@@ -1,0 +1,9 @@
+C:\Visual Studio\Lap trinh mang can ban\Do An\CaroNet\CaroNet\bin\Debug\CaroNet.exe.config
+C:\Visual Studio\Lap trinh mang can ban\Do An\CaroNet\CaroNet\bin\Debug\CaroNet.exe
+C:\Visual Studio\Lap trinh mang can ban\Do An\CaroNet\CaroNet\bin\Debug\CaroNet.pdb
+C:\Visual Studio\Lap trinh mang can ban\Do An\CaroNet\CaroNet\obj\Debug\CaroNet (Client).csproj.AssemblyReference.cache
+C:\Visual Studio\Lap trinh mang can ban\Do An\CaroNet\CaroNet\obj\Debug\CaroNet.Properties.Resources.resources
+C:\Visual Studio\Lap trinh mang can ban\Do An\CaroNet\CaroNet\obj\Debug\CaroNet (Client).csproj.GenerateResource.cache
+C:\Visual Studio\Lap trinh mang can ban\Do An\CaroNet\CaroNet\obj\Debug\CaroNet (Client).csproj.CoreCompileInputs.cache
+C:\Visual Studio\Lap trinh mang can ban\Do An\CaroNet\CaroNet\obj\Debug\CaroNet.exe
+C:\Visual Studio\Lap trinh mang can ban\Do An\CaroNet\CaroNet\obj\Debug\CaroNet.pdb

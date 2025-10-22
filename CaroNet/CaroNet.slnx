@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="CaroNet/CaroClient.csproj" Id="42d396f4-7ac0-4cb9-ac9f-d69bdc04473d" />
+  <Project Path="CaroServer/CaroServer.csproj" Id="18317d1f-6d3f-404e-b2cf-3162fab57438" />
+</Solution>
