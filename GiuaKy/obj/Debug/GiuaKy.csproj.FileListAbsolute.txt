@@ -17,3 +17,14 @@ C:\Users\23521\source\repos\GiuaKy\obj\Debug\GiuaKy.exe.config
 C:\Users\23521\source\repos\GiuaKy\obj\Debug\GiuaKy.ChatUI.resources
 C:\Users\23521\source\repos\GiuaKy\obj\Debug\GiuaKy.Profile.resources
 C:\Users\23521\source\repos\GiuaKy\obj\Debug\GiuaKy.ProfileUI.resources
+C:\Users\Admin\source\repos\AppChatTichHopCaro\GiuaKy\obj\Debug\GiuaKy.csproj.AssemblyReference.cache
+C:\Users\Admin\source\repos\AppChatTichHopCaro\GiuaKy\obj\Debug\GiuaKy.ChatUI.resources
+C:\Users\Admin\source\repos\AppChatTichHopCaro\GiuaKy\obj\Debug\GiuaKy.DangKy.resources
+C:\Users\Admin\source\repos\AppChatTichHopCaro\GiuaKy\obj\Debug\GiuaKy.DangNhap.resources
+C:\Users\Admin\source\repos\AppChatTichHopCaro\GiuaKy\obj\Debug\GiuaKy.Form1.resources
+C:\Users\Admin\source\repos\AppChatTichHopCaro\GiuaKy\obj\Debug\GiuaKy.GiaoDien.resources
+C:\Users\Admin\source\repos\AppChatTichHopCaro\GiuaKy\obj\Debug\GiuaKy.Profile.resources
+C:\Users\Admin\source\repos\AppChatTichHopCaro\GiuaKy\obj\Debug\GiuaKy.ProfileUI.resources
+C:\Users\Admin\source\repos\AppChatTichHopCaro\GiuaKy\obj\Debug\GiuaKy.QuenMatKhau.resources
+C:\Users\Admin\source\repos\AppChatTichHopCaro\GiuaKy\obj\Debug\UnderlinedTextBox.resources
+C:\Users\Admin\source\repos\AppChatTichHopCaro\GiuaKy\obj\Debug\GiuaKy.csproj.GenerateResource.cache
