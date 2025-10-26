@@ -1,6 +1,12 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\CaroNet",
+    "\\CaroNet\\CaroNet",
+    "\\GiuaKy",
+    "\\GiuaKy\\Properties",
+    "\\GiuaKy\\Resources"
   ],
+  "SelectedNode": "\\GiuaKy\\Properties\\Resources.resx",
   "PreviewInSolutionExplorer": false
 }
