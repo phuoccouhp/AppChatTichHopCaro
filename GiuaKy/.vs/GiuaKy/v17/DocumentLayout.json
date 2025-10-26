@@ -1,0 +1,119 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\23521\\source\\repos\\GiuaKy\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{09F6EC8C-5EBB-4551-93DF-43F23BAB4C78}|GiuaKy.csproj|c:\\users\\23521\\source\\repos\\giuaky\\chatui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{09F6EC8C-5EBB-4551-93DF-43F23BAB4C78}|GiuaKy.csproj|solutionrelative:chatui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{09F6EC8C-5EBB-4551-93DF-43F23BAB4C78}|GiuaKy.csproj|c:\\users\\23521\\source\\repos\\giuaky\\chatui.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{09F6EC8C-5EBB-4551-93DF-43F23BAB4C78}|GiuaKy.csproj|solutionrelative:chatui.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{09F6EC8C-5EBB-4551-93DF-43F23BAB4C78}|GiuaKy.csproj|c:\\users\\23521\\source\\repos\\giuaky\\chatui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{09F6EC8C-5EBB-4551-93DF-43F23BAB4C78}|GiuaKy.csproj|solutionrelative:chatui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{09F6EC8C-5EBB-4551-93DF-43F23BAB4C78}|GiuaKy.csproj|c:\\users\\23521\\source\\repos\\giuaky\\giaodien.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{09F6EC8C-5EBB-4551-93DF-43F23BAB4C78}|GiuaKy.csproj|solutionrelative:giaodien.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{09F6EC8C-5EBB-4551-93DF-43F23BAB4C78}|GiuaKy.csproj|c:\\users\\23521\\source\\repos\\giuaky\\profile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{09F6EC8C-5EBB-4551-93DF-43F23BAB4C78}|GiuaKy.csproj|solutionrelative:profile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{09F6EC8C-5EBB-4551-93DF-43F23BAB4C78}|GiuaKy.csproj|c:\\users\\23521\\source\\repos\\giuaky\\giaodien.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{09F6EC8C-5EBB-4551-93DF-43F23BAB4C78}|GiuaKy.csproj|solutionrelative:giaodien.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 1,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ChatUI.Designer.cs",
+              "DocumentMoniker": "C:\\Users\\23521\\source\\repos\\GiuaKy\\ChatUI.Designer.cs",
+              "RelativeDocumentMoniker": "ChatUI.Designer.cs",
+              "ToolTip": "C:\\Users\\23521\\source\\repos\\GiuaKy\\ChatUI.Designer.cs",
+              "RelativeToolTip": "ChatUI.Designer.cs",
+              "ViewState": "AgIAAAQAAAAAAAAAAAAswBcAAAAfAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-22T16:05:43.531Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "ChatUI.cs",
+              "DocumentMoniker": "C:\\Users\\23521\\source\\repos\\GiuaKy\\ChatUI.cs",
+              "RelativeDocumentMoniker": "ChatUI.cs",
+              "ToolTip": "C:\\Users\\23521\\source\\repos\\GiuaKy\\ChatUI.cs",
+              "RelativeToolTip": "ChatUI.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAWAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-22T16:00:32.953Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "ChatUI.cs [Design]",
+              "DocumentMoniker": "C:\\Users\\23521\\source\\repos\\GiuaKy\\ChatUI.cs",
+              "RelativeDocumentMoniker": "ChatUI.cs",
+              "ToolTip": "C:\\Users\\23521\\source\\repos\\GiuaKy\\ChatUI.cs [Design]",
+              "RelativeToolTip": "ChatUI.cs [Design]",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-22T15:57:49.083Z",
+              "EditorCaption": " [Design]"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Profile.cs [Design]",
+              "DocumentMoniker": "C:\\Users\\23521\\source\\repos\\GiuaKy\\Profile.cs",
+              "RelativeDocumentMoniker": "Profile.cs",
+              "ToolTip": "C:\\Users\\23521\\source\\repos\\GiuaKy\\Profile.cs [Design]",
+              "RelativeToolTip": "Profile.cs [Design]",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-22T15:27:11.802Z",
+              "EditorCaption": " [Design]"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "GiaoDien.cs [Design]",
+              "DocumentMoniker": "C:\\Users\\23521\\source\\repos\\GiuaKy\\GiaoDien.cs",
+              "RelativeDocumentMoniker": "GiaoDien.cs",
+              "ToolTip": "C:\\Users\\23521\\source\\repos\\GiuaKy\\GiaoDien.cs [Design]",
+              "RelativeToolTip": "GiaoDien.cs [Design]",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-22T14:27:19.953Z",
+              "EditorCaption": " [Design]"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "GiaoDien.cs",
+              "DocumentMoniker": "C:\\Users\\23521\\source\\repos\\GiuaKy\\GiaoDien.cs",
+              "RelativeDocumentMoniker": "GiaoDien.cs",
+              "ToolTip": "C:\\Users\\23521\\source\\repos\\GiuaKy\\GiaoDien.cs",
+              "RelativeToolTip": "GiaoDien.cs",
+              "ViewState": "AgIAAAUAAAAAAAAAAAAAAB0AAAAsAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-22T14:25:00.14Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
