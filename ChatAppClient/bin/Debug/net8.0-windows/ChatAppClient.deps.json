@@ -7,14 +7,27 @@
   "targets": {
     ".NETCoreApp,Version=v8.0": {
       "ChatAppClient/1.0.0": {
+        "dependencies": {
+          "ChatApp.Shared": "1.0.0"
+        },
         "runtime": {
           "ChatAppClient.dll": {}
+        }
+      },
+      "ChatApp.Shared/1.0.0": {
+        "runtime": {
+          "ChatApp.Shared.dll": {}
         }
       }
     }
   },
   "libraries": {
     "ChatAppClient/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "ChatApp.Shared/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
