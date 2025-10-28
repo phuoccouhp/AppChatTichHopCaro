@@ -41,7 +41,7 @@
             try
             {
                 // Tải ảnh từ thư mục "Images" (đảm bảo file tồn tại và đã set "Copy if newer")
-                this.pbAvatar.Image = System.Drawing.Image.FromFile("Images/default_avatar.png");
+                this.pbAvatar.Image = System.Drawing.Image.FromFile("Images/550370560_1205130104983681_4413519399568592495_n.png");
             }
             catch (System.IO.FileNotFoundException)
             {

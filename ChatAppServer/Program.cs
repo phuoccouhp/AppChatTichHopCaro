@@ -5,14 +5,15 @@ namespace ChatAppServer
 {
     class Program
     {
+        // (Trong Program.cs)
         static async Task Main(string[] args)
         {
-            // Chọn 1 port bất kỳ
             int port = 9000;
-
             Server server = new Server(port);
 
-            // Chạy server vĩnh viễn
+            // Báo cáo thành công (màu xanh lá)
+            Logger.Success($"Server đã khởi động và lắng nghe tại port {port}.");
+
             await server.StartAsync();
         }
     }

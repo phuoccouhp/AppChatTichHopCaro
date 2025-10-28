@@ -1,4 +1,4 @@
-﻿#pragma warning disable SYSLIB0011
+﻿#pragma warning disable SYSLIB0011 // Tắt cảnh báo BinaryFormatter
 using ChatApp.Shared;
 using System;
 using System.Collections.Generic;
@@ -25,8 +25,6 @@ namespace ChatAppServer
             _client = client;
             _server = server;
             _stream = _client.GetStream();
-
-            // Cảnh báo: BinaryFormatter không an toàn
             _formatter = new BinaryFormatter();
         }
 
@@ -37,16 +35,15 @@ namespace ChatAppServer
                 // Vòng lặp liên tục đọc dữ liệu từ client
                 while (_client.Connected)
                 {
-                    // Đợi và nhận gói tin
                     object receivedPacket = await Task.Run(() => _formatter.Deserialize(_stream));
-
-                    // Xử lý gói tin
                     HandlePacket(receivedPacket);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Client {UserID ?? "???"}] Đã ngắt kết nối: {ex.Message}");
+                // *** ĐÂY LÀ PHẦN SỬA LỖI ***
+                // Khối catch chỉ nên log lỗi ngắt kết nối
+                Logger.Warning($"[Client {UserID ?? "???"}] Đã ngắt kết nối: {ex.Message}");
             }
             finally
             {
@@ -54,7 +51,6 @@ namespace ChatAppServer
             }
         }
 
-        // "Bộ định tuyến" - Xử lý các loại gói tin
         // "Bộ định tuyến" - Xử lý các loại gói tin
         private void HandlePacket(object packet)
         {
@@ -64,16 +60,15 @@ namespace ChatAppServer
                     HandleLogin(p);
                     break;
                 case TextPacket p:
-                    Console.WriteLine($"[Chat] {p.SenderID} -> {p.ReceiverID}: {p.MessageContent}");
+                    Logger.Info($"[Chat] {p.SenderID} -> {p.ReceiverID}: {p.MessageContent}");
                     _server.RelayPrivatePacket(p.ReceiverID, p);
                     break;
                 case FilePacket p:
-                    Console.WriteLine($"[File] {p.SenderID} -> {p.ReceiverID}: {p.FileName}");
+                    Logger.Info($"[File] {p.SenderID} -> {p.ReceiverID}: {p.FileName}");
                     _server.RelayPrivatePacket(p.ReceiverID, p);
                     break;
                 case GameInvitePacket p:
-                    // THÊM DÒNG NÀY (hoặc kiểm tra xem đã có chưa)
-                    Console.WriteLine($"[Game] {p.SenderID} mời {p.ReceiverID}");
+                    Logger.Info($"[Game] {p.SenderID} mời {p.ReceiverID}");
                     _server.RelayPrivatePacket(p.ReceiverID, p);
                     break;
                 case GameResponsePacket p:
@@ -81,34 +76,28 @@ namespace ChatAppServer
                     _server.ProcessGameResponse(p);
                     break;
                 case GameMovePacket p:
-                    // THÊM DÒNG NÀY
-                    Console.WriteLine($"[GameMove] {p.SenderID} đi ({p.Row},{p.Col})");
+                    Logger.Info($"[GameMove] {p.SenderID} đi ({p.Row},{p.Col})");
                     _server.ProcessGameMove(p);
                     break;
                 default:
-                    Console.WriteLine($"[Warning] Nhận được gói tin không xác định.");
+                    Logger.Warning($"[Warning] Nhận được gói tin không xác định.");
                     break;
             }
         }
 
         // Xử lý Đăng nhập
-        private void HandleLogin(LoginPacket loginPacket)
+        private void HandleLogin(LoginPacket p)
         {
             // TODO: Bạn phải thay thế bằng logic check DB thật
-            // (Tạm thời hard-code 2 user)
-            if ((loginPacket.Username == "user1" && loginPacket.Password == "123") ||
-                (loginPacket.Username == "user2" && loginPacket.Password == "123"))
+            if ((p.Username == "user1" && p.Password == "123") ||
+                (p.Username == "user2" && p.Password == "123"))
             {
-                this.UserID = loginPacket.Username;
-                this.UserName = (loginPacket.Username == "user1") ? "Bạn Bè A" : "Bạn Bè B"; // Tên giả
+                this.UserID = p.Username;
+                this.UserName = (p.Username == "user1") ? "Bạn Bè A" : "Bạn Bè B";
 
-                // 1. Đăng ký client này với Server
                 _server.RegisterClient(this.UserID, this);
-
-                // 2. Lấy danh sách bạn bè đang online
                 var onlineUsers = _server.GetOnlineUsers(this.UserID);
 
-                // 3. Gửi phản hồi thành công + danh sách bạn
                 var result = new LoginResultPacket
                 {
                     Success = true,
@@ -118,23 +107,21 @@ namespace ChatAppServer
                 };
                 SendPacket(result);
 
-                // 4. Thông báo cho tất cả client khác là "tôi" đã online
                 var statusPacket = new UserStatusPacket
                 {
                     UserID = this.UserID,
                     UserName = this.UserName,
                     IsOnline = true
                 };
-                _server.BroadcastPacket(statusPacket, this.UserID); // Gửi cho mọi người, TRỪ TÔI
+                _server.BroadcastPacket(statusPacket, this.UserID);
 
-                Console.WriteLine($"[Login] User '{this.UserID}' đã đăng nhập.");
+                Logger.Success($"[Login] User '{this.UserID}' đã đăng nhập.");
             }
             else
             {
-                // Gửi phản hồi thất bại
                 SendPacket(new LoginResultPacket { Success = false, Message = "Sai tên đăng nhập hoặc mật khẩu." });
-                Console.WriteLine($"[Login] Thất bại: {loginPacket.Username}");
-                Close(); // Ngắt kết nối
+                Logger.Warning($"[Login] Thất bại: {p.Username}");
+                Close();
             }
         }
 
@@ -152,7 +139,8 @@ namespace ChatAppServer
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[Error] Không thể gửi gói tin cho {UserID}: {ex.Message}");
+                    // Sửa lỗi: Dùng Logger
+                    Logger.Error($"Không thể gửi gói tin cho {UserID}", ex);
                 }
             }
         }
@@ -165,4 +153,4 @@ namespace ChatAppServer
         }
     }
 }
-#pragma warning restore SYSLIB0011
+#pragma warning restore SYSLIB0011 // Bật lại cảnh báo
