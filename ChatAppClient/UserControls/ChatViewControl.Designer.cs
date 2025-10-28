@@ -28,192 +28,191 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
-            this.pnlHeader = new System.Windows.Forms.Panel();
-            this.btnStartGame = new System.Windows.Forms.Button();
-            this.lblFriendName = new System.Windows.Forms.Label();
-            this.pnlInput = new System.Windows.Forms.Panel();
-            this.btnEmoji = new System.Windows.Forms.Button();
-            this.btnAttach = new System.Windows.Forms.Button();
-            this.btnSend = new ChatAppClient.CustomControls.RoundedButton();
-            this.txtMessage = new System.Windows.Forms.TextBox();
-            this.flpMessages = new System.Windows.Forms.FlowLayoutPanel();
-            this.ctxAttachMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.btnSendImage = new System.Windows.Forms.ToolStripMenuItem();
-            this.btnSendFile = new System.Windows.Forms.ToolStripMenuItem();
-            this.pnlEmojiPicker = new System.Windows.Forms.FlowLayoutPanel();
-            this.pnlHeader.SuspendLayout();
-            this.pnlInput.SuspendLayout();
-            this.ctxAttachMenu.SuspendLayout();
-            this.SuspendLayout();
+            components = new System.ComponentModel.Container();
+            pnlHeader = new Panel();
+            btnStartGame = new Button();
+            lblFriendName = new Label();
+            pnlInput = new Panel();
+            btnEmoji = new Button();
+            btnAttach = new Button();
+            ctxAttachMenu = new ContextMenuStrip(components);
+            btnSendImage = new ToolStripMenuItem();
+            btnSendFile = new ToolStripMenuItem();
+            btnSend = new CustomControls.RoundedButton();
+            txtMessage = new TextBox();
+            flpMessages = new FlowLayoutPanel();
+            pnlEmojiPicker = new FlowLayoutPanel();
+            pnlHeader.SuspendLayout();
+            pnlInput.SuspendLayout();
+            ctxAttachMenu.SuspendLayout();
+            SuspendLayout();
             // 
             // pnlHeader
             // 
-            this.pnlHeader.BackColor = ChatAppClient.Helpers.AppColors.Primary;
-            this.pnlHeader.Controls.Add(this.btnStartGame);
-            this.pnlHeader.Controls.Add(this.lblFriendName);
-            this.pnlHeader.Dock = System.Windows.Forms.DockStyle.Top;
-            this.pnlHeader.Location = new System.Drawing.Point(0, 0);
-            this.pnlHeader.Name = "pnlHeader";
-            this.pnlHeader.Size = new System.Drawing.Size(520, 55);
-            this.pnlHeader.TabIndex = 1;
+            pnlHeader.BackColor = Color.FromArgb(0, 145, 255);
+            pnlHeader.Controls.Add(btnStartGame);
+            pnlHeader.Controls.Add(lblFriendName);
+            pnlHeader.Dock = DockStyle.Top;
+            pnlHeader.Location = new Point(0, 0);
+            pnlHeader.Name = "pnlHeader";
+            pnlHeader.Size = new Size(520, 55);
+            pnlHeader.TabIndex = 1;
             // 
             // btnStartGame
             // 
-            this.btnStartGame.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnStartGame.BackColor = ChatAppClient.Helpers.AppColors.Primary;
-            this.btnStartGame.FlatAppearance.BorderSize = 0;
-            this.btnStartGame.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnStartGame.Font = new System.Drawing.Font("Segoe UI Emoji", 13.8F);
-            this.btnStartGame.ForeColor = System.Drawing.Color.White;
-            this.btnStartGame.Location = new System.Drawing.Point(468, 7);
-            this.btnStartGame.Name = "btnStartGame";
-            this.btnStartGame.Size = new System.Drawing.Size(40, 40);
-            this.btnStartGame.TabIndex = 1;
-            this.btnStartGame.Text = "🎲";
-            this.btnStartGame.UseVisualStyleBackColor = false;
+            btnStartGame.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnStartGame.BackColor = Color.FromArgb(0, 145, 255);
+            btnStartGame.FlatAppearance.BorderSize = 0;
+            btnStartGame.FlatStyle = FlatStyle.Flat;
+            btnStartGame.Font = new Font("Segoe UI Emoji", 13.8F);
+            btnStartGame.ForeColor = Color.White;
+            btnStartGame.Location = new Point(468, 7);
+            btnStartGame.Name = "btnStartGame";
+            btnStartGame.Size = new Size(40, 40);
+            btnStartGame.TabIndex = 1;
+            btnStartGame.Text = "🎲";
+            btnStartGame.UseVisualStyleBackColor = false;
             // 
             // lblFriendName
             // 
-            this.lblFriendName.AutoSize = true;
-            this.lblFriendName.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
-            this.lblFriendName.ForeColor = System.Drawing.Color.White;
-            this.lblFriendName.Location = new System.Drawing.Point(12, 13);
-            this.lblFriendName.Name = "lblFriendName";
-            this.lblFriendName.Size = new System.Drawing.Size(107, 28);
-            this.lblFriendName.TabIndex = 0;
-            this.lblFriendName.Text = "Bạn Bè A";
+            lblFriendName.AutoSize = true;
+            lblFriendName.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            lblFriendName.ForeColor = Color.White;
+            lblFriendName.Location = new Point(12, 13);
+            lblFriendName.Name = "lblFriendName";
+            lblFriendName.Size = new Size(98, 28);
+            lblFriendName.TabIndex = 0;
+            lblFriendName.Text = "Bạn Bè A";
             // 
             // pnlInput
             // 
-            this.pnlInput.BackColor = ChatAppClient.Helpers.AppColors.FormBackground;
-            this.pnlInput.Controls.Add(this.btnEmoji);
-            this.pnlInput.Controls.Add(this.btnAttach);
-            this.pnlInput.Controls.Add(this.btnSend);
-            this.pnlInput.Controls.Add(this.txtMessage);
-            this.pnlInput.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.pnlInput.Location = new System.Drawing.Point(0, 480);
-            this.pnlInput.Name = "pnlInput";
-            this.pnlInput.Padding = new System.Windows.Forms.Padding(10);
-            this.pnlInput.Size = new System.Drawing.Size(520, 60);
-            this.pnlInput.TabIndex = 2;
+            pnlInput.BackColor = Color.White;
+            pnlInput.Controls.Add(btnEmoji);
+            pnlInput.Controls.Add(btnAttach);
+            pnlInput.Controls.Add(btnSend);
+            pnlInput.Controls.Add(txtMessage);
+            pnlInput.Dock = DockStyle.Bottom;
+            pnlInput.Location = new Point(0, 480);
+            pnlInput.Name = "pnlInput";
+            pnlInput.Padding = new Padding(10);
+            pnlInput.Size = new Size(520, 60);
+            pnlInput.TabIndex = 2;
             // 
             // btnEmoji
             // 
-            this.btnEmoji.BackColor = System.Drawing.Color.Transparent;
-            this.btnEmoji.Dock = System.Windows.Forms.DockStyle.Left;
-            this.btnEmoji.FlatAppearance.BorderSize = 0;
-            this.btnEmoji.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnEmoji.Font = new System.Drawing.Font("Segoe UI Emoji", 12F);
-            this.btnEmoji.Location = new System.Drawing.Point(50, 10);
-            this.btnEmoji.Name = "btnEmoji";
-            this.btnEmoji.Size = new System.Drawing.Size(40, 40);
-            this.btnEmoji.TabIndex = 3;
-            this.btnEmoji.Text = "😊";
-            this.btnEmoji.UseVisualStyleBackColor = false;
+            btnEmoji.BackColor = Color.Transparent;
+            btnEmoji.Dock = DockStyle.Left;
+            btnEmoji.FlatAppearance.BorderSize = 0;
+            btnEmoji.FlatStyle = FlatStyle.Flat;
+            btnEmoji.Font = new Font("Segoe UI Emoji", 12F);
+            btnEmoji.Location = new Point(50, 10);
+            btnEmoji.Name = "btnEmoji";
+            btnEmoji.Size = new Size(40, 40);
+            btnEmoji.TabIndex = 3;
+            btnEmoji.Text = "😊";
+            btnEmoji.UseVisualStyleBackColor = false;
             // 
             // btnAttach
             // 
-            this.btnAttach.BackColor = System.Drawing.Color.Transparent;
-            this.btnAttach.ContextMenuStrip = this.ctxAttachMenu; // Gán context menu
-            this.btnAttach.Dock = System.Windows.Forms.DockStyle.Left;
-            this.btnAttach.FlatAppearance.BorderSize = 0;
-            this.btnAttach.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnAttach.Font = new System.Drawing.Font("Segoe UI Emoji", 12F);
-            this.btnAttach.Location = new System.Drawing.Point(10, 10);
-            this.btnAttach.Name = "btnAttach";
-            this.btnAttach.Size = new System.Drawing.Size(40, 40);
-            this.btnAttach.TabIndex = 2;
-            this.btnAttach.Text = "📎";
-            this.btnAttach.UseVisualStyleBackColor = false;
-            // 
-            // btnSend
-            // 
-            this.btnSend.BorderRadius = 20;
-            this.btnSend.ButtonColor = ChatAppClient.Helpers.AppColors.Primary;
-            this.btnSend.Dock = System.Windows.Forms.DockStyle.Right;
-            this.btnSend.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
-            this.btnSend.Location = new System.Drawing.Point(435, 10);
-            this.btnSend.Name = "btnSend";
-            this.btnSend.Size = new System.Drawing.Size(75, 40);
-            this.btnSend.TabIndex = 1;
-            this.btnSend.Text = "Gửi";
-            this.btnSend.TextColor = System.Drawing.Color.White;
-            // 
-            // txtMessage
-            // 
-            this.txtMessage.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtMessage.Font = new System.Drawing.Font("Segoe UI", 10.8F);
-            this.txtMessage.Location = new System.Drawing.Point(96, 14);
-            this.txtMessage.Multiline = true;
-            this.txtMessage.Name = "txtMessage";
-            this.txtMessage.Size = new System.Drawing.Size(333, 32);
-            this.txtMessage.TabIndex = 0;
-            // 
-            // flpMessages
-            // 
-            this.flpMessages.AutoScroll = true;
-            this.flpMessages.BackColor = ChatAppClient.Helpers.AppColors.Background;
-            this.flpMessages.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.flpMessages.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
-            this.flpMessages.Location = new System.Drawing.Point(0, 55);
-            this.flpMessages.Name = "flpMessages";
-            this.flpMessages.Padding = new System.Windows.Forms.Padding(5);
-            this.flpMessages.Size = new System.Drawing.Size(520, 425);
-            this.flpMessages.TabIndex = 3;
-            this.flpMessages.WrapContents = false;
+            btnAttach.BackColor = Color.Transparent;
+            btnAttach.ContextMenuStrip = ctxAttachMenu;
+            btnAttach.Dock = DockStyle.Left;
+            btnAttach.FlatAppearance.BorderSize = 0;
+            btnAttach.FlatStyle = FlatStyle.Flat;
+            btnAttach.Font = new Font("Segoe UI Emoji", 12F);
+            btnAttach.Location = new Point(10, 10);
+            btnAttach.Name = "btnAttach";
+            btnAttach.Size = new Size(40, 40);
+            btnAttach.TabIndex = 2;
+            btnAttach.Text = "📎";
+            btnAttach.UseVisualStyleBackColor = false;
             // 
             // ctxAttachMenu
             // 
-            this.ctxAttachMenu.ImageScalingSize = new System.Drawing.Size(20, 20);
-            this.ctxAttachMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-    this.btnSendImage,
-    this.btnSendFile});
-            this.ctxAttachMenu.Name = "ctxAttachMenu";
-            this.ctxAttachMenu.Size = new System.Drawing.Size(167, 52);
+            ctxAttachMenu.ImageScalingSize = new Size(20, 20);
+            ctxAttachMenu.Items.AddRange(new ToolStripItem[] { btnSendImage, btnSendFile });
+            ctxAttachMenu.Name = "ctxAttachMenu";
+            ctxAttachMenu.Size = new Size(167, 52);
             // 
             // btnSendImage
             // 
-            this.btnSendImage.Name = "btnSendImage";
-            this.btnSendImage.Size = new System.Drawing.Size(166, 24);
-            this.btnSendImage.Text = "Gửi Hình Ảnh";
+            btnSendImage.Name = "btnSendImage";
+            btnSendImage.Size = new Size(166, 24);
+            btnSendImage.Text = "Gửi Hình Ảnh";
             // 
             // btnSendFile
             // 
-            this.btnSendFile.Name = "btnSendFile";
-            this.btnSendFile.Size = new System.Drawing.Size(166, 24);
-            this.btnSendFile.Text = "Gửi File";
+            btnSendFile.Name = "btnSendFile";
+            btnSendFile.Size = new Size(166, 24);
+            btnSendFile.Text = "Gửi File";
+            // 
+            // btnSend
+            // 
+            btnSend.BackColor = Color.Transparent;
+            btnSend.BorderRadius = 20;
+            btnSend.ButtonColor = Color.FromArgb(0, 145, 255);
+            btnSend.Dock = DockStyle.Right;
+            btnSend.FlatStyle = FlatStyle.Flat;
+            btnSend.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnSend.ForeColor = Color.Transparent;
+            btnSend.Location = new Point(435, 10);
+            btnSend.Name = "btnSend";
+            btnSend.Size = new Size(75, 40);
+            btnSend.TabIndex = 1;
+            btnSend.Text = "Gửi";
+            btnSend.TextColor = Color.White;
+            btnSend.UseVisualStyleBackColor = false;
+            // 
+            // txtMessage
+            // 
+            txtMessage.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            txtMessage.Font = new Font("Segoe UI", 10.8F);
+            txtMessage.Location = new Point(96, 14);
+            txtMessage.Multiline = true;
+            txtMessage.Name = "txtMessage";
+            txtMessage.Size = new Size(333, 32);
+            txtMessage.TabIndex = 0;
+            // 
+            // flpMessages
+            // 
+            flpMessages.AutoScroll = true;
+            flpMessages.BackColor = Color.FromArgb(229, 221, 213);
+            flpMessages.Dock = DockStyle.Fill;
+            flpMessages.FlowDirection = FlowDirection.TopDown;
+            flpMessages.Location = new Point(0, 55);
+            flpMessages.Name = "flpMessages";
+            flpMessages.Padding = new Padding(5);
+            flpMessages.Size = new Size(520, 425);
+            flpMessages.TabIndex = 3;
+            flpMessages.WrapContents = false;
             // 
             // pnlEmojiPicker
             // 
-            this.pnlEmojiPicker.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.pnlEmojiPicker.BackColor = System.Drawing.Color.White;
-            this.pnlEmojiPicker.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pnlEmojiPicker.Location = new System.Drawing.Point(96, 324);
-            this.pnlEmojiPicker.Name = "pnlEmojiPicker";
-            this.pnlEmojiPicker.Size = new System.Drawing.Size(250, 150);
-            this.pnlEmojiPicker.TabIndex = 4;
-            this.pnlEmojiPicker.Visible = false; // Ẩn ban đầu
-                                                 // 
-                                                 // ChatViewControl
-                                                 // 
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
-            this.Controls.Add(this.pnlEmojiPicker);
-            this.Controls.Add(this.flpMessages);
-            this.Controls.Add(this.pnlInput);
-            this.Controls.Add(this.pnlHeader);
-            this.Name = "ChatViewControl";
-            this.Size = new System.Drawing.Size(520, 540);
-            this.Load += new System.EventHandler(this.ChatViewControl_Load);
-            this.pnlHeader.ResumeLayout(false);
-            this.pnlHeader.PerformLayout();
-            this.pnlInput.ResumeLayout(false);
-            this.pnlInput.PerformLayout();
-            this.ctxAttachMenu.ResumeLayout(false);
-            this.ResumeLayout(false);
-
+            pnlEmojiPicker.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            pnlEmojiPicker.BackColor = Color.White;
+            pnlEmojiPicker.BorderStyle = BorderStyle.FixedSingle;
+            pnlEmojiPicker.Location = new Point(96, 324);
+            pnlEmojiPicker.Name = "pnlEmojiPicker";
+            pnlEmojiPicker.Size = new Size(250, 150);
+            pnlEmojiPicker.TabIndex = 4;
+            pnlEmojiPicker.Visible = false;
+            // 
+            // ChatViewControl
+            // 
+            AutoScaleMode = AutoScaleMode.None;
+            Controls.Add(pnlEmojiPicker);
+            Controls.Add(flpMessages);
+            Controls.Add(pnlInput);
+            Controls.Add(pnlHeader);
+            Name = "ChatViewControl";
+            Size = new Size(520, 540);
+            Load += ChatViewControl_Load;
+            pnlHeader.ResumeLayout(false);
+            pnlHeader.PerformLayout();
+            pnlInput.ResumeLayout(false);
+            pnlInput.PerformLayout();
+            ctxAttachMenu.ResumeLayout(false);
+            ResumeLayout(false);
         }
         #endregion
         // Thêm các control mới vào

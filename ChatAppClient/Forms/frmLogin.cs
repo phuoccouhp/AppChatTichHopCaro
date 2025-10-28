@@ -1,6 +1,9 @@
-﻿using ChatAppClient.Helpers;
+﻿using ChatApp.Shared;
+using ChatAppClient.Helpers;
 using System;
+using System.Collections.Generic; // Cần cho List
 using System.Drawing;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace ChatAppClient.Forms
@@ -14,21 +17,28 @@ namespace ChatAppClient.Forms
 
         private void frmLogin_Load(object sender, EventArgs e)
         {
-            // Gán sự kiện
             this.btnLogin.Click += BtnLogin_Click;
             this.btnRegister.Click += BtnRegister_Click;
 
-            // Làm đẹp TextBox (một chút)
+            // Thiết lập placeholder cho TextBox
             SetTextBoxPlaceholder(txtUsername, "Tên đăng nhập");
             SetTextBoxPlaceholder(txtPassword, "Mật khẩu");
+
+            // Tự động điền (để test cho nhanh)
+            txtUsername.Text = "user1";
+            txtUsername.ForeColor = Color.Black;
+            txtPassword.Text = "123";
+            txtPassword.PasswordChar = '●';
+            txtPassword.ForeColor = Color.Black;
         }
 
-
-        private void BtnLogin_Click(object sender, EventArgs e)
+        // Sự kiện click nút Đăng nhập (đã chuyển sang async)
+        private async void BtnLogin_Click(object sender, EventArgs e)
         {
             string username = txtUsername.Text.Trim();
             string password = txtPassword.Text.Trim();
 
+            // 1. Kiểm tra đầu vào
             if (string.IsNullOrEmpty(username) || username == "Tên đăng nhập" ||
                 string.IsNullOrEmpty(password) || password == "Mật khẩu")
             {
@@ -36,29 +46,73 @@ namespace ChatAppClient.Forms
                 return;
             }
 
-            // TODO: Gửi username và password lên Server để xác thực
-            // NetworkManager.Instance.Login(username, password);
+            // 2. Vô hiệu hóa UI
+            btnLogin.Enabled = false;
+            btnLogin.Text = "Đang kết nối...";
 
-            // Giả lập đăng nhập thành công
-            // Sau khi Server phản hồi thành công, bạn làm:
-            MessageBox.Show("Đăng nhập thành công! (Giả lập)", "Thành công");
+            try
+            {
+                // 3. Kết nối đến Server
+                // (Địa chỉ 127.0.0.1 là localhost - tức máy chủ chạy trên cùng máy)
+                bool connected = await NetworkManager.Instance.ConnectAsync("127.0.0.1", 9000);
 
-            // TODO: Lưu thông tin user (ví dụ: GlobalState.CurrentUser = ...)
+                if (!connected)
+                {
+                    throw new Exception("Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại Server!");
+                }
 
-            frmHome homeForm = new frmHome();
-            homeForm.Show();
-            this.Hide(); // Ẩn form login đi
+                // 4. Gửi gói tin Login và đợi phản hồi
+                btnLogin.Text = "Đang đăng nhập...";
+                var loginPacket = new LoginPacket { Username = username, Password = password };
+
+                // Gọi hàm async mới trong NetworkManager
+                LoginResultPacket result = await NetworkManager.Instance.LoginAsync(loginPacket);
+
+                // 5. Xử lý kết quả
+                ProcessLoginResult(result);
+            }
+            catch (Exception ex)
+            {
+                // Bất kỳ lỗi nào (kết nối, timeout, server sập) sẽ bị bắt ở đây
+                MessageBox.Show($"Đăng nhập thất bại: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                btnLogin.Enabled = true;
+                btnLogin.Text = "Đăng Nhập";
+            }
         }
 
+        // 6. Xử lý kết quả (chạy trên luồng UI)
+        private void ProcessLoginResult(LoginResultPacket result)
+        {
+            if (result.Success)
+            {
+                // Đăng nhập thành công!
+
+                // Lưu thông tin user vào NetworkManager
+                NetworkManager.Instance.SetUserCredentials(result.UserID, result.UserName);
+
+                // Mở Form Home và truyền danh sách bạn bè
+                frmHome homeForm = new frmHome(result.OnlineUsers);
+                homeForm.Show();
+                this.Hide(); // Ẩn form login
+            }
+            else
+            {
+                // Đăng nhập thất bại (do Server báo)
+                MessageBox.Show($"Đăng nhập thất bại: {result.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                btnLogin.Enabled = true;
+                btnLogin.Text = "Đăng Nhập";
+            }
+        }
+
+        // Chức năng Đăng ký (chưa làm)
         private void BtnRegister_Click(object sender, EventArgs e)
         {
             MessageBox.Show("Chức năng đăng ký đang được phát triển!", "Thông báo");
-            // TODO: Mở form Đăng Ký (frmRegister)
         }
 
+        // Đóng ứng dụng khi tắt Form Login
         private void frmLogin_FormClosing(object sender, FormClosingEventArgs e)
         {
-            // Khi form Login bị tắt, tắt toàn bộ ứng dụng
             Application.Exit();
         }
 

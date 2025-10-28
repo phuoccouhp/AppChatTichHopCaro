@@ -32,17 +32,22 @@
             this.lblFriendName = new System.Windows.Forms.Label();
             this.lblStatus = new System.Windows.Forms.Label();
             this.pnlStatusDot = new System.Windows.Forms.Panel();
+            this.lblNewMessageBadge = new System.Windows.Forms.Label(); // Khai báo dòng này trước
             ((System.ComponentModel.ISupportInitialize)(this.pbAvatar)).BeginInit();
             this.SuspendLayout();
             // 
             // pbAvatar
             // 
-            // TẠM THỜI: Gán ảnh mặc định. Bạn nên dùng ImageList hoặc Resources
             try
             {
-                this.pbAvatar.Image = System.Drawing.Image.FromFile("Images/550370560_1205130104983681_4413519399568592495_n.jpg");
+                // Tải ảnh từ thư mục "Images" (đảm bảo file tồn tại và đã set "Copy if newer")
+                this.pbAvatar.Image = System.Drawing.Image.FromFile("Images/default_avatar.png");
             }
-            catch { } // Bỏ qua lỗi nếu file không tồn tại
+            catch (System.IO.FileNotFoundException)
+            {
+                // Nếu không tìm thấy file, hiển thị ảnh lỗi (hoặc để trống)
+                this.pbAvatar.Image = this.pbAvatar.ErrorImage;
+            }
             this.pbAvatar.Location = new System.Drawing.Point(10, 10);
             this.pbAvatar.Name = "pbAvatar";
             this.pbAvatar.Size = new System.Drawing.Size(50, 50);
@@ -79,10 +84,25 @@
             this.pnlStatusDot.Size = new System.Drawing.Size(10, 10);
             this.pnlStatusDot.TabIndex = 3;
             // 
+            // lblNewMessageBadge
+            // 
+            this.lblNewMessageBadge.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.lblNewMessageBadge.BackColor = System.Drawing.Color.Red;
+            this.lblNewMessageBadge.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblNewMessageBadge.ForeColor = System.Drawing.Color.White;
+            this.lblNewMessageBadge.Location = new System.Drawing.Point(240, 22);
+            this.lblNewMessageBadge.Name = "lblNewMessageBadge";
+            this.lblNewMessageBadge.Size = new System.Drawing.Size(25, 25);
+            this.lblNewMessageBadge.TabIndex = 4;
+            this.lblNewMessageBadge.Text = "N";
+            this.lblNewMessageBadge.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.lblNewMessageBadge.Visible = false;
+            // 
             // FriendListItem
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.BackColor = System.Drawing.Color.White;
+            this.Controls.Add(this.lblNewMessageBadge); // Thêm chấm đỏ
             this.Controls.Add(this.pnlStatusDot);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.lblFriendName);
@@ -103,5 +123,6 @@
         private System.Windows.Forms.Label lblFriendName;
         private System.Windows.Forms.Label lblStatus;
         private System.Windows.Forms.Panel pnlStatusDot;
+        private System.Windows.Forms.Label lblNewMessageBadge; // Khai báo biến
     }
 }

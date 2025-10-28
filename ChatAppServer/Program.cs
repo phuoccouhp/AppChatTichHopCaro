@@ -1,17 +1,19 @@
+﻿using System;
+using System.Threading.Tasks;
+
 namespace ChatAppServer
 {
-    internal static class Program
+    class Program
     {
-        /// <summary>
-        ///  The main entry point for the application.
-        /// </summary>
-        [STAThread]
-        static void Main()
+        static async Task Main(string[] args)
         {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
-            ApplicationConfiguration.Initialize();
-            Application.Run(new Form1());
+            // Chọn 1 port bất kỳ
+            int port = 9000;
+
+            Server server = new Server(port);
+
+            // Chạy server vĩnh viễn
+            await server.StartAsync();
         }
     }
 }
