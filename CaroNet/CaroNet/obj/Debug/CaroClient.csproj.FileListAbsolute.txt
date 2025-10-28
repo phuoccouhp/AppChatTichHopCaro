@@ -1,9 +1,0 @@
-C:\Users\Admin\source\repos\AppChatTichHopCaro\CaroNet\CaroNet\bin\Debug\CaroNet.exe.config
-C:\Users\Admin\source\repos\AppChatTichHopCaro\CaroNet\CaroNet\bin\Debug\CaroNet.exe
-C:\Users\Admin\source\repos\AppChatTichHopCaro\CaroNet\CaroNet\bin\Debug\CaroNet.pdb
-C:\Users\Admin\source\repos\AppChatTichHopCaro\CaroNet\CaroNet\obj\Debug\CaroClient.csproj.AssemblyReference.cache
-C:\Users\Admin\source\repos\AppChatTichHopCaro\CaroNet\CaroNet\obj\Debug\CaroNet.Properties.Resources.resources
-C:\Users\Admin\source\repos\AppChatTichHopCaro\CaroNet\CaroNet\obj\Debug\CaroClient.csproj.GenerateResource.cache
-C:\Users\Admin\source\repos\AppChatTichHopCaro\CaroNet\CaroNet\obj\Debug\CaroClient.csproj.CoreCompileInputs.cache
-C:\Users\Admin\source\repos\AppChatTichHopCaro\CaroNet\CaroNet\obj\Debug\CaroNet.exe
-C:\Users\Admin\source\repos\AppChatTichHopCaro\CaroNet\CaroNet\obj\Debug\CaroNet.pdb
