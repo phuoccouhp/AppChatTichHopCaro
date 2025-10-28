@@ -1,7 +1,0 @@
-C:\Visual Studio\Lap trinh mang can ban\Do An\CaroNet\CaroServer\bin\Debug\CaroServer.exe.config
-C:\Visual Studio\Lap trinh mang can ban\Do An\CaroNet\CaroServer\bin\Debug\CaroServer.exe
-C:\Visual Studio\Lap trinh mang can ban\Do An\CaroNet\CaroServer\bin\Debug\CaroServer.pdb
-C:\Visual Studio\Lap trinh mang can ban\Do An\CaroNet\CaroServer\obj\Debug\CaroServer.csproj.AssemblyReference.cache
-C:\Visual Studio\Lap trinh mang can ban\Do An\CaroNet\CaroServer\obj\Debug\CaroServer.csproj.CoreCompileInputs.cache
-C:\Visual Studio\Lap trinh mang can ban\Do An\CaroNet\CaroServer\obj\Debug\CaroServer.exe
-C:\Visual Studio\Lap trinh mang can ban\Do An\CaroNet\CaroServer\obj\Debug\CaroServer.pdb
