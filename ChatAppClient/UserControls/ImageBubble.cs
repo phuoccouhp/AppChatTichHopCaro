@@ -13,7 +13,6 @@ namespace ChatAppClient.UserControls
         public ImageBubble()
         {
             InitializeComponent();
-            // TODO: Gán sự kiện Click cho pbImage để mở ảnh to hơn
         }
 
         public void SetMessage(byte[] imageData, MessageType type, int parentUsableWidth)
@@ -22,11 +21,9 @@ namespace ChatAppClient.UserControls
 
             try
             {
-                // Chuyển byte[] thành Image
                 using (var ms = new MemoryStream(imageData))
                 {
                     Image img = Image.FromStream(ms);
-                    // Giới hạn kích thước ảnh
                     int maxWidth = 300;
                     int newHeight = (int)((double)img.Height / img.Width * maxWidth);
 
@@ -36,19 +33,15 @@ namespace ChatAppClient.UserControls
             }
             catch (Exception ex)
             {
-                // Xử lý nếu file ảnh lỗi
                 pbImage.Image = pbImage.ErrorImage;
             }
 
-            // Kích thước control bằng kích thước ảnh + padding
             this.Size = new Size(pbImage.Width + 6, pbImage.Height + 6);
             _bubbleWidth = this.Width;
 
-            // Cập nhật căn lề
             UpdateMargins(parentUsableWidth);
         }
 
-        // Copy hàm này từ ChatMessageBubble
         public void UpdateMargins(int parentUsableWidth)
         {
             if (_bubbleWidth == 0) _bubbleWidth = this.Width;
@@ -57,12 +50,10 @@ namespace ChatAppClient.UserControls
 
             if (_type == MessageType.Outgoing)
             {
-                // Căn Phải
                 this.Margin = new Padding(remainingSpace, 5, 0, 5);
             }
             else
             {
-                // Căn Trái
                 this.Margin = new Padding(0, 5, remainingSpace, 5);
             }
         }

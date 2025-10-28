@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ChatApp.Shared // <-- Đảm bảo đúng namespace
+namespace ChatApp.Shared 
 {
     [Serializable]
     public class FilePacket
@@ -9,8 +9,6 @@ namespace ChatApp.Shared // <-- Đảm bảo đúng namespace
         public string ReceiverID { get; set; }
         public string FileName { get; set; }
         public byte[] FileData { get; set; }
-
-        // Cờ để phân biệt ảnh và file
         public bool IsImage { get; set; }
     }
 }

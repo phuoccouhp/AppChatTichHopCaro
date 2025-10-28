@@ -1,6 +1,5 @@
 ﻿using System;
 
-// Đặt namespace phù hợp, ví dụ:
 namespace ChatAppClient
 {
     public static class Logger
@@ -11,7 +10,7 @@ namespace ChatAppClient
         public static void Success(string message) => Log(message, ConsoleColor.Green);
         public static void Warning(string message) => Log(message, ConsoleColor.Yellow);
         public static void Error(string message, Exception ex = null) =>
-            Log($"LỖI: {message}" + (ex != null ? $"\n{ex.ToString()}" : ""), ConsoleColor.Red); // Log cả StackTrace
+            Log($"LỖI: {message}" + (ex != null ? $"\n{ex.ToString()}" : ""), ConsoleColor.Red); 
 
         private static void Log(string message, ConsoleColor color)
         {

@@ -6,7 +6,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
-// **ĐÚNG NAMESPACE CHO SERVER**
 namespace ChatAppServer
 {
     public class Server
@@ -27,7 +26,6 @@ namespace ChatAppServer
             try
             {
                 _listener.Start();
-                // Logger.Success($"Server đang lắng nghe kết nối tại port {_port}..."); // Dòng này nên ở Program.cs
             }
             catch (Exception ex)
             {
@@ -40,7 +38,6 @@ namespace ChatAppServer
             {
                 try
                 {
-                    // Logger.Info("Đang đợi client kết nối..."); // Có thể bỏ log này
                     TcpClient clientSocket = await _listener.AcceptTcpClientAsync();
                     Logger.Info($"[Connect] Client mới từ {(clientSocket.Client.RemoteEndPoint as IPEndPoint)?.Address} đã kết nối.");
 
@@ -79,7 +76,7 @@ namespace ChatAppServer
         {
             lock (_clients)
             {
-                foreach (var client in _clients.Values.ToList()) // ToList() để an toàn
+                foreach (var client in _clients.Values.ToList())
                 {
                     if (client.UserID != excludeUserID) client.SendPacket(packet);
                 }
@@ -122,7 +119,7 @@ namespace ChatAppServer
             if (player1_Handler == null || player2_Handler == null)
             {
                 Logger.Error("[Error] Không thể bắt đầu game, 1 trong 2 người đã offline.");
-                lock (_gameSessions) _gameSessions.Remove(gameID); // Xóa game nếu lỗi
+                lock (_gameSessions) _gameSessions.Remove(gameID); 
                 return;
             }
 
@@ -143,7 +140,6 @@ namespace ChatAppServer
             }
             else Logger.Warning($"[GameMove] Nhận được nước đi cho GameID không tồn tại: {move.GameID}");
         }
-        // TODO: Hàm dọn dẹp game
         #endregion
     }
 }

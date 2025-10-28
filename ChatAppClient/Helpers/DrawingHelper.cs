@@ -4,7 +4,6 @@ using System.Windows.Forms;
 
 namespace ChatAppClient.Helpers
 {
-    // Phải là 'public static class'
     public static class DrawingHelper
     {
         public static GraphicsPath CreateRoundedRectPath(Rectangle rect, int radius)

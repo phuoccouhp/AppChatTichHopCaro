@@ -9,7 +9,7 @@ namespace ChatApp.Shared
         public string Message { get; set; }
         public string UserID { get; set; }
         public string UserName { get; set; }
-        public List<UserStatus> OnlineUsers { get; set; } // Danh sách bạn bè đang online
+        public List<UserStatus> OnlineUsers { get; set; } 
     }
 
     [Serializable]

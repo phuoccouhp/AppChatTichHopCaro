@@ -13,7 +13,6 @@
             Player2_ID = player2;
         }
 
-        // Lấy ID của đối thủ
         public string GetOpponent(string playerID)
         {
             if (playerID == Player1_ID)
