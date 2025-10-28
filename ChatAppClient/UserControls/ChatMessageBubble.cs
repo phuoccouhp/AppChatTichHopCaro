@@ -14,7 +14,6 @@ namespace ChatAppClient.UserControls
         private MessageType _type = MessageType.Incoming;
         private int _borderRadius = 15;
 
-        // Biến để lưu kích thước thật của bubble
         private int _bubbleWidth = 0;
 
         public ChatMessageBubble()
@@ -23,7 +22,6 @@ namespace ChatAppClient.UserControls
             this.DoubleBuffered = true;
         }
 
-        // Sửa hàm SetMessage để nhận chiều rộng của Panel cha
         public void SetMessage(string message, MessageType type, int parentUsableWidth)
         {
             _type = type;
@@ -40,40 +38,33 @@ namespace ChatAppClient.UserControls
                 lblMessage.ForeColor = AppColors.TextPrimary;
             }
 
-            // Tính toán lại kích thước control dựa trên Label
             this.Size = new Size(lblMessage.Width + 20, lblMessage.Height + 20);
-            _bubbleWidth = this.Width; // Lưu lại kích thước thật
+            _bubbleWidth = this.Width; 
 
-            // Gọi hàm căn lề mới
             UpdateMargins(parentUsableWidth);
 
             this.Invalidate();
         }
 
-        // Hàm mới: Cập nhật lề (Margin) để căn trái/phải
         public void UpdateMargins(int parentUsableWidth)
         {
             if (_bubbleWidth == 0)
                 _bubbleWidth = this.Width;
 
-            // Tính toán không gian còn trống
             int remainingSpace = parentUsableWidth - _bubbleWidth;
             if (remainingSpace < 0)
                 remainingSpace = 0;
 
             if (_type == MessageType.Outgoing)
             {
-                // Căn Phải: Đặt lề trái = khoảng trống
                 this.Margin = new Padding(remainingSpace, 5, 0, 5);
             }
             else
             {
-                // Căn Trái: Đặt lề phải = khoảng trống
                 this.Margin = new Padding(0, 5, remainingSpace, 5);
             }
         }
 
-        // Ghi đè OnPaint (Giữ nguyên như cũ)
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);

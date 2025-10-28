@@ -1,5 +1,5 @@
 ﻿using ChatApp.Shared;
-using ChatAppClient.Forms; // Thường không cần using này ở đây
+using ChatAppClient.Forms;
 using ChatAppClient.Helpers;
 using ChatAppClient.UserControls;
 using System;
@@ -27,7 +27,7 @@ namespace ChatAppClient.UserControls
 
         private void ChatViewControl_Load(object sender, EventArgs e)
         {
-            _myId = NetworkManager.Instance.UserID; // Lấy ID
+            _myId = NetworkManager.Instance.UserID; 
 
             // Gán sự kiện
             btnSend.Click += BtnSend_Click;
@@ -39,8 +39,6 @@ namespace ChatAppClient.UserControls
 
             LoadEmojis();
 
-            // Tin nhắn mẫu (có thể xóa)
-            // AddMessage($"Bắt đầu trò chuyện với {_friendName}", MessageType.Incoming);
         }
 
         #region == GỬI TIN (TEXT, FILE, GAME) ==
@@ -148,22 +146,19 @@ namespace ChatAppClient.UserControls
 
         #region == UI & TIỆN ÍCH ==
 
-        // Hàm được gọi từ frmHome khi bị từ chối game
         public void HandleGameInviteDeclined()
         {
             if (this.InvokeRequired) { this.Invoke(new Action(HandleGameInviteDeclined)); return; }
             MessageBox.Show($"{_friendName} đã từ chối lời mời.", "Tiếc quá!");
-            ResetGameButtonInternal(); // Gọi hàm nội bộ
+            ResetGameButtonInternal(); 
         }
 
-        // Hàm được gọi từ frmHome khi game bắt đầu (chỉ reset nút)
         public void ResetGameButton()
         {
             if (this.InvokeRequired) { this.Invoke(new Action(ResetGameButton)); return; }
-            ResetGameButtonInternal(); // Gọi hàm nội bộ
+            ResetGameButtonInternal();
         }
 
-        // Hàm nội bộ để reset nút game (tránh lặp code)
         private void ResetGameButtonInternal()
         {
             btnStartGame.Enabled = true;
@@ -173,12 +168,12 @@ namespace ChatAppClient.UserControls
         private int GetUsableWidth()
         {
             int width = flpMessages.ClientSize.Width - (flpMessages.Padding.Left + flpMessages.Padding.Right);
-            // Trừ thêm khoảng cách cho thanh cuộn nếu có
+           
             if (flpMessages.VerticalScroll.Visible)
             {
                 width -= SystemInformation.VerticalScrollBarWidth;
             }
-            return (width > 0) ? width : this.Width; // Đảm bảo không âm
+            return (width > 0) ? width : this.Width;
         }
 
         private void ChatViewControl_Resize(object sender, EventArgs e)
@@ -196,11 +191,8 @@ namespace ChatAppClient.UserControls
 
         private void ScrollToBottom(Control control)
         {
-            // Sử dụng BeginInvoke để đảm bảo việc cuộn xảy ra sau khi control được vẽ xong
             this.BeginInvoke((MethodInvoker)delegate {
                 flpMessages.ScrollControlIntoView(control);
-                // Có thể cần cuộn thêm một chút để đảm bảo thấy rõ bubble cuối cùng
-                // flpMessages.AutoScrollPosition = new Point(0, flpMessages.VerticalScroll.Maximum);
             });
         }
 
@@ -223,7 +215,7 @@ namespace ChatAppClient.UserControls
         }
         private void EmojiButton_Click(object sender, EventArgs e)
         {
-            txtMessage.AppendText(((Button)sender).Text); // Dùng AppendText tốt hơn
+            txtMessage.AppendText(((Button)sender).Text); 
             pnlEmojiPicker.Visible = false;
             txtMessage.Focus();
         }

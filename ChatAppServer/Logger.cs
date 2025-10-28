@@ -2,10 +2,8 @@
 
 namespace ChatAppServer
 {
-    // Lớp tĩnh để ghi log có màu
     public static class Logger
     {
-        // Khóa để tránh các luồng ghi đè màu của nhau
         private static readonly object _lock = new object();
 
         public static void Info(string message)
@@ -15,12 +13,12 @@ namespace ChatAppServer
 
         public static void Success(string message)
         {
-            Log(message, ConsoleColor.Green); // Màu xanh lá
+            Log(message, ConsoleColor.Green);
         }
 
         public static void Warning(string message)
         {
-            Log(message, ConsoleColor.Yellow); // Màu vàng
+            Log(message, ConsoleColor.Yellow); 
         }
 
         public static void Error(string message, Exception ex = null)
@@ -35,7 +33,7 @@ namespace ChatAppServer
             {
                 Console.ForegroundColor = color;
                 Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {message}");
-                Console.ResetColor(); // Trả lại màu mặc định
+                Console.ResetColor();
             }
         }
     }

@@ -15,7 +15,6 @@ namespace ChatAppClient
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // Bắt đầu ứng dụng với Form Đăng nhập
             Application.Run(new frmLogin());
         }
     }

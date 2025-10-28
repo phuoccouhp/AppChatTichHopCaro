@@ -11,7 +11,6 @@ namespace ChatAppClient.UserControls
         private MessageType _type;
         private int _bubbleWidth = 0;
 
-        // Biến để lưu dữ liệu file
         private byte[] _fileData;
         private string _fileName;
 
@@ -25,32 +24,26 @@ namespace ChatAppClient.UserControls
         {
             _type = type;
             _fileName = fileName;
-            _fileData = fileData; // Lưu lại
+            _fileData = fileData; 
 
             lblFileName.Text = fileName;
 
-            // Cập nhật màu nền dựa trên người gửi/nhận
             if (type == MessageType.Outgoing)
             {
-                pnlContainer.BackColor = AppColors.Primary; // Màu xanh
+                pnlContainer.BackColor = AppColors.Primary; 
                 lblFileName.ForeColor = Color.White;
             }
             else
             {
-                pnlContainer.BackColor = AppColors.LightGray; // Màu xám
+                pnlContainer.BackColor = AppColors.LightGray; 
                 lblFileName.ForeColor = Color.Black;
             }
 
-            // --- ĐÃ XÓA KHỐI LỖI ---
-            // Không cần làm gì ở đây cả,
-            // vì pbIcon.Image đã được gán icon Shield
-            // trong file .designer.cs
 
             _bubbleWidth = pnlContainer.Width;
             UpdateMargins(parentUsableWidth);
         }
 
-        // Sự kiện khi nhấn nút Tải về
         private void BtnDownload_Click(object sender, EventArgs e)
         {
             if (_fileData == null)
@@ -60,7 +53,7 @@ namespace ChatAppClient.UserControls
             }
 
             SaveFileDialog sfd = new SaveFileDialog();
-            sfd.FileName = _fileName; // Tên file mặc định
+            sfd.FileName = _fileName; 
             sfd.Title = "Lưu file";
             sfd.Filter = "All Files|*.*";
 
@@ -77,8 +70,6 @@ namespace ChatAppClient.UserControls
                 }
             }
         }
-
-        // Copy hàm này từ ChatMessageBubble
         public void UpdateMargins(int parentUsableWidth)
         {
             if (_bubbleWidth == 0) _bubbleWidth = this.Width;
@@ -87,12 +78,10 @@ namespace ChatAppClient.UserControls
 
             if (_type == MessageType.Outgoing)
             {
-                // Căn Phải
                 this.Margin = new Padding(remainingSpace, 5, 0, 5);
             }
             else
             {
-                // Căn Trái
                 this.Margin = new Padding(0, 5, remainingSpace, 5);
             }
         }

@@ -2,7 +2,6 @@
 
 namespace ChatAppClient.Helpers
 {
-    // Phải là 'public static class'
     public static class AppColors
     {
         public static Color Primary = Color.FromArgb(0, 145, 255);

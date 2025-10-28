@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ChatApp.Shared // <-- Đảm bảo đúng namespace
+namespace ChatApp.Shared
 {
     [Serializable]
     public class TextPacket

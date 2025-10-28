@@ -2,11 +2,10 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using ChatAppClient.Helpers; // Phải using Helpers
+using ChatAppClient.Helpers; 
 
 namespace ChatAppClient.CustomControls
 {
-    // Phải kế thừa từ 'Button', không phải 'UserControl'
     public class RoundedButton : Button
     {
         private int _borderRadius = 20;
@@ -22,7 +21,7 @@ namespace ChatAppClient.CustomControls
         public Color ButtonColor
         {
             get { return _buttonColor; }
-            set { _buttonColor = value; _originalColor = value; this.Invalidate(); } // Lưu màu gốc
+            set { _buttonColor = value; _originalColor = value; this.Invalidate(); } 
         }
 
         public Color TextColor
@@ -31,7 +30,7 @@ namespace ChatAppClient.CustomControls
             set { _textColor = value; this.Invalidate(); }
         }
 
-        private Color _originalColor; // Biến lưu màu gốc cho sự kiện hover
+        private Color _originalColor; 
 
         public RoundedButton()
         {
@@ -42,17 +41,15 @@ namespace ChatAppClient.CustomControls
             this.BackColor = Color.Transparent;
             this.ForeColor = Color.Transparent;
             this.DoubleBuffered = true;
-            _originalColor = _buttonColor; // Lưu màu gốc
+            _originalColor = _buttonColor; 
 
             this.MouseEnter += (s, e) =>
             {
-                // Làm màu tối đi khi hover
                 this._buttonColor = ControlPaint.Dark(_originalColor, 0.1f);
                 this.Invalidate();
             };
             this.MouseLeave += (s, e) =>
             {
-                // Trả lại màu gốc
                 this._buttonColor = _originalColor;
                 this.Invalidate();
             };
