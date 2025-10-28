@@ -1,19 +1,20 @@
 ﻿using System;
 using System.Threading.Tasks;
 
+// **ĐÚNG NAMESPACE CHO SERVER**
 namespace ChatAppServer
 {
     class Program
     {
         static async Task Main(string[] args)
         {
-            // Chọn 1 port bất kỳ
             int port = 9000;
-
             Server server = new Server(port);
 
-            // Chạy server vĩnh viễn
-            await server.StartAsync();
+            // Log khi khởi động
+            Logger.Success($"Server đã khởi động và lắng nghe tại port {port}.");
+
+            await server.StartAsync(); // Chạy Server
         }
     }
 }

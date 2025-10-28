@@ -1,5 +1,5 @@
 ﻿using ChatApp.Shared; // <-- Phải có
-using ChatAppClient.UserControls;
+using ChatAppClient.UserControls; // <-- Phải có
 using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
@@ -16,89 +16,70 @@ namespace ChatAppClient.Forms
         // Danh sách bạn bè nhận được khi login
         private List<UserStatus> _initialUsers;
 
-        // Control chat đang hiển thị (FIX LỖI CS0103)
+        // Control chat đang hiển thị
         private ChatViewControl _currentChatControl = null;
 
-        // Hàm tạo (Constructor) - Đã sửa
+        // Hàm tạo (Constructor)
         public frmHome(List<UserStatus> initialUsers)
         {
             InitializeComponent();
             openChatControls = new Dictionary<string, ChatViewControl>();
             openGameForms = new Dictionary<string, frmCaroGame>();
-            _initialUsers = initialUsers; // Lưu lại danh sách
+            _initialUsers = initialUsers;
         }
 
         // Khi Form Home được tải
         private void frmHome_Load(object sender, EventArgs e)
         {
-            // 1. Đăng ký Form này với NetworkManager
-            NetworkManager.Instance.RegisterHomeForm(this);
-
-            // 2. Lấy tên user từ NetworkManager (đã lưu khi login)
-            lblWelcome.Text = $"Chào mừng, {NetworkManager.Instance.UserName}!";
-
-            // 3. Tải danh sách bạn bè ban đầu (nhận từ Server)
-            LoadInitialFriendList();
-
-            // 4. Ẩn/Hiện text chào mừng
-            lblMainWelcome.Visible = true;
+            NetworkManager.Instance.RegisterHomeForm(this); // Đăng ký
+            lblWelcome.Text = $"Chào mừng, {NetworkManager.Instance.UserName}!"; // Cập nhật tên
+            LoadInitialFriendList(); // Tải bạn bè
+            lblMainWelcome.Visible = true; // Hiện lời chào
         }
 
         // Tải danh sách bạn bè ban đầu
         private void LoadInitialFriendList()
         {
-            if (_initialUsers == null) return;
-
-            foreach (var user in _initialUsers)
+            flpFriendsList.SuspendLayout(); // Tạm dừng layout để thêm nhanh hơn
+            if (_initialUsers != null)
             {
-                // Hiển thị tất cả user Server gửi về (đang online)
-                AddFriendToList(user.UserID, user.UserName,
-                    user.IsOnline ? "Online" : "Offline", user.IsOnline);
+                foreach (var user in _initialUsers)
+                {
+                    AddFriendToList(user.UserID, user.UserName, user.IsOnline ? "Online" : "Offline", user.IsOnline);
+                }
             }
+            flpFriendsList.ResumeLayout(); // Bật lại layout
         }
 
-        // Khi click vào một người bạn
         // Khi click vào một người bạn
         private void FriendItem_Click(FriendListItem item)
         {
             string friendId = item.FriendID;
             string friendName = item.FriendName;
 
-            // TẮT CHẤM ĐỎ (NẾU CÓ)
-            item.SetNewMessageAlert(false);
+            item.SetNewMessageAlert(false); // TẮT CHẤM ĐỎ
 
-            lblMainWelcome.Visible = false;
+            lblMainWelcome.Visible = false; // Ẩn lời chào
 
-            if (_currentChatControl != null && _currentChatControl.Name == friendId)
-            {
-                return;
-            }
+            // Nếu đang xem chat này rồi thì không làm gì
+            if (_currentChatControl != null && _currentChatControl.Name == friendId) return;
 
-            if (_currentChatControl != null)
-            {
-                _currentChatControl.Visible = false;
-            }
+            // Ẩn chat cũ (nếu có)
+            if (_currentChatControl != null) _currentChatControl.Visible = false;
 
             ChatViewControl chatControl;
-            if (openChatControls.ContainsKey(friendId))
+            // Tìm trong cache hoặc tạo mới
+            if (!openChatControls.TryGetValue(friendId, out chatControl))
             {
-                // Lấy từ cache
-                chatControl = openChatControls[friendId];
-                chatControl.Visible = true;
-            }
-            else
-            {
-                // Tạo mới
-                chatControl = new ChatViewControl(friendId, friendName, this);
-                chatControl.Name = friendId;
-                chatControl.Dock = DockStyle.Fill;
-
+                chatControl = new ChatViewControl(friendId, friendName, this) { Name = friendId, Dock = DockStyle.Fill };
                 openChatControls.Add(friendId, chatControl);
                 pnlMain.Controls.Add(chatControl);
             }
 
-            _currentChatControl = chatControl;
+            // Hiển thị chat mới
+            chatControl.Visible = true;
             chatControl.BringToFront();
+            _currentChatControl = chatControl;
         }
 
         // Hàm thêm user vào danh sách (Không đổi)
@@ -107,10 +88,12 @@ namespace ChatAppClient.Forms
             FriendListItem item = new FriendListItem();
             item.SetData(id, name, status, isOnline);
 
-            item.Click += (sender, e) => FriendItem_Click(item);
+            // Gán sự kiện click cho cả item và các control con của nó
+            Action<object, EventArgs> clickAction = (sender, e) => FriendItem_Click(item);
+            item.Click += new EventHandler(clickAction);
             foreach (Control control in item.Controls)
             {
-                control.Click += (sender, e) => FriendItem_Click(item);
+                control.Click += new EventHandler(clickAction);
             }
 
             flpFriendsList.Controls.Add(item);
@@ -125,14 +108,10 @@ namespace ChatAppClient.Forms
 
         #region == BỘ ĐIỀU PHỐI GÓI TIN (GỌI TỪ NETWORKMANAGER) ==
 
-        // FIX LỖI "CLIENT 1 KHÔNG THẤY CLIENT 2"
+        // Xử lý khi có ai đó Online/Offline
         public void HandleUserStatusUpdate(UserStatusPacket packet)
         {
-            if (this.InvokeRequired)
-            {
-                this.Invoke(new Action(() => HandleUserStatusUpdate(packet)));
-                return;
-            }
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleUserStatusUpdate(packet))); return; }
 
             FriendListItem existingItem = null;
             foreach (Control ctrl in flpFriendsList.Controls)
@@ -144,195 +123,145 @@ namespace ChatAppClient.Forms
                 }
             }
 
-            if (packet.IsOnline) // Nếu user vừa ONLINE
+            if (packet.IsOnline)
             {
-                if (existingItem == null)
-                {
-                    // User mới online (Client 2) -> Thêm vào danh sách
-                    AddFriendToList(packet.UserID, packet.UserName, "Online", true);
-                }
-                else
-                {
-                    // User cũ online trở lại
-                    existingItem.SetData(packet.UserID, packet.UserName, "Online", true);
-                }
+                if (existingItem == null) AddFriendToList(packet.UserID, packet.UserName, "Online", true);
+                else existingItem.SetData(packet.UserID, packet.UserName, "Online", true);
             }
-            else // Nếu user vừa OFFLINE
+            else
             {
-                if (existingItem != null)
-                {
-                    existingItem.SetData(packet.UserID, packet.UserName, "Offline", false);
-                }
+                if (existingItem != null) existingItem.SetData(packet.UserID, packet.UserName, "Offline", false);
             }
         }
 
-        // NHẬN TIN NHẮN TEXT
-        // NHẬN TIN NHẮN TEXT
+        // Xử lý khi nhận tin nhắn TEXT
         public void HandleIncomingTextMessage(TextPacket packet)
         {
-            if (this.InvokeRequired)
-            {
-                this.Invoke(new Action(() => HandleIncomingTextMessage(packet)));
-                return;
-            }
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleIncomingTextMessage(packet))); return; }
 
             ChatViewControl chatControl;
-
-            // 1. Kiểm tra xem control chat đã được tạo (cache) chưa
-            if (openChatControls.ContainsKey(packet.SenderID))
+            // Tìm hoặc Tạo control chat
+            if (!openChatControls.TryGetValue(packet.SenderID, out chatControl))
             {
-                chatControl = openChatControls[packet.SenderID];
-            }
-            else // 2. Nếu CHƯA, hãy TẠO MỚI nó (và ẩn đi)
-            {
-                // Lấy Tên của người gửi từ danh sách FriendList
                 string senderName = packet.SenderID; // Tên mặc định
+                FriendListItem friendItem = null;
                 foreach (Control ctrl in flpFriendsList.Controls)
                 {
                     if (ctrl is FriendListItem item && item.FriendID == packet.SenderID)
                     {
                         senderName = item.FriendName;
+                        friendItem = item; // Lưu lại để bật chấm đỏ
                         break;
                     }
                 }
-
-                // Tạo control mới (giống hệt như khi click)
-                chatControl = new ChatViewControl(packet.SenderID, senderName, this);
-                chatControl.Name = packet.SenderID;
-                chatControl.Dock = DockStyle.Fill;
-                chatControl.Visible = false; // QUAN TRỌNG: Ẩn nó đi
-
-                openChatControls.Add(packet.SenderID, chatControl); // Thêm vào cache
-                pnlMain.Controls.Add(chatControl); // Thêm vào panel chính
+                chatControl = new ChatViewControl(packet.SenderID, senderName, this) { Name = packet.SenderID, Dock = DockStyle.Fill, Visible = false };
+                openChatControls.Add(packet.SenderID, chatControl);
+                pnlMain.Controls.Add(chatControl);
             }
 
-            // 3. Gửi tin nhắn vào control (dù đang ẩn hay hiện)
+            // Thêm tin nhắn vào control (dù ẩn hay hiện)
             chatControl.ReceiveMessage(packet.MessageContent);
 
-            // 4. Bật chấm đỏ (nếu người dùng đang không xem chat này)
+            // Bật chấm đỏ nếu đang không xem
             if (_currentChatControl == null || _currentChatControl.Name != packet.SenderID)
-                
-    {
-                // Tìm FriendListItem và bật chấm đỏ
-                foreach (Control ctrl in flpFriendsList.Controls)
+            {
+                // Tìm lại FriendListItem nếu cần
+                FriendListItem friendItemToAlert = null;
+                if (chatControl.IsHandleCreated) // Kiểm tra xem control đã được tạo chưa
                 {
-                    if (ctrl is FriendListItem item && item.FriendID == packet.SenderID)
+                    foreach (Control ctrl in flpFriendsList.Controls)
                     {
-                        item.SetNewMessageAlert(true);
-                        break;
+                        if (ctrl is FriendListItem item && item.FriendID == packet.SenderID)
+                        {
+                            friendItemToAlert = item;
+                            break;
+                        }
                     }
                 }
+                friendItemToAlert?.SetNewMessageAlert(true); // Bật chấm đỏ
             }
         }
 
-        // NHẬN TIN NHẮN FILE/ẢNH
+        // Xử lý khi nhận tin nhắn FILE/ẢNH
         public void HandleIncomingFileMessage(FilePacket packet)
         {
-            if (this.InvokeRequired)
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleIncomingFileMessage(packet))); return; }
+
+            ChatViewControl chatControl;
+            // Tìm hoặc Tạo control chat (Tương tự như Text)
+            if (!openChatControls.TryGetValue(packet.SenderID, out chatControl))
             {
-                this.Invoke(new Action(() => HandleIncomingFileMessage(packet)));
-                return;
+                string senderName = packet.SenderID;
+                FriendListItem friendItem = null;
+                foreach (Control ctrl in flpFriendsList.Controls) { if (ctrl is FriendListItem item && item.FriendID == packet.SenderID) { senderName = item.FriendName; friendItem = item; break; } }
+                chatControl = new ChatViewControl(packet.SenderID, senderName, this) { Name = packet.SenderID, Dock = DockStyle.Fill, Visible = false };
+                openChatControls.Add(packet.SenderID, chatControl); pnlMain.Controls.Add(chatControl);
             }
 
-            if (openChatControls.ContainsKey(packet.SenderID))
+            // Gửi file vào control
+            chatControl.ReceiveFileMessage(packet, MessageType.Incoming);
+
+            // Bật chấm đỏ nếu cần
+            if (_currentChatControl == null || _currentChatControl.Name != packet.SenderID)
             {
-                var chatControl = openChatControls[packet.SenderID];
-                chatControl.ReceiveFileMessage(packet, MessageType.Incoming);
+                FriendListItem friendItemToAlert = null;
+                if (chatControl.IsHandleCreated) { foreach (Control ctrl in flpFriendsList.Controls) { if (ctrl is FriendListItem item && item.FriendID == packet.SenderID) { friendItemToAlert = item; break; } } }
+                friendItemToAlert?.SetNewMessageAlert(true);
             }
         }
 
-        // NHẬN LỜI MỜI GAME
+        // Xử lý khi nhận lời mời GAME
         public void HandleIncomingGameInvite(GameInvitePacket invite)
         {
-            if (this.InvokeRequired)
-            {
-                this.Invoke(new Action(() => HandleIncomingGameInvite(invite)));
-                return;
-            }
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleIncomingGameInvite(invite))); return; }
 
-            DialogResult result = MessageBox.Show(
-                $"{invite.SenderName} muốn thách đấu Cờ Caro với bạn. Bạn có đồng ý?",
-                "Lời Mời Chơi Game",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
-
+            DialogResult result = MessageBox.Show($"{invite.SenderName} muốn thách đấu Cờ Caro. Đồng ý?", "Lời Mời Chơi Game", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             bool accepted = (result == DialogResult.Yes);
-
-            var response = new GameResponsePacket
-            {
-                SenderID = NetworkManager.Instance.UserID,
-                ReceiverID = invite.SenderID,
-                Accepted = accepted
-            };
-
-            // GỬI PHẢN HỒI LẠI
-            NetworkManager.Instance.SendPacket(response);
+            var response = new GameResponsePacket { SenderID = NetworkManager.Instance.UserID, ReceiverID = invite.SenderID, Accepted = accepted };
+            NetworkManager.Instance.SendPacket(response); // Gửi phản hồi
         }
 
-        // NHẬN PHẢN HỒI LỜI MỜI (BỊ TỪ CHỐI)
+        // Xử lý khi nhận phản hồi lời mời GAME (Bị từ chối)
         public void HandleGameResponse(GameResponsePacket packet)
         {
-            if (this.InvokeRequired)
-            {
-                this.Invoke(new Action(() => HandleGameResponse(packet)));
-                return;
-            }
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleGameResponse(packet))); return; }
 
             if (!packet.Accepted)
             {
-                // Tìm control chat của người đã từ chối (SenderID)
-                if (openChatControls.ContainsKey(packet.SenderID))
+                // Tìm control chat của người từ chối (SenderID)
+                if (openChatControls.TryGetValue(packet.SenderID, out var chatControl))
                 {
-                    var chatControl = openChatControls[packet.SenderID];
-                    // Gọi hàm kích hoạt lại nút 🎲
-                    chatControl.HandleGameInviteDeclined();
+                    chatControl.HandleGameInviteDeclined(); // Gọi hàm của control đó
                 }
             }
         }
 
-        // NHẬN LỆNH BẮT ĐẦU GAME (TỪ SERVER)
+        // Xử lý khi nhận lệnh BẮT ĐẦU GAME
         public void HandleGameStart(GameStartPacket packet)
         {
-            if (this.InvokeRequired)
-            {
-                this.Invoke(new Action(() => HandleGameStart(packet)));
-                return;
-            }
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleGameStart(packet))); return; }
 
-            // Kích hoạt lại nút 🎲 trên control chat (nếu có)
-            if (openChatControls.ContainsKey(packet.OpponentID))
+            // Reset nút 🎲 trên control chat (nếu có)
+            if (openChatControls.TryGetValue(packet.OpponentID, out var chatControl))
             {
-                var chatControl = openChatControls[packet.OpponentID];
-                chatControl.HandleGameInviteDeclined(); // Dùng chung hàm này để bật lại nút 🎲
+                chatControl.ResetGameButton(); // *** ĐÃ SỬA ***
             }
 
             // Mở Form Game
-            frmCaroGame gameForm = new frmCaroGame(
-                packet.GameID,
-                packet.OpponentID,
-                packet.StartsFirst
-            );
-
-            openGameForms.Add(packet.GameID, gameForm);
-            gameForm.FormClosed += (s, e) => {
-                openGameForms.Remove(packet.GameID);
-            };
-
+            frmCaroGame gameForm = new frmCaroGame(packet.GameID, packet.OpponentID, packet.StartsFirst);
+            openGameForms.Add(packet.GameID, gameForm); // Quản lý form
+            gameForm.FormClosed += (s, e) => { openGameForms.Remove(packet.GameID); }; // Xóa khi đóng
             gameForm.Show();
         }
 
-        // NHẬN NƯỚC ĐI CỦA ĐỐI THỦ
+        // Xử lý khi nhận NƯỚC ĐI của đối thủ
         public void HandleGameMove(GameMovePacket packet)
         {
-            if (this.InvokeRequired)
-            {
-                this.Invoke(new Action(() => HandleGameMove(packet)));
-                return;
-            }
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleGameMove(packet))); return; }
 
-            if (openGameForms.ContainsKey(packet.GameID))
+            // Tìm form game đang mở và gửi nước đi vào
+            if (openGameForms.TryGetValue(packet.GameID, out var gameForm))
             {
-                var gameForm = openGameForms[packet.GameID];
                 gameForm.ReceiveOpponentMove(packet.Row, packet.Col);
             }
         }

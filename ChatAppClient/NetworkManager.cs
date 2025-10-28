@@ -1,202 +1,237 @@
-﻿#pragma warning disable SYSLIB0011 // Tắt cảnh báo BinaryFormatter (giống Server)
+﻿#pragma warning disable SYSLIB0011 // Tắt cảnh báo BinaryFormatter
 
 using ChatApp.Shared;
+using ChatAppClient.Helpers; // <-- THÊM USING LOGGER
 using System;
 using System.IO;
 using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading; // Thêm
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace ChatAppClient.Forms
 {
-    // Lớp này sẽ quản lý MỘT kết nối duy nhất đến Server
-    // Chúng ta dùng Singleton Pattern để truy cập nó từ mọi Form
     public class NetworkManager
     {
         #region Singleton
         private static NetworkManager _instance;
-        public static NetworkManager Instance
-        {
-            get
-            {
-                if (_instance == null)
-                    _instance = new NetworkManager();
-                return _instance;
-            }
-        }
+        public static NetworkManager Instance => _instance ??= new NetworkManager();
         #endregion
 
         private TcpClient _client;
         private NetworkStream _stream;
         private BinaryFormatter _formatter;
-
-        // Lưu lại Form Home để điều phối tin nhắn
         private frmHome _homeForm;
-
-        // Thông tin User (lưu lại sau khi login thành công)
         public string UserID { get; private set; }
         public string UserName { get; private set; }
-
-        // 1. THÊM: Biến này dùng để "đợi" kết quả Login
         private TaskCompletionSource<LoginResultPacket> _loginCompletionSource;
+        private CancellationTokenSource _listeningCts; // Để hủy luồng lắng nghe
 
         private NetworkManager()
         {
-            _client = new TcpClient();
             _formatter = new BinaryFormatter();
+            // Khởi tạo _client trong ConnectAsync để dễ retry
         }
 
-        // Đăng ký Form Home để nhận tin
-        public void RegisterHomeForm(frmHome homeForm)
-        {
-            _homeForm = homeForm;
-        }
+        public void RegisterHomeForm(frmHome homeForm) => _homeForm = homeForm;
 
-        // Bước 1: Kết nối và Bắt đầu Lắng nghe
         public async Task<bool> ConnectAsync(string ipAddress, int port)
         {
-            if (_client.Connected) return true;
+            // Trả về true nếu đã kết nối và stream hợp lệ
+            if (_client != null && _client.Connected && _stream != null) return true;
+
+            // Đảm bảo client cũ đã được dọn dẹp
+            DisconnectInternal(false); // Ngắt kết nối cũ nếu có (không thông báo)
 
             try
             {
-                Console.WriteLine("Client: Đang kết nối đến Server...");
-                await _client.ConnectAsync(ipAddress, port);
-                _stream = _client.GetStream();
+                _client = new TcpClient(); // Tạo client mới
+                Logger.Info($"Đang kết nối đến {ipAddress}:{port}...");
 
-                // Bắt đầu 1 luồng riêng để lắng nghe Server
-                _ = StartListeningAsync();
+                var connectTask = _client.ConnectAsync(ipAddress, port);
+                using var timeoutCts = new CancellationTokenSource(5000); // 5 giây timeout
 
-                Console.WriteLine("Client: Đã kết nối!");
-                return true;
+                // Chờ kết nối hoặc timeout
+                var completedTask = await Task.WhenAny(connectTask, Task.Delay(-1, timeoutCts.Token));
+
+                if (completedTask == connectTask)
+                {
+                    // Kết nối thành công (không timeout)
+                    await connectTask; // Đảm bảo không có lỗi ngầm khi kết nối
+
+                    // *** SỬA LỖI NullRef: Thêm try-catch khi lấy stream ***
+                    try
+                    {
+                        _stream = _client.GetStream();
+                        if (_stream == null) throw new IOException("NetworkStream trả về null.");
+                    }
+                    catch (Exception streamEx)
+                    {
+                        Logger.Error("Lỗi khi lấy NetworkStream", streamEx);
+                        DisconnectInternal(false); // Dọn dẹp
+                        return false;
+                    }
+                    // *** KẾT THÚC SỬA ***
+
+                    _listeningCts = new CancellationTokenSource(); // Tạo token mới để hủy
+                    _ = StartListeningAsync(_listeningCts.Token); // Bắt đầu lắng nghe
+                    Logger.Success("Đã kết nối!");
+                    return true;
+                }
+                else
+                {
+                    // Kết nối timeout
+                    Logger.Error("Kết nối thất bại (Timeout).");
+                    DisconnectInternal(false); // Dọn dẹp
+                    return false;
+                }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Client: Kết nối thất bại: {ex.Message}");
-                return false;
-            }
+            catch (SocketException sockEx) { Logger.Error($"Lỗi Socket (kiểm tra IP/Port/Firewall)", sockEx); DisconnectInternal(false); return false; }
+            catch (Exception ex) { Logger.Error($"Kết nối thất bại (Lỗi khác)", ex); DisconnectInternal(false); return false; }
         }
 
-        // Bước 2: Luồng Lắng nghe
-        private async Task StartListeningAsync()
+        private async Task StartListeningAsync(CancellationToken cancellationToken)
         {
+            Logger.Info("Bắt đầu lắng nghe Server...");
             try
             {
-                while (_client.Connected)
+                // Dùng vòng lặp an toàn hơn với CancellationToken
+                while (_client.Connected && _stream != null && !cancellationToken.IsCancellationRequested)
                 {
-                    // Đợi và nhận gói tin từ Server
-                    object receivedPacket = await Task.Run(() => _formatter.Deserialize(_stream));
-
-                    // Xử lý gói tin
+                    if (!_stream.DataAvailable) // Kiểm tra có dữ liệu không trước khi đọc
+                    {
+                        await Task.Delay(100, cancellationToken); // Đợi 100ms
+                        continue;
+                    }
+                    object receivedPacket = await Task.Run(() => _formatter.Deserialize(_stream), cancellationToken);
                     HandlePacket(receivedPacket);
                 }
             }
-            catch (Exception ex)
+            catch (OperationCanceledException) { Logger.Warning("Luồng lắng nghe đã bị hủy."); } // Bị hủy bởi Disconnect
+            catch (IOException ioEx) { Logger.Warning($"Lỗi I/O khi lắng nghe (mất kết nối?): {ioEx.Message}"); }
+            catch (SerializationException serEx) { Logger.Error("Lỗi Deserialize gói tin", serEx); }
+            catch (Exception ex) { Logger.Error("Lỗi không xác định khi lắng nghe", ex); }
+            finally
             {
-                Console.WriteLine($"Client: Mất kết nối Server: {ex.Message}");
-                MessageBox.Show("Mất kết nối đến máy chủ!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                Application.Exit(); // Thoát app nếu mất kết nối
+                Logger.Warning("Dừng lắng nghe.");
+                // Chỉ thoát nếu lỗi xảy ra khi HomeForm còn hiển thị (không phải do người dùng chủ động disconnect)
+                if (!cancellationToken.IsCancellationRequested && _homeForm != null && !_homeForm.IsDisposed)
+                {
+                    // Nên gọi hàm Disconnect để xử lý đồng bộ
+                    Disconnect(); // Thông báo lỗi và thoát
+                }
             }
         }
 
-        // 3. THÊM HÀM MỚI: (Để frmLogin gọi)
         public async Task<LoginResultPacket> LoginAsync(LoginPacket packet)
         {
-            // Tạo 1 "cầu nối" để đợi kết quả
-            _loginCompletionSource = new TaskCompletionSource<LoginResultPacket>();
+            if (!_client.Connected || _stream == null) throw new InvalidOperationException("Chưa kết nối đến Server.");
 
-            // Gửi gói tin đi
+            _loginCompletionSource = new TaskCompletionSource<LoginResultPacket>();
             SendPacket(packet);
 
-            // Đợi kết quả hoặc 10 giây (timeout)
-            var timeoutTask = Task.Delay(10000);
-            var resultTask = _loginCompletionSource.Task;
+            using var timeoutCts = new CancellationTokenSource(10000); // 10 giây timeout
+            var completedTask = await Task.WhenAny(_loginCompletionSource.Task, Task.Delay(-1, timeoutCts.Token));
 
-            if (await Task.WhenAny(resultTask, timeoutTask) == resultTask)
-            {
-                // Nhận được kết quả
-                return await resultTask;
-            }
-            else
-            {
-                // Hết giờ
-                throw new TimeoutException("Không nhận được phản hồi từ máy chủ.");
-            }
+            if (completedTask == _loginCompletionSource.Task) return await _loginCompletionSource.Task;
+            else throw new TimeoutException("Không nhận được phản hồi đăng nhập từ máy chủ.");
         }
 
-        // 4. THÊM HÀM MỚI: (Để lưu thông tin user)
         public void SetUserCredentials(string userId, string userName)
         {
             this.UserID = userId;
             this.UserName = userName;
         }
 
-
-        // 5. SỬA LẠI HÀM NÀY: (Bộ định tuyến - Router)
         private void HandlePacket(object packet)
         {
-            // Ưu tiên 1: Xử lý Login Result
             if (packet is LoginResultPacket pLogin)
             {
-                // Gửi kết quả về cho hàm LoginAsync đang "đợi"
                 _loginCompletionSource?.TrySetResult(pLogin);
-                return; // Xong, không làm gì nữa
-            }
-
-            // Nếu chưa login (chưa có _homeForm), thì bỏ qua các gói tin khác
-            if (_homeForm == null)
-            {
                 return;
             }
+            if (_homeForm == null || _homeForm.IsDisposed) return;
 
-            // Ưu tiên 2: Điều phối các gói tin khác về frmHome
-            // (Phải dùng Invoke để đảm bảo chạy trên luồng UI chính)
-            switch (packet)
+            // Dùng BeginInvoke để không chặn luồng lắng nghe
+            Action action = packet switch
             {
-                case UserStatusPacket p:
-                    _homeForm.Invoke(new Action(() => _homeForm.HandleUserStatusUpdate(p)));
-                    break;
-                case TextPacket p:
-                    _homeForm.Invoke(new Action(() => _homeForm.HandleIncomingTextMessage(p)));
-                    break;
-                case FilePacket p:
-                    _homeForm.Invoke(new Action(() => _homeForm.HandleIncomingFileMessage(p)));
-                    break;
-                case GameInvitePacket p:
-                    _homeForm.Invoke(new Action(() => _homeForm.HandleIncomingGameInvite(p)));
-                    break;
-                case GameResponsePacket p:
-                    _homeForm.Invoke(new Action(() => _homeForm.HandleGameResponse(p)));
-                    break;
-                case GameStartPacket p:
-                    _homeForm.Invoke(new Action(() => _homeForm.HandleGameStart(p)));
-                    break;
-                case GameMovePacket p:
-                    _homeForm.Invoke(new Action(() => _homeForm.HandleGameMove(p)));
-                    break;
-            }
+                UserStatusPacket p => () => _homeForm.HandleUserStatusUpdate(p),
+                TextPacket p => () => _homeForm.HandleIncomingTextMessage(p),
+                FilePacket p => () => _homeForm.HandleIncomingFileMessage(p),
+                GameInvitePacket p => () => _homeForm.HandleIncomingGameInvite(p),
+                GameResponsePacket p => () => _homeForm.HandleGameResponse(p),
+                GameStartPacket p => () => _homeForm.HandleGameStart(p),
+                GameMovePacket p => () => _homeForm.HandleGameMove(p),
+                _ => null
+            };
+            action?.Invoke(); // Gọi trực tiếp nếu cùng luồng, Invoke nếu khác luồng
         }
 
-        // Bước 6: Gửi gói tin đi (Giữ nguyên)
         public void SendPacket(object packet)
         {
-            if (!_client.Connected)
+            // *** SỬA LỖI NullRef: Kiểm tra _stream trước khi lock ***
+            NetworkStream currentStream = _stream; // Tạo biến cục bộ để kiểm tra
+            if (!_client.Connected || currentStream == null)
             {
-                MessageBox.Show("Không có kết nối đến máy chủ!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Logger.Warning("Lỗi gửi gói tin: Chưa kết nối hoặc stream null.");
+                // Cân nhắc hiển thị lỗi cho người dùng ở đây nếu cần thiết
                 return;
             }
+            // *** KẾT THÚC SỬA ***
 
             try
             {
-                lock (_stream) // Khóa stream khi gửi
-                {
-                    _formatter.Serialize(_stream, packet);
-                }
+                // Lock stream đã kiểm tra
+                lock (currentStream) { _formatter.Serialize(currentStream, packet); }
+            }
+            // Chia nhỏ lỗi để biết rõ hơn
+            catch (IOException ioEx) // Lỗi I/O (stream bị đóng...)
+            {
+                Logger.Error($"Lỗi I/O khi gửi gói tin", ioEx);
+                Disconnect(); // Ngắt kết nối nếu không gửi được
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Client: Lỗi gửi gói tin: {ex.Message}");
+                Logger.Error($"Lỗi không xác định khi gửi gói tin", ex);
+                // Cân nhắc ngắt kết nối tùy theo lỗi
+            }
+        }
+
+        // Hàm ngắt kết nối công khai (ví dụ: khi người dùng logout)
+        public void Disconnect()
+        {
+            DisconnectInternal(true); // Ngắt và thông báo
+        }
+
+        // Hàm ngắt kết nối nội bộ
+        private void DisconnectInternal(bool showMessage)
+        {
+            try
+            {
+                _listeningCts?.Cancel(); // Yêu cầu luồng lắng nghe dừng lại
+                _stream?.Close();
+                _client?.Close();
+            }
+            catch { /* Bỏ qua lỗi khi đóng */ }
+            finally
+            {
+                _client = null;
+                _stream = null;
+                _listeningCts = null;
+                _homeForm = null; // Hủy đăng ký home form
+                UserID = null;    // Reset thông tin user
+                UserName = null;
+                Logger.Info("Đã ngắt kết nối.");
+
+                // Chỉ hiện MessageBox nếu ngắt kết nối do lỗi (không phải do timeout lúc connect)
+                if (showMessage && _loginCompletionSource == null) // Nếu loginCompletionSource null tức là chưa login hoặc đã login xong
+                {
+                    MessageBox.Show("Đã mất kết nối đến máy chủ!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    // Cân nhắc việc thoát ứng dụng hoặc quay về màn hình Login
+                    Application.Exit();
+                }
             }
         }
     }
