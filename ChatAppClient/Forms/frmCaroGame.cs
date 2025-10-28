@@ -1,4 +1,5 @@
-﻿using ChatAppClient.Helpers;
+﻿using ChatApp.Shared; // <-- Phải có
+using ChatAppClient.Helpers;
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -8,43 +9,47 @@ namespace ChatAppClient.Forms
 {
     public partial class frmCaroGame : Form
     {
-        private const int BOARD_SIZE = 20; // Bàn cờ 20x20
-        private const int CELL_SIZE = 30;  // Mỗi ô 30x30 pixels
-        private int[,] _board; // Mảng 2D lưu trạng thái bàn cờ (0=trống, 1=X, 2=O)
+        // Định nghĩa bàn cờ
+        private const int BOARD_SIZE = 20;
+        private const int CELL_SIZE = 30;
+        private int[,] _board;
 
-        private bool _isMyTurn = false; // Server sẽ quyết định ai đi trước
-        private int _myPiece; // Quân cờ của tôi (1=X, 2=O)
-        private int _currentPlayerPiece = 1; // Luôn bắt đầu là X (quân 1)
-
+        // Trạng thái ván game
+        private bool _isMyTurn = false;
+        private int _myPiece; // Quân của tôi (1=X, 2=O)
+        private int _currentPlayerPiece = 1; // Quân đang đi (Luôn là X)
         private bool _isGameEnded = false;
 
+        // Thông tin ván game
+        private string _gameId;
+        private string _opponentId;
+        private string _myId;
+
+        // Dụng cụ vẽ
         private Pen _gridPen = new Pen(Color.LightGray, 1);
         private Pen _xPen = new Pen(AppColors.Primary, 3);
         private Pen _oPen = new Pen(Color.DarkOrange, 3);
 
-        private string _gameId;
-        private string _opponentId;
-
+        // Hàm tạo (Constructor) - Đã sửa
         public frmCaroGame(string gameId, string opponentId, bool startsFirst)
         {
             InitializeComponent();
             _gameId = gameId;
             _opponentId = opponentId;
+            _myId = NetworkManager.Instance.UserID; // Lấy ID của tôi
 
-            // Thiết lập kích thước cố định cho bàn cờ
+            // Thiết lập kích thước
             int boardPixelSize = BOARD_SIZE * CELL_SIZE + 1;
             pnlBoard.Size = new Size(boardPixelSize, boardPixelSize);
-            // Tự điều chỉnh kích thước Form
             this.ClientSize = new Size(boardPixelSize, boardPixelSize + pnlHeader.Height + pnlControls.Height);
 
             // Xác định lượt chơi
-            _myPiece = startsFirst ? 1 : 2; // Nếu đi trước là X (1), ngược lại là O (2)
+            _myPiece = startsFirst ? 1 : 2; // Nếu đi trước là X (1)
             _isMyTurn = startsFirst;
         }
 
         private void frmCaroGame_Load(object sender, EventArgs e)
         {
-            // Gán sự kiện
             pnlBoard.Paint += pnlBoard_Paint;
             pnlBoard.MouseClick += pnlBoard_MouseClick;
             btnNewGame.Click += BtnNewGame_Click;
@@ -57,12 +62,10 @@ namespace ChatAppClient.Forms
             _board = new int[BOARD_SIZE, BOARD_SIZE];
             _currentPlayerPiece = 1; // X luôn đi trước
             _isGameEnded = false;
-
-            // Cập nhật lại lượt đi ban đầu
-            _isMyTurn = (_myPiece == 1);
+            _isMyTurn = (_myPiece == 1); // Quyền đi đầu tiên
 
             UpdateTurnLabel();
-            pnlBoard.Invalidate(); // Vẽ lại bàn cờ
+            pnlBoard.Invalidate();
         }
 
         private void UpdateTurnLabel()
@@ -80,55 +83,58 @@ namespace ChatAppClient.Forms
 
         private void BtnNewGame_Click(object sender, EventArgs e)
         {
-            // TODO: Gửi yêu cầu "Chơi Lại" lên Server
-            // NetworkManager.Instance.SendRematchRequest(_gameId);
-            MessageBox.Show("Đã gửi yêu cầu chơi lại!");
-            // Chỉ reset khi đối phương đồng ý
+            MessageBox.Show("Chức năng 'Chơi Lại' chưa được phát triển.", "Thông báo");
+            // TODO: Gửi gói tin RematchPacket
         }
 
+        // GỬI NƯỚC ĐI
         private void pnlBoard_MouseClick(object sender, MouseEventArgs e)
         {
             if (_isGameEnded || !_isMyTurn)
-                return; // Không phải lượt của bạn, hoặc game đã kết thúc
+                return;
 
-            // Tính toán vị trí (hàng, cột) từ tọa độ (x, y) của chuột
             int col = e.X / CELL_SIZE;
             int row = e.Y / CELL_SIZE;
 
-            // Kiểm tra vị trí hợp lệ
-            if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE)
+            if (!IsSafe(row, col) || _board[row, col] != 0)
                 return;
 
-            // Kiểm tra ô đã được đánh chưa
-            if (_board[row, col] == 0)
+            // 1. Đánh dấu
+            _board[row, col] = _myPiece;
+
+            // 2. Vô hiệu hóa lượt
+            _isMyTurn = false;
+
+            // 3. TẠO GÓI TIN NƯỚC ĐI
+            var movePacket = new GameMovePacket
             {
-                // 1. Đánh dấu nước đi
-                _board[row, col] = _myPiece;
+                GameID = _gameId,
+                SenderID = _myId,
+                Row = row,
+                Col = col
+            };
 
-                // 2. Vô hiệu hóa lượt đi
-                _isMyTurn = false;
+            // 4. GỬI GÓI TIN
+            NetworkManager.Instance.SendPacket(movePacket);
 
-                // 3. TODO: Gửi nước đi (row, col) lên Server
-                // NetworkManager.Instance.SendGameMove(_gameId, row, col);
+            // 5. Cập nhật UI
+            pnlBoard.Invalidate();
 
-                // 4. Cập nhật UI ngay lập tức
-                pnlBoard.Invalidate(); // Vẽ lại nước đi của mình
-
-                // 5. Kiểm tra thắng
-                if (CheckWin(row, col, _myPiece))
-                {
-                    EndGame(_myPiece);
-                }
-                else
-                {
-                    // Chuyển lượt (UI)
-                    _currentPlayerPiece = (_currentPlayerPiece == 1) ? 2 : 1;
-                    UpdateTurnLabel();
-                }
+            // 6. Kiểm tra thắng
+            if (CheckWin(row, col, _myPiece))
+            {
+                EndGame(_myPiece);
+                // TODO: Gửi GameEndPacket
+            }
+            else
+            {
+                // Chuyển lượt (UI)
+                _currentPlayerPiece = (_currentPlayerPiece == 1) ? 2 : 1;
+                UpdateTurnLabel();
             }
         }
 
-        // Hàm này được gọi khi Server gửi nước đi của đối thủ
+        // NHẬN NƯỚC ĐI (Được gọi từ frmHome)
         public void ReceiveOpponentMove(int row, int col)
         {
             if (this.InvokeRequired)
@@ -140,20 +146,23 @@ namespace ChatAppClient.Forms
             if (_isGameEnded) return;
 
             int opponentPiece = (_myPiece == 1) ? 2 : 1;
-            _board[row, col] = opponentPiece;
 
-            pnlBoard.Invalidate(); // Vẽ lại bàn cờ với nước đi của đối thủ
+            if (IsSafe(row, col) && _board[row, col] == 0)
+            {
+                _board[row, col] = opponentPiece;
+                pnlBoard.Invalidate(); // Vẽ nước đi của đối thủ
 
-            if (CheckWin(row, col, opponentPiece))
-            {
-                EndGame(opponentPiece);
-            }
-            else
-            {
-                // Bắt đầu lượt của bạn
-                _isMyTurn = true;
-                _currentPlayerPiece = _myPiece;
-                UpdateTurnLabel();
+                if (CheckWin(row, col, opponentPiece))
+                {
+                    EndGame(opponentPiece);
+                }
+                else
+                {
+                    // Bắt đầu lượt của bạn
+                    _isMyTurn = true;
+                    _currentPlayerPiece = _myPiece;
+                    UpdateTurnLabel();
+                }
             }
         }
 
@@ -167,10 +176,10 @@ namespace ChatAppClient.Forms
             MessageBox.Show(message, "Kết thúc trò chơi");
         }
 
-        // Logic kiểm tra thắng (5 ô liên tiếp, không bị chặn 2 đầu)
+        #region Logic Game (Không đổi)
+
         private bool CheckWin(int r, int c, int piece)
         {
-            // Kiểm tra ngang, dọc, và 2 đường chéo
             if (CountInLine(r, c, 1, 0, piece) >= 5) return true; // Dọc
             if (CountInLine(r, c, 0, 1, piece) >= 5) return true; // Ngang
             if (CountInLine(r, c, 1, 1, piece) >= 5) return true; // Chéo \
@@ -178,11 +187,9 @@ namespace ChatAppClient.Forms
             return false;
         }
 
-        // Đếm số quân liên tiếp theo 1 hướng (dr, dc)
         private int CountInLine(int r, int c, int dr, int dc, int piece)
         {
             int count = 0;
-            // Đếm theo hướng (dr, dc)
             for (int i = 0; i < 5; i++)
             {
                 int nr = r + i * dr;
@@ -190,7 +197,6 @@ namespace ChatAppClient.Forms
                 if (IsSafe(nr, nc) && _board[nr, nc] == piece) count++;
                 else break;
             }
-            // Đếm theo hướng ngược lại (-dr, -dc), bỏ qua ô trung tâm (đã đếm)
             for (int i = 1; i < 5; i++)
             {
                 int nr = r - i * dr;
@@ -198,10 +204,6 @@ namespace ChatAppClient.Forms
                 if (IsSafe(nr, nc) && _board[nr, nc] == piece) count++;
                 else break;
             }
-
-            // TODO: Bổ sung logic "chặn 2 đầu" (luật Caro chuẩn)
-            // Tạm thời chỉ cần 5 quân là thắng
-
             return count;
         }
 
@@ -210,32 +212,27 @@ namespace ChatAppClient.Forms
             return r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE;
         }
 
-
-        // Hàm vẽ bàn cờ
         private void pnlBoard_Paint(object sender, PaintEventArgs e)
         {
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            // 1. Vẽ các đường kẻ
             for (int i = 0; i <= BOARD_SIZE; i++)
             {
-                g.DrawLine(_gridPen, 0, i * CELL_SIZE, BOARD_SIZE * CELL_SIZE, i * CELL_SIZE); // Ngang
-                g.DrawLine(_gridPen, i * CELL_SIZE, 0, i * CELL_SIZE, BOARD_SIZE * CELL_SIZE); // Dọc
+                g.DrawLine(_gridPen, 0, i * CELL_SIZE, BOARD_SIZE * CELL_SIZE, i * CELL_SIZE);
+                g.DrawLine(_gridPen, i * CELL_SIZE, 0, i * CELL_SIZE, BOARD_SIZE * CELL_SIZE);
             }
 
-            // 2. Vẽ các quân cờ (X và O)
             for (int r = 0; r < BOARD_SIZE; r++)
             {
                 for (int c = 0; c < BOARD_SIZE; c++)
                 {
                     int piece = _board[r, c];
-                    int padding = 5; // Khoảng đệm để X, O nhỏ hơn ô
+                    int padding = 5;
                     int x = c * CELL_SIZE + padding;
                     int y = r * CELL_SIZE + padding;
                     int size = CELL_SIZE - (padding * 2);
                     Rectangle rect = new Rectangle(x, y, size, size);
-
 
                     if (piece == 1) // X
                     {
@@ -249,5 +246,7 @@ namespace ChatAppClient.Forms
                 }
             }
         }
+
+        #endregion
     }
 }

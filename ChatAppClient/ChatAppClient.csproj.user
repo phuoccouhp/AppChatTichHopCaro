@@ -22,7 +22,16 @@
     <Compile Update="UserControls\ChatMessageBubble.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Update="UserControls\ChatViewControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UserControls\FileBubble.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Update="UserControls\FriendListItem.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UserControls\ImageBubble.cs">
       <SubType>UserControl</SubType>
     </Compile>
   </ItemGroup>

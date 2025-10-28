@@ -29,7 +29,22 @@ namespace ChatAppClient.UserControls
             // Bo tròn Avatar
             // (Bo tròn PictureBox phức tạp, tạm thời để vuông)
         }
+        // (Bên trong public partial class FriendListItem)
 
+        // ... (Các hàm cũ SetData, ApplyHoverEvents... giữ nguyên) ...
+
+        /// <summary>
+        /// Dùng để Bật/Tắt chấm đỏ thông báo tin nhắn mới
+        /// </summary>
+        public void SetNewMessageAlert(bool visible)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => SetNewMessageAlert(visible)));
+                return;
+            }
+            lblNewMessageBadge.Visible = visible;
+        }
         public void SetData(string id, string name, string status, bool isOnline)
         {
             FriendID = id;

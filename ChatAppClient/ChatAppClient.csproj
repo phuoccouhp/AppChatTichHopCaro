@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ChatApp.Shared\ChatApp.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="Images\550370560_1205130104983681_4413519399568592495_n.jpg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
