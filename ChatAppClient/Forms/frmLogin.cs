@@ -33,16 +33,25 @@ namespace ChatAppClient.Forms
         }
 
         // Sự kiện click nút Đăng nhập (đã chuyển sang async)
+        // (Trong frmLogin.cs)
+
         private async void BtnLogin_Click(object sender, EventArgs e)
         {
+            // ĐỌC GIÁ TRỊ TỪ CÁC Ô NHẬP LIỆU
+            string serverIp = txtServerIp.Text.Trim(); // <-- Lấy IP từ TextBox
             string username = txtUsername.Text.Trim();
             string password = txtPassword.Text.Trim();
 
-            // 1. Kiểm tra đầu vào
+            // 1. Kiểm tra đầu vào (Thêm kiểm tra serverIp)
+            if (string.IsNullOrEmpty(serverIp))
+            {
+                MessageBox.Show("Vui lòng nhập địa chỉ IP của Server.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
             if (string.IsNullOrEmpty(username) || username == "Tên đăng nhập" ||
                 string.IsNullOrEmpty(password) || password == "Mật khẩu")
             {
-                MessageBox.Show("Vui lòng nhập đầy đủ thông tin.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui lòng nhập đầy đủ Tên đăng nhập và Mật khẩu.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -52,20 +61,19 @@ namespace ChatAppClient.Forms
 
             try
             {
-                // 3. Kết nối đến Server
-                // (Địa chỉ 127.0.0.1 là localhost - tức máy chủ chạy trên cùng máy)
-                bool connected = await NetworkManager.Instance.ConnectAsync("127.0.0.1", 9000);
+                // 3. Kết nối đến Server (SỬ DỤNG serverIp ĐÃ LẤY)
+                bool connected = await NetworkManager.Instance.ConnectAsync(serverIp, 9000); // <-- DÒNG QUAN TRỌNG
 
                 if (!connected)
                 {
-                    throw new Exception("Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại Server!");
+                    // Lỗi sẽ được hiển thị bởi ConnectAsync
+                    // Chỉ cần bật lại nút
+                    throw new Exception("Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại IP Server và Firewall!");
                 }
 
                 // 4. Gửi gói tin Login và đợi phản hồi
                 btnLogin.Text = "Đang đăng nhập...";
                 var loginPacket = new LoginPacket { Username = username, Password = password };
-
-                // Gọi hàm async mới trong NetworkManager
                 LoginResultPacket result = await NetworkManager.Instance.LoginAsync(loginPacket);
 
                 // 5. Xử lý kết quả
@@ -73,9 +81,8 @@ namespace ChatAppClient.Forms
             }
             catch (Exception ex)
             {
-                // Bất kỳ lỗi nào (kết nối, timeout, server sập) sẽ bị bắt ở đây
                 MessageBox.Show($"Đăng nhập thất bại: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                btnLogin.Enabled = true;
+                btnLogin.Enabled = true; // Bật lại nút nếu lỗi
                 btnLogin.Text = "Đăng Nhập";
             }
         }
