@@ -97,15 +97,29 @@ namespace ChatAppServer
                     _server.ProcessRematchResponse(p);
                     break;
 
-                // --- CASE MỚI ---
                 case UpdateProfilePacket p:
                     HandleUpdateProfile(p);
+                    break;
+                case RegisterPacket p:
+                    HandleRegister(p);
                     break;
 
                 default: Logger.Warning($"Packet lạ: {packet.GetType().Name}"); break;
             }
         }
+            private void HandleRegister(RegisterPacket p)
+        {
+            bool success = DatabaseManager.Instance.RegisterUser(p.Username, p.Password, p.Email);
 
+            var result = new RegisterResultPacket
+            {
+                Success = success,
+                Message = success ? "Đăng ký thành công!" : "Tên đăng nhập đã tồn tại hoặc lỗi hệ thống."
+            };
+
+            SendPacket(result);
+            Logger.Info($"[Register] User '{p.Username}' đăng ký: {(success ? "Thành công" : "Thất bại")}");
+        }
         // --- HÀM MỚI ---
         private void HandleUpdateProfile(UpdateProfilePacket p)
         {

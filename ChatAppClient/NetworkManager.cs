@@ -19,7 +19,7 @@ namespace ChatAppClient.Forms
         private static NetworkManager _instance;
         public static NetworkManager Instance => _instance ??= new NetworkManager();
         #endregion
-
+        private TaskCompletionSource<RegisterResultPacket> _registerCompletionSource;
         private TcpClient _client;
         private NetworkStream _stream;
         private BinaryFormatter _formatter;
@@ -33,7 +33,22 @@ namespace ChatAppClient.Forms
         {
             _formatter = new BinaryFormatter();
         }
+        public async Task<RegisterResultPacket> RegisterAsync(RegisterPacket packet)
+        {
+            if (!_client.Connected) throw new InvalidOperationException("Chưa kết nối đến Server.");
 
+            _registerCompletionSource = new TaskCompletionSource<RegisterResultPacket>();
+            SendPacket(packet);
+
+            // Timeout 10s
+            var timeoutTask = Task.Delay(10000);
+            var resultTask = _registerCompletionSource.Task;
+
+            if (await Task.WhenAny(resultTask, timeoutTask) == resultTask)
+                return await resultTask;
+            else
+                throw new TimeoutException("Không nhận được phản hồi đăng ký.");
+        }
         public void RegisterHomeForm(frmHome homeForm) => _homeForm = homeForm;
 
         public async Task<bool> ConnectAsync(string ipAddress, int port)
@@ -141,6 +156,11 @@ namespace ChatAppClient.Forms
             if (packet is LoginResultPacket pLogin)
             {
                 _loginCompletionSource?.TrySetResult(pLogin);
+                return;
+            }
+            if (packet is RegisterResultPacket pRegister)
+            {
+                _registerCompletionSource?.TrySetResult(pRegister);
                 return;
             }
             if (_homeForm == null || _homeForm.IsDisposed) return;
