@@ -74,7 +74,46 @@ namespace ChatAppServer
                 }
             }
         }
+        // (Trong class DatabaseManager)
+
+        public bool RegisterUser(string username, string password, string email)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                try
+                {
+                    conn.Open();
+                    // Kiểm tra xem user đã tồn tại chưa
+                    string checkQuery = "SELECT COUNT(*) FROM Users WHERE Username = @u";
+                    using (SqlCommand checkCmd = new SqlCommand(checkQuery, conn))
+                    {
+                        checkCmd.Parameters.AddWithValue("@u", username);
+                        int count = (int)checkCmd.ExecuteScalar();
+                        if (count > 0) return false; // Username đã tồn tại
+                    }
+
+                    // Nếu chưa, thêm mới
+                    // Mặc định Tên hiển thị (DisplayName) sẽ giống Username
+                    string insertQuery = "INSERT INTO Users (Username, Password, DisplayName, Email) VALUES (@u, @p, @d, @e)";
+                    using (SqlCommand cmd = new SqlCommand(insertQuery, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@u", username);
+                        cmd.Parameters.AddWithValue("@p", password);
+                        cmd.Parameters.AddWithValue("@d", username); // DisplayName mặc định
+                        cmd.Parameters.AddWithValue("@e", email);
+                        cmd.ExecuteNonQuery();
+                    }
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Lỗi Đăng ký User", ex);
+                    return false;
+                }
+            }
+        }
     }
+
 
     // Class nhỏ để chứa dữ liệu trả về
     public class UserData

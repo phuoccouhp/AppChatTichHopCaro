@@ -33,3 +33,7 @@ C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-wi
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppC.8063C422.Up2Date
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\Images\default_avatar.png
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmSettings.resources
+C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmForgotPass.resources
+C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmSignup.resources
+C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\Images\Background1.jpg
+C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Properties.Resources.resources
