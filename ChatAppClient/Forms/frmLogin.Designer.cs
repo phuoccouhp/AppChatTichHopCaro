@@ -1,6 +1,4 @@
-﻿using ChatAppClient.CustomControls;
-
-namespace ChatAppClient.Forms
+﻿namespace ChatAppClient.Forms
 {
     partial class frmLogin
     {
@@ -30,185 +28,123 @@ namespace ChatAppClient.Forms
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmLogin));
-            lblTitle = new Label();
-            txtUser = new RoundedTextBox();
-            txtPass = new RoundedTextBox();
-            chkRemember = new CheckBox();
-            lnkForgot = new LinkLabel();
-            btnLogin = new RoundedButton();
-            lblNoAccount = new Label();
-            lnkSignup = new LinkLabel();
-            txtServerIP = new RoundedTextBox();
-            SuspendLayout();
+            this.lblTitle = new System.Windows.Forms.Label();
+            this.txtUsername = new System.Windows.Forms.TextBox();
+            this.txtPassword = new System.Windows.Forms.TextBox();
+            this.btnRegister = new ChatAppClient.CustomControls.RoundedButton();
+            this.btnLogin = new ChatAppClient.CustomControls.RoundedButton();
+            // THÊM 2 KHAI BÁO NÀY
+            this.lblServerIp = new System.Windows.Forms.Label();
+            this.txtServerIp = new System.Windows.Forms.TextBox();
+            this.SuspendLayout();
             // 
             // lblTitle
             // 
-            lblTitle.AutoSize = true;
-            lblTitle.BackColor = Color.Transparent;
-            lblTitle.Font = new Font("Montserrat", 24F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblTitle.ForeColor = Color.FromArgb(0, 240, 255);
-            lblTitle.Location = new Point(150, 49);
-            lblTitle.Margin = new Padding(4, 0, 4, 0);
-            lblTitle.Name = "lblTitle";
-            lblTitle.Size = new Size(376, 62);
-            lblTitle.TabIndex = 0;
-            lblTitle.Text = "CHAT APP CARO";
+            this.lblTitle.AutoSize = true;
+            this.lblTitle.Font = new System.Drawing.Font("Segoe UI", 22.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblTitle.ForeColor = ChatAppClient.Helpers.AppColors.Primary;
+            this.lblTitle.Location = new System.Drawing.Point(58, 20); // Dịch lên một chút
+            this.lblTitle.Name = "lblTitle";
+            this.lblTitle.Size = new System.Drawing.Size(284, 51);
+            this.lblTitle.TabIndex = 0;
+            this.lblTitle.Text = "Chat && Caro"; // Đã sửa '&'
             // 
-            // txtUser
+            // lblServerIp (NHÃN MỚI)
             // 
-            txtUser.BackColor = Color.Transparent;
-            txtUser.Font = new Font("Montserrat", 9F);
-            txtUser.Icon = (Image)resources.GetObject("txtUser.Icon");
-            txtUser.IconEnd = null;
-            txtUser.IsPassword = false;
-            txtUser.Location = new Point(101, 247);
-            txtUser.Margin = new Padding(4, 5, 4, 5);
-            txtUser.Name = "txtUser";
-            txtUser.Padding = new Padding(13, 8, 13, 8);
-            txtUser.PlaceholderText = "Username";
-            txtUser.Size = new Size(467, 69);
-            txtUser.TabIndex = 4;
+            this.lblServerIp.AutoSize = true;
+            this.lblServerIp.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblServerIp.ForeColor = ChatAppClient.Helpers.AppColors.TextSecondary;
+            this.lblServerIp.Location = new System.Drawing.Point(63, 85); // Vị trí
+            this.lblServerIp.Name = "lblServerIp";
+            this.lblServerIp.Size = new System.Drawing.Size(71, 20);
+            this.lblServerIp.TabIndex = 5;
+            this.lblServerIp.Text = "Server IP:";
             // 
-            // txtPass
+            // txtServerIp (Ô NHẬP IP MỚI)
             // 
-            txtPass.BackColor = Color.Transparent;
-            txtPass.Font = new Font("Montserrat", 9F);
-            txtPass.Icon = (Image)resources.GetObject("txtPass.Icon");
-            txtPass.IconEnd = (Image)resources.GetObject("txtPass.IconEnd");
-            txtPass.IsPassword = true;
-            txtPass.Location = new Point(101, 339);
-            txtPass.Margin = new Padding(4, 5, 4, 5);
-            txtPass.Name = "txtPass";
-            txtPass.Padding = new Padding(13, 8, 13, 8);
-            txtPass.PlaceholderText = "Password";
-            txtPass.Size = new Size(467, 69);
-            txtPass.TabIndex = 5;
+            this.txtServerIp.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txtServerIp.Location = new System.Drawing.Point(67, 108); // Vị trí
+            this.txtServerIp.Name = "txtServerIp";
+            this.txtServerIp.Size = new System.Drawing.Size(266, 34);
+            this.txtServerIp.TabIndex = 6; // TabIndex quan trọng
+            this.txtServerIp.Text = "127.0.0.1"; // Giá trị mặc định
             // 
-            // chkRemember
+            // txtUsername
             // 
-            chkRemember.AutoSize = true;
-            chkRemember.BackColor = Color.Transparent;
-            chkRemember.Font = new Font("Montserrat", 10F);
-            chkRemember.ForeColor = Color.White;
-            chkRemember.Location = new Point(101, 431);
-            chkRemember.Margin = new Padding(4, 5, 4, 5);
-            chkRemember.Name = "chkRemember";
-            chkRemember.Size = new Size(163, 31);
-            chkRemember.TabIndex = 6;
-            chkRemember.Text = "Remember me";
-            chkRemember.UseVisualStyleBackColor = false;
+            this.txtUsername.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txtUsername.Location = new System.Drawing.Point(67, 155); // Dịch xuống
+            this.txtUsername.Name = "txtUsername";
+            this.txtUsername.Size = new System.Drawing.Size(266, 34);
+            this.txtUsername.TabIndex = 1; // Sửa TabIndex
             // 
-            // lnkForgot
+            // txtPassword
             // 
-            lnkForgot.AutoSize = true;
-            lnkForgot.BackColor = Color.Transparent;
-            lnkForgot.Font = new Font("Montserrat", 10F);
-            lnkForgot.LinkColor = Color.White;
-            lnkForgot.Location = new Point(358, 432);
-            lnkForgot.Margin = new Padding(4, 0, 4, 0);
-            lnkForgot.Name = "lnkForgot";
-            lnkForgot.Size = new Size(210, 27);
-            lnkForgot.TabIndex = 7;
-            lnkForgot.TabStop = true;
-            lnkForgot.Text = "Forgot your password?";
+            this.txtPassword.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txtPassword.Location = new System.Drawing.Point(67, 200); // Dịch xuống
+            this.txtPassword.Name = "txtPassword";
+            this.txtPassword.PasswordChar = '●';
+            this.txtPassword.Size = new System.Drawing.Size(266, 34);
+            this.txtPassword.TabIndex = 2; // Sửa TabIndex
+            // 
+            // btnRegister
+            // 
+            this.btnRegister.BorderRadius = 20;
+            this.btnRegister.ButtonColor = System.Drawing.Color.Gray;
+            this.btnRegister.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
+            this.btnRegister.Location = new System.Drawing.Point(67, 310); // Dịch xuống
+            this.btnRegister.Name = "btnRegister";
+            this.btnRegister.Size = new System.Drawing.Size(266, 45);
+            this.btnRegister.TabIndex = 4; // Sửa TabIndex
+            this.btnRegister.Text = "Đăng Ký";
+            this.btnRegister.TextColor = System.Drawing.Color.White;
             // 
             // btnLogin
             // 
-            btnLogin.BackColor = Color.FromArgb(12, 42, 82);
-            btnLogin.FlatAppearance.BorderSize = 0;
-            btnLogin.FlatStyle = FlatStyle.Flat;
-            btnLogin.Font = new Font("Montserrat", 16F, FontStyle.Bold);
-            btnLogin.ForeColor = Color.White;
-            btnLogin.Location = new Point(101, 493);
-            btnLogin.Margin = new Padding(4, 5, 4, 5);
-            btnLogin.Name = "btnLogin";
-            btnLogin.Size = new Size(467, 77);
-            btnLogin.TabIndex = 8;
-            btnLogin.Text = "Log in";
-            btnLogin.UseVisualStyleBackColor = false;
-            // 
-            // lblNoAccount
-            // 
-            lblNoAccount.AutoSize = true;
-            lblNoAccount.BackColor = Color.Transparent;
-            lblNoAccount.Font = new Font("Montserrat", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            lblNoAccount.ForeColor = Color.White;
-            lblNoAccount.Location = new Point(201, 601);
-            lblNoAccount.Margin = new Padding(4, 0, 4, 0);
-            lblNoAccount.Name = "lblNoAccount";
-            lblNoAccount.Size = new Size(129, 24);
-            lblNoAccount.TabIndex = 9;
-            lblNoAccount.Text = "Not a member?";
-            // 
-            // lnkSignup
-            // 
-            lnkSignup.AutoSize = true;
-            lnkSignup.BackColor = Color.Transparent;
-            lnkSignup.Font = new Font("Montserrat", 9F, FontStyle.Bold);
-            lnkSignup.LinkColor = Color.FromArgb(0, 132, 255);
-            lnkSignup.Location = new Point(338, 601);
-            lnkSignup.Margin = new Padding(4, 0, 4, 0);
-            lnkSignup.Name = "lnkSignup";
-            lnkSignup.Size = new Size(111, 24);
-            lnkSignup.TabIndex = 10;
-            lnkSignup.TabStop = true;
-            lnkSignup.Text = "Sign up now!";
-            // 
-            // txtServerIP
-            // 
-            txtServerIP.BackColor = Color.Transparent;
-            txtServerIP.Font = new Font("Montserrat", 9F);
-            txtServerIP.Icon = (Image)resources.GetObject("txtServerIP.Icon");
-            txtServerIP.IconEnd = null;
-            txtServerIP.IsPassword = false;
-            txtServerIP.Location = new Point(101, 154);
-            txtServerIP.Margin = new Padding(4, 5, 4, 5);
-            txtServerIP.Name = "txtServerIP";
-            txtServerIP.Padding = new Padding(13, 8, 13, 8);
-            txtServerIP.PlaceholderText = "IP Host";
-            txtServerIP.Size = new Size(467, 69);
-            txtServerIP.TabIndex = 4;
+            this.btnLogin.BorderRadius = 20;
+            this.btnLogin.ButtonColor = ChatAppClient.Helpers.AppColors.Primary;
+            this.btnLogin.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
+            this.btnLogin.Location = new System.Drawing.Point(67, 255); // Dịch xuống
+            this.btnLogin.Name = "btnLogin";
+            this.btnLogin.Size = new System.Drawing.Size(266, 45);
+            this.btnLogin.TabIndex = 3; // Sửa TabIndex
+            this.btnLogin.Text = "Đăng Nhập";
+            this.btnLogin.TextColor = System.Drawing.Color.White;
             // 
             // frmLogin
             // 
-            AutoScaleDimensions = new SizeF(8F, 20F);
-            AutoScaleMode = AutoScaleMode.Font;
-            BackgroundImage = Properties.Resources.Background1;
-            BackgroundImageLayout = ImageLayout.Stretch;
-            ClientSize = new Size(667, 660);
-            Controls.Add(lnkSignup);
-            Controls.Add(lblNoAccount);
-            Controls.Add(btnLogin);
-            Controls.Add(lnkForgot);
-            Controls.Add(chkRemember);
-            Controls.Add(txtPass);
-            Controls.Add(txtServerIP);
-            Controls.Add(txtUser);
-            Controls.Add(lblTitle);
-            DoubleBuffered = true;
-            FormBorderStyle = FormBorderStyle.FixedSingle;
-            Margin = new Padding(4, 5, 4, 5);
-            MaximizeBox = false;
-            Name = "frmLogin";
-            StartPosition = FormStartPosition.CenterScreen;
-            Text = "Login";
-            ResumeLayout(false);
-            PerformLayout();
+            this.AcceptButton = this.btnLogin;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = ChatAppClient.Helpers.AppColors.FormBackground;
+            this.ClientSize = new System.Drawing.Size(400, 400); // Giữ nguyên Size
+            this.Controls.Add(this.txtServerIp); // Thêm control mới
+            this.Controls.Add(this.lblServerIp); // Thêm control mới
+            this.Controls.Add(this.btnRegister);
+            this.Controls.Add(this.btnLogin);
+            this.Controls.Add(this.txtPassword);
+            this.Controls.Add(this.txtUsername);
+            this.Controls.Add(this.lblTitle);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
+            this.Name = "frmLogin";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.Text = "Đăng Nhập";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.frmLogin_FormClosing);
+            this.Load += new System.EventHandler(this.frmLogin_Load);
+            this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
-
 
         #endregion
 
         private System.Windows.Forms.Label lblTitle;
-        public ChatAppClient.RoundedTextBox txtUser;
-        public ChatAppClient.RoundedTextBox txtPass;
-        public System.Windows.Forms.CheckBox chkRemember;
-        public System.Windows.Forms.LinkLabel lnkForgot;
-        public ChatAppClient.RoundedButton btnLogin;
-        private System.Windows.Forms.Label lblNoAccount;
-        public System.Windows.Forms.LinkLabel lnkSignup;
-        public RoundedTextBox txtServerIP;
+        private System.Windows.Forms.TextBox txtUsername;
+        private System.Windows.Forms.TextBox txtPassword;
+        private CustomControls.RoundedButton btnLogin;
+        private CustomControls.RoundedButton btnRegister;
+        // THÊM 2 KHAI BÁO BIẾN NÀY
+        private System.Windows.Forms.Label lblServerIp;
+        private System.Windows.Forms.TextBox txtServerIp;
     }
 }

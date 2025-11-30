@@ -1,48 +1,40 @@
 ﻿using System;
-using System.Drawing; // Thư viện để dùng màu sắc (Color)
 
 namespace ChatAppServer
 {
     public static class Logger
     {
-        // KHAI BÁO SỰ KIỆN: Để Form đăng ký nhận tin nhắn
-        // Action<Nội dung, Màu sắc>
-        public static event Action<string, Color> OnLogReceived;
+        private static readonly object _lock = new object();
 
         public static void Info(string message)
         {
-            // Tin thường: Màu trắng (hoặc đen tùy nền form của bạn)
-            Log(message, Color.White);
+            Log(message, ConsoleColor.Gray);
         }
 
         public static void Success(string message)
         {
-            // Tin thành công: Màu xanh lá sáng
-            Log(message, Color.LimeGreen);
+            Log(message, ConsoleColor.Green);
         }
 
         public static void Warning(string message)
         {
-            // Cảnh báo: Màu vàng
-            Log(message, Color.Yellow);
+            Log(message, ConsoleColor.Yellow); 
         }
 
         public static void Error(string message, Exception ex = null)
         {
-            // Lỗi: Màu đỏ
-            string errorMsg = $"LỖI: {message}" + (ex != null ? $"\n{ex.Message}" : "");
-            Log(errorMsg, Color.Red);
+            Log($"LỖI: {message}" + (ex != null ? $"\n{ex.Message}" : ""),
+                ConsoleColor.Red); // Màu đỏ
         }
 
-        // Hàm nội bộ để xử lý chung
-        private static void Log(string message, Color color)
+        private static void Log(string message, ConsoleColor color)
         {
-            // Định dạng thời gian
-            string finalMessage = $"[{DateTime.Now:HH:mm:ss}] {message}";
-
-            // BẮN SỰ KIỆN RA NGOÀI (Thay vì Console.WriteLine)
-            // Dấu ? có nghĩa là: nếu không có Form nào đang nghe thì không làm gì cả
-            OnLogReceived?.Invoke(finalMessage, color);
+            lock (_lock)
+            {
+                Console.ForegroundColor = color;
+                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {message}");
+                Console.ResetColor();
+            }
         }
     }
 }
