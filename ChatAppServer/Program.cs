@@ -1,18 +1,19 @@
 ﻿using System;
-using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace ChatAppServer
 {
-    class Program
+    static class Program
     {
-        static async Task Main(string[] args)
+        [STAThread]
+        static void Main()
         {
-            int port = 9000;
-            Server server = new Server(port);
+            Application.SetHighDpiMode(HighDpiMode.SystemAware);
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
 
-            Logger.Success($"Server đã khởi động và lắng nghe tại port {port}.");
-
-            await server.StartAsync();
+            // Chạy Form Server thay vì Console
+            Application.Run(new frmServer());
         }
     }
 }

@@ -1,40 +1,48 @@
 ﻿using System;
+using System.Drawing; // Thư viện để dùng màu sắc (Color)
 
 namespace ChatAppServer
 {
     public static class Logger
     {
-        private static readonly object _lock = new object();
+        // KHAI BÁO SỰ KIỆN: Để Form đăng ký nhận tin nhắn
+        // Action<Nội dung, Màu sắc>
+        public static event Action<string, Color> OnLogReceived;
 
         public static void Info(string message)
         {
-            Log(message, ConsoleColor.Gray);
+            // Tin thường: Màu trắng (hoặc đen tùy nền form của bạn)
+            Log(message, Color.White);
         }
 
         public static void Success(string message)
         {
-            Log(message, ConsoleColor.Green);
+            // Tin thành công: Màu xanh lá sáng
+            Log(message, Color.LimeGreen);
         }
 
         public static void Warning(string message)
         {
-            Log(message, ConsoleColor.Yellow); 
+            // Cảnh báo: Màu vàng
+            Log(message, Color.Yellow);
         }
 
         public static void Error(string message, Exception ex = null)
         {
-            Log($"LỖI: {message}" + (ex != null ? $"\n{ex.Message}" : ""),
-                ConsoleColor.Red); // Màu đỏ
+            // Lỗi: Màu đỏ
+            string errorMsg = $"LỖI: {message}" + (ex != null ? $"\n{ex.Message}" : "");
+            Log(errorMsg, Color.Red);
         }
 
-        private static void Log(string message, ConsoleColor color)
+        // Hàm nội bộ để xử lý chung
+        private static void Log(string message, Color color)
         {
-            lock (_lock)
-            {
-                Console.ForegroundColor = color;
-                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {message}");
-                Console.ResetColor();
-            }
+            // Định dạng thời gian
+            string finalMessage = $"[{DateTime.Now:HH:mm:ss}] {message}";
+
+            // BẮN SỰ KIỆN RA NGOÀI (Thay vì Console.WriteLine)
+            // Dấu ? có nghĩa là: nếu không có Form nào đang nghe thì không làm gì cả
+            OnLogReceived?.Invoke(finalMessage, color);
         }
     }
 }

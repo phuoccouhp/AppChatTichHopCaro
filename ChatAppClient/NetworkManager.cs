@@ -7,7 +7,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
-using System.Threading; // Thêm
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -121,7 +121,7 @@ namespace ChatAppClient.Forms
             _loginCompletionSource = new TaskCompletionSource<LoginResultPacket>();
             SendPacket(packet);
 
-            using var timeoutCts = new CancellationTokenSource(10000); // 10 giây timeout
+            using var timeoutCts = new CancellationTokenSource(10000); 
             var completedTask = await Task.WhenAny(_loginCompletionSource.Task, Task.Delay(-1, timeoutCts.Token));
 
             if (completedTask == _loginCompletionSource.Task) return await _loginCompletionSource.Task;
@@ -152,6 +152,9 @@ namespace ChatAppClient.Forms
                 GameResponsePacket p => () => _homeForm.HandleGameResponse(p),
                 GameStartPacket p => () => _homeForm.HandleGameStart(p),
                 GameMovePacket p => () => _homeForm.HandleGameMove(p),
+                RematchRequestPacket p => () => _homeForm.HandleRematchRequest(p),  
+                RematchResponsePacket p => () => _homeForm.HandleRematchResponse(p), 
+                GameResetPacket p => () => _homeForm.HandleGameReset(p),     
                 _ => null
             };
             action?.Invoke(); 

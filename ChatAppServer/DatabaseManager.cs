@@ -1,0 +1,63 @@
+﻿using System;
+using System.Data.SqlClient;
+
+namespace ChatAppServer
+{
+    public class DatabaseManager
+    {
+        // CHUỖI KẾT NỐI (CONNECTION STRING)
+        // Bạn cần sửa lại cho đúng với máy của bạn
+        // Server=Tên_Máy_Của_Bạn; Database=ChatAppDB; Trusted_Connection=True; (Nếu dùng Windows Auth)
+        // Hoặc: Server=...; User Id=sa; Password=...; (Nếu dùng SQL Auth)
+        private readonly string _connectionString = @"Data Source=localhost;Initial Catalog=ChatAppDB;Integrated Security=True";
+        private static DatabaseManager _instance;
+        public static DatabaseManager Instance => _instance ??= new DatabaseManager();
+
+        private DatabaseManager() { }
+
+        // Hàm kiểm tra đăng nhập
+        public UserData Login(string username, string password)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                try
+                {
+                    conn.Open();
+                    string query = "SELECT Username, DisplayName FROM Users WHERE Username = @u AND Password = @p";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        // Dùng tham số (@u, @p) để chống hack SQL Injection
+                        cmd.Parameters.AddWithValue("@u", username);
+                        cmd.Parameters.AddWithValue("@p", password);
+
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                // Tìm thấy user!
+                                return new UserData
+                                {
+                                    Username = reader["Username"].ToString(),
+                                    DisplayName = reader["DisplayName"].ToString()
+                                };
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Lỗi kết nối CSDL", ex);
+                }
+            }
+            return null; // Không tìm thấy hoặc lỗi
+        }
+    }
+
+    // Class nhỏ để chứa dữ liệu trả về
+    public class UserData
+    {
+        public string Username { get; set; }
+        public string DisplayName { get; set; }
+    }
+}
