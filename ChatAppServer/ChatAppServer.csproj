@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.Data.SQLite" Version="1.0.118" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ChatApp.Shared\ChatApp.Shared.csproj" />
     <ProjectReference Include="..\ChatAppClient\ChatAppClient.csproj" />
   </ItemGroup>

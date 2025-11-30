@@ -48,10 +48,8 @@ namespace ChatAppClient.Forms
         private void InitializeGame()
         {
             _board = new int[BOARD_SIZE, BOARD_SIZE];
-            _currentPlayerPiece = 1; 
+            _currentPlayerPiece = 1;
             _isGameEnded = false;
-            _isMyTurn = (_myPiece == 1);
-
             UpdateTurnLabel();
             pnlBoard.Invalidate();
         }
@@ -71,10 +69,70 @@ namespace ChatAppClient.Forms
 
         private void BtnNewGame_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Chức năng 'Chơi Lại' chưa được phát triển.", "Thông báo");
-           
-        }
+            if (!_isGameEnded) return;
 
+            var request = new RematchRequestPacket
+            {
+                GameID = _gameId,
+                SenderID = _myId
+            };
+            NetworkManager.Instance.SendPacket(request);
+            btnNewGame.Enabled = false;
+            btnNewGame.Text = "Đang chờ...";
+        }
+        public void HandleRematchRequest(RematchRequestPacket request)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleRematchRequest(request))); return; }
+            if (!_isGameEnded) return;
+
+            DialogResult result = MessageBox.Show(
+                "Đối thủ muốn chơi lại. Bạn có đồng ý?",
+                "Yêu Cầu Chơi Lại",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+            bool accepted = (result == DialogResult.Yes);
+            var response = new RematchResponsePacket
+            {
+                GameID = _gameId,
+                SenderID = _myId,
+                ReceiverID = request.SenderID, 
+                Accepted = accepted
+            };
+            NetworkManager.Instance.SendPacket(response);
+            if (accepted)
+            {
+                btnNewGame.Enabled = false;
+                btnNewGame.Text = "Đang chờ...";
+            }
+        }
+        public void HandleRematchResponse(RematchResponsePacket response)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleRematchResponse(response))); return; }
+
+            if (!response.Accepted)
+            {
+                MessageBox.Show("Đối thủ đã từ chối chơi lại.", "Thông báo");
+                btnNewGame.Enabled = true; 
+                btnNewGame.Text = "Chơi Lại";
+            }
+        }
+        public void HandleGameReset(GameResetPacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleGameReset(packet))); return; }
+
+            Logger.Success("Bắt đầu ván mới!"); 
+
+            _board = new int[BOARD_SIZE, BOARD_SIZE];
+            _currentPlayerPiece = 1;
+            _isGameEnded = false;
+            _isMyTurn = packet.StartsFirst;
+
+            UpdateTurnLabel();
+            pnlBoard.Invalidate(); 
+            btnNewGame.Enabled = true;
+            btnNewGame.Text = "Chơi Lại";
+        }
+        
         private void pnlBoard_MouseClick(object sender, MouseEventArgs e)
         {
             if (_isGameEnded || !_isMyTurn)

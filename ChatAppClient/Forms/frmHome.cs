@@ -43,7 +43,33 @@ namespace ChatAppClient.Forms
             }
             flpFriendsList.ResumeLayout(); 
         }
+        public void HandleRematchRequest(RematchRequestPacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleRematchRequest(packet))); return; }
 
+            if (openGameForms.TryGetValue(packet.GameID, out var gameForm))
+            {
+                gameForm.HandleRematchRequest(packet); 
+            }
+        }
+        public void HandleRematchResponse(RematchResponsePacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleRematchResponse(packet))); return; }
+
+            if (openGameForms.TryGetValue(packet.GameID, out var gameForm))
+            {
+                gameForm.HandleRematchResponse(packet); 
+            }
+        }
+        public void HandleGameReset(GameResetPacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleGameReset(packet))); return; }
+
+            if (openGameForms.TryGetValue(packet.GameID, out var gameForm))
+            {
+                gameForm.HandleGameReset(packet);
+            }
+        }
         private void FriendItem_Click(FriendListItem item)
         {
             string friendId = item.FriendID;

@@ -56,30 +56,60 @@ namespace ChatAppServer
                 case FilePacket p: Logger.Info($"[File] {p.SenderID}->{p.ReceiverID}"); _server.RelayPrivatePacket(p.ReceiverID, p); break;
                 case GameInvitePacket p: Logger.Info($"[Game] {p.SenderID} mời {p.ReceiverID}"); _server.RelayPrivatePacket(p.ReceiverID, p); break;
                 case GameResponsePacket p: _server.ProcessGameResponse(p); break;
-                case GameMovePacket p: Logger.Info($"[Move] {p.SenderID} đi {p.Row},{p.Col}"); _server.ProcessGameMove(p); break; 
-                default: Logger.Warning($"[Warning] Gói tin không xác định: {packet.GetType().Name}"); break;
+                case GameMovePacket p: Logger.Info($"[Move] {p.SenderID} đi {p.Row},{p.Col}"); _server.ProcessGameMove(p); break;
+                case RematchRequestPacket p:                      
+                    Logger.Info($"[Rematch] {p.SenderID} yêu cầu chơi lại game {p.GameID}");
+                    _server.ProcessRematchRequest(p);
+                    break;
+                case RematchResponsePacket p:                    
+                    Logger.Info($"[Rematch] {p.SenderID} phản hồi yêu cầu chơi lại game {p.GameID}");
+                    _server.ProcessRematchResponse(p);
+                    break;
+                default:
+                    Logger.Warning($"[Warning] Gói tin không xác định: {packet.GetType().Name}");
+                    break;
             }
         }
 
+        // Xử lý Đăng nhập
         private void HandleLogin(LoginPacket p)
         {
-            if ((p.Username == "user1" && p.Password == "123") || (p.Username == "user2" && p.Password == "123"))
+            // GỌI DATABASE ĐỂ KIỂM TRA
+            var user = DatabaseManager.Instance.Login(p.Username, p.Password);
+
+            if (user != null) // Đăng nhập thành công
             {
-                this.UserID = p.Username;
-                this.UserName = (p.Username == "user1") ? "Bạn Bè A" : "Bạn Bè B"; 
+                this.UserID = user.Username;     // Lấy ID từ DB
+                this.UserName = user.DisplayName; // Lấy Tên hiển thị từ DB (VD: "Bạn Bè A")
+
+                // --- (Phần code bên dưới giữ nguyên) ---
                 _server.RegisterClient(this.UserID, this);
                 var onlineUsers = _server.GetOnlineUsers(this.UserID);
-                var result = new LoginResultPacket { Success = true, UserID = this.UserID, UserName = this.UserName, OnlineUsers = onlineUsers };
+
+                var result = new LoginResultPacket
+                {
+                    Success = true,
+                    UserID = this.UserID,
+                    UserName = this.UserName,
+                    OnlineUsers = onlineUsers
+                };
                 SendPacket(result);
-                var statusPacket = new UserStatusPacket { UserID = this.UserID, UserName = this.UserName, IsOnline = true };
-                _server.BroadcastPacket(statusPacket, this.UserID); 
-                Logger.Success($"[Login] User '{this.UserID}' đã đăng nhập.");
+
+                var statusPacket = new UserStatusPacket
+                {
+                    UserID = this.UserID,
+                    UserName = this.UserName,
+                    IsOnline = true
+                };
+                _server.BroadcastPacket(statusPacket, this.UserID);
+
+                Logger.Success($"[Login] User '{this.UserID}' ({this.UserName}) đã đăng nhập từ DB.");
             }
-            else
+            else // Đăng nhập thất bại
             {
                 SendPacket(new LoginResultPacket { Success = false, Message = "Sai tên đăng nhập hoặc mật khẩu." });
-                Logger.Warning($"[Login] Thất bại: {p.Username}");
-                Close(); 
+                Logger.Warning($"[Login] Thất bại: {p.Username} (Sai pass hoặc không tồn tại)");
+                Close();
             }
         }
 

@@ -140,6 +140,59 @@ namespace ChatAppServer
             }
             else Logger.Warning($"[GameMove] Nhận được nước đi cho GameID không tồn tại: {move.GameID}");
         }
+        public void ProcessRematchRequest(RematchRequestPacket request)
+        {
+            GameSession session;
+            lock (_gameSessions) _gameSessions.TryGetValue(request.GameID, out session);
+
+            if (session != null)
+            {
+                string opponentID = session.GetOpponent(request.SenderID);
+                if (opponentID != null)
+                {
+                    RelayPrivatePacket(opponentID, request);
+                }
+                else Logger.Warning($"[Rematch] Không tìm thấy đối thủ cho {request.SenderID} trong game {request.GameID}");
+            }
+            else Logger.Warning($"[Rematch] Yêu cầu cho GameID không tồn tại: {request.GameID}");
+        }
+
+        public void ProcessRematchResponse(RematchResponsePacket response)
+        {
+            if (!response.Accepted)
+            {
+                Logger.Warning($"[Rematch] {response.SenderID} từ chối chơi lại game {response.GameID}");
+                RelayPrivatePacket(response.ReceiverID, response);
+                return;
+            }
+            Logger.Success($"[Rematch] {response.SenderID} đồng ý chơi lại game {response.GameID}. Reset game!");
+            GameSession session;
+            lock (_gameSessions) _gameSessions.TryGetValue(response.GameID, out session);
+
+            if (session != null)
+            {
+                ClientHandler player1_Handler, player2_Handler;
+                lock (_clients)
+                {
+                    _clients.TryGetValue(session.Player1_ID, out player1_Handler);
+                    _clients.TryGetValue(session.Player2_ID, out player2_Handler);
+                }
+
+                if (player1_Handler != null && player2_Handler != null)
+                {
+                    bool player1Starts = (session.Player1_ID == response.SenderID);
+
+                    var resetPacket1 = new GameResetPacket { GameID = response.GameID, StartsFirst = player1Starts };
+                    player1_Handler.SendPacket(resetPacket1);
+
+                    var resetPacket2 = new GameResetPacket { GameID = response.GameID, StartsFirst = !player1Starts };
+                    player2_Handler.SendPacket(resetPacket2);
+                }
+                else Logger.Error($"[Rematch] Không tìm thấy client handler khi reset game {response.GameID}");
+            }
+            else Logger.Warning($"[Rematch] Phản hồi cho GameID không tồn tại: {response.GameID}");
+        }
+
         #endregion
     }
 }
