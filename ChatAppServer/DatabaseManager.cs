@@ -52,6 +52,28 @@ namespace ChatAppServer
             }
             return null; // Không tìm thấy hoặc lỗi
         }
+        // (Trong class DatabaseManager)
+        public void UpdateDisplayName(string username, string newDisplayName)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                try
+                {
+                    conn.Open();
+                    string query = "UPDATE Users SET DisplayName = @name WHERE Username = @u";
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@name", newDisplayName);
+                        cmd.Parameters.AddWithValue("@u", username);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Lỗi cập nhật tên User", ex);
+                }
+            }
+        }
     }
 
     // Class nhỏ để chứa dữ liệu trả về

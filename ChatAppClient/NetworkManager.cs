@@ -134,6 +134,8 @@ namespace ChatAppClient.Forms
             this.UserName = userName;
         }
 
+        // (Chỉ cần thay hàm HandlePacket trong NetworkManager.cs của bạn)
+
         private void HandlePacket(object packet)
         {
             if (packet is LoginResultPacket pLogin)
@@ -152,12 +154,16 @@ namespace ChatAppClient.Forms
                 GameResponsePacket p => () => _homeForm.HandleGameResponse(p),
                 GameStartPacket p => () => _homeForm.HandleGameStart(p),
                 GameMovePacket p => () => _homeForm.HandleGameMove(p),
-                RematchRequestPacket p => () => _homeForm.HandleRematchRequest(p),  
-                RematchResponsePacket p => () => _homeForm.HandleRematchResponse(p), 
-                GameResetPacket p => () => _homeForm.HandleGameReset(p),     
+                RematchRequestPacket p => () => _homeForm.HandleRematchRequest(p),
+                RematchResponsePacket p => () => _homeForm.HandleRematchResponse(p),
+                GameResetPacket p => () => _homeForm.HandleGameReset(p),
+
+                // --- CASE MỚI ---
+                UpdateProfilePacket p => () => _homeForm.HandleUpdateProfile(p),
+
                 _ => null
             };
-            action?.Invoke(); 
+            action?.Invoke();
         }
 
         public void SendPacket(object packet)

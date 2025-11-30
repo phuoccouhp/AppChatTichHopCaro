@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Images\550370560_1205130104983681_4413519399568592495_n.jpg">
+    <None Update="Images\default_avatar.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

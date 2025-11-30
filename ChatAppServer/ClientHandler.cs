@@ -1,8 +1,8 @@
-﻿#pragma warning disable SYSLIB0011 // Tắt cảnh báo BinaryFormatter
+﻿#pragma warning disable SYSLIB0011 
 using ChatApp.Shared;
 using System;
 using System.IO;
-using System.Net; // Cần thiết cho IPEndPoint
+using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading.Tasks;
@@ -19,7 +19,6 @@ namespace ChatAppServer
         public string UserID { get; private set; }
         public string UserName { get; private set; }
 
-        // MỚI: Lấy IP để Admin xem
         public string ClientIP
         {
             get
@@ -28,8 +27,6 @@ namespace ChatAppServer
                 catch { return "Unknown"; }
             }
         }
-
-        // MỚI: Thời gian đăng nhập
         public DateTime LoginTime { get; private set; } = DateTime.Now;
 
         public ClientHandler(TcpClient client, Server server)
@@ -99,20 +96,33 @@ namespace ChatAppServer
                     Logger.Info($"[Rematch] {p.SenderID} phản hồi chơi lại.");
                     _server.ProcessRematchResponse(p);
                     break;
+
+                // --- CASE MỚI ---
+                case UpdateProfilePacket p:
+                    HandleUpdateProfile(p);
+                    break;
+
                 default: Logger.Warning($"Packet lạ: {packet.GetType().Name}"); break;
             }
         }
 
+        // --- HÀM MỚI ---
+        private void HandleUpdateProfile(UpdateProfilePacket p)
+        {
+            DatabaseManager.Instance.UpdateDisplayName(p.UserID, p.NewDisplayName);
+            this.UserName = p.NewDisplayName;
+            Logger.Info($"[Profile] {p.UserID} đổi tên thành '{p.NewDisplayName}' {(p.HasNewAvatar ? "& đổi Avatar" : "")}");
+            _server.BroadcastPacket(p, null); // Gửi cho mọi người (bao gồm cả người gửi để họ cập nhật)
+        }
+
         private void HandleLogin(LoginPacket p)
         {
-            // Kiểm tra DB
             var user = DatabaseManager.Instance.Login(p.Username, p.Password);
-
             if (user != null)
             {
                 this.UserID = user.Username;
                 this.UserName = user.DisplayName;
-                this.LoginTime = DateTime.Now; // Lưu thời gian
+                this.LoginTime = DateTime.Now;
 
                 _server.RegisterClient(this.UserID, this);
                 var onlineUsers = _server.GetOnlineUsers(this.UserID);

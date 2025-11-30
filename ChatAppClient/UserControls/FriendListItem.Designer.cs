@@ -28,24 +28,28 @@
         /// </summary>
         private void InitializeComponent()
         {
+            // 1. KHỞI TẠO CÁC CONTROL (QUAN TRỌNG: Phải có dòng new... ở đây)
             this.pbAvatar = new System.Windows.Forms.PictureBox();
             this.lblFriendName = new System.Windows.Forms.Label();
             this.lblStatus = new System.Windows.Forms.Label();
             this.pnlStatusDot = new System.Windows.Forms.Panel();
-            this.lblNewMessageBadge = new System.Windows.Forms.Label(); // Khai báo dòng này trước
+            this.lblNewMessageBadge = new System.Windows.Forms.Label(); // <--- ĐÃ SỬA: Thêm dòng này
+
             ((System.ComponentModel.ISupportInitialize)(this.pbAvatar)).BeginInit();
             this.SuspendLayout();
+
             // 
             // pbAvatar
             // 
             try
             {
-                // Tải ảnh từ thư mục "Images" (đảm bảo file tồn tại và đã set "Copy if newer")
-                this.pbAvatar.Image = System.Drawing.Image.FromFile("Images/550370560_1205130104983681_4413519399568592495_n.png");
+                // Tải ảnh từ thư mục Images. Nếu không có file này, nó sẽ nhảy xuống catch.
+                // Bạn nên đảm bảo file "Images/default_avatar.png" tồn tại trong bin/Debug/Images
+                this.pbAvatar.Image = System.Drawing.Image.FromFile("Images/default_avatar.png");
             }
-            catch (System.IO.FileNotFoundException)
+            catch
             {
-                // Nếu không tìm thấy file, hiển thị ảnh lỗi (hoặc để trống)
+                // Nếu lỗi (không tìm thấy file), dùng ảnh lỗi mặc định để không crash app
                 this.pbAvatar.Image = this.pbAvatar.ErrorImage;
             }
             this.pbAvatar.Location = new System.Drawing.Point(10, 10);
@@ -96,13 +100,13 @@
             this.lblNewMessageBadge.TabIndex = 4;
             this.lblNewMessageBadge.Text = "N";
             this.lblNewMessageBadge.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.lblNewMessageBadge.Visible = false;
+            this.lblNewMessageBadge.Visible = false; // Ẩn mặc định
             // 
             // FriendListItem
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.BackColor = System.Drawing.Color.White;
-            this.Controls.Add(this.lblNewMessageBadge); // Thêm chấm đỏ
+            this.Controls.Add(this.lblNewMessageBadge);
             this.Controls.Add(this.pnlStatusDot);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.lblFriendName);
@@ -123,6 +127,6 @@
         private System.Windows.Forms.Label lblFriendName;
         private System.Windows.Forms.Label lblStatus;
         private System.Windows.Forms.Panel pnlStatusDot;
-        private System.Windows.Forms.Label lblNewMessageBadge; // Khai báo biến
+        private System.Windows.Forms.Label lblNewMessageBadge;
     }
 }
