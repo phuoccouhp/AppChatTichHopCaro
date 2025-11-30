@@ -71,77 +71,6 @@
         }
       }
     },
-    "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj": {
-      "version": "1.0.0",
-      "restore": {
-        "projectUniqueName": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj",
-        "projectName": "ChatAppClient",
-        "projectPath": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj",
-        "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\obj\\",
-        "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
-        "configFilePaths": [
-          "C:\\Users\\Admin\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
-        ],
-        "originalTargetFrameworks": [
-          "net8.0-windows"
-        ],
-        "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "https://api.nuget.org/v3/index.json": {}
-        },
-        "frameworks": {
-          "net8.0-windows7.0": {
-            "targetAlias": "net8.0-windows",
-            "projectReferences": {
-              "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj": {
-                "projectPath": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj"
-              }
-            }
-          }
-        },
-        "warningProperties": {
-          "warnAsError": [
-            "NU1605"
-          ]
-        },
-        "restoreAuditProperties": {
-          "enableAudit": "true",
-          "auditLevel": "low",
-          "auditMode": "direct"
-        }
-      },
-      "frameworks": {
-        "net8.0-windows7.0": {
-          "targetAlias": "net8.0-windows",
-          "imports": [
-            "net461",
-            "net462",
-            "net47",
-            "net471",
-            "net472",
-            "net48",
-            "net481"
-          ],
-          "assetTargetFallback": true,
-          "warn": true,
-          "frameworkReferences": {
-            "Microsoft.NETCore.App": {
-              "privateAssets": "all"
-            },
-            "Microsoft.WindowsDesktop.App.WindowsForms": {
-              "privateAssets": "none"
-            }
-          },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.202/PortableRuntimeIdentifierGraph.json"
-        }
-      }
-    },
     "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\ChatAppServer.csproj": {
       "version": "1.0.0",
       "restore": {
@@ -172,9 +101,6 @@
             "projectReferences": {
               "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj": {
                 "projectPath": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj"
-              },
-              "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj": {
-                "projectPath": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj"
               }
             }
           }
@@ -194,9 +120,9 @@
         "net8.0-windows7.0": {
           "targetAlias": "net8.0-windows",
           "dependencies": {
-            "System.Data.SQLite": {
+            "System.Data.SqlClient": {
               "target": "Package",
-              "version": "[1.0.118, )"
+              "version": "[4.8.6, )"
             }
           },
           "imports": [
