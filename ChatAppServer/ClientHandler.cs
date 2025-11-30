@@ -1,9 +1,9 @@
-﻿#pragma warning disable SYSLIB0011
+﻿#pragma warning disable SYSLIB0011 // Tắt cảnh báo BinaryFormatter
 using ChatApp.Shared;
 using System;
 using System.IO;
+using System.Net; // Cần thiết cho IPEndPoint
 using System.Net.Sockets;
-using System.Runtime.Serialization; 
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading.Tasks;
 
@@ -15,8 +15,22 @@ namespace ChatAppServer
         private Server _server;
         private NetworkStream _stream;
         private BinaryFormatter _formatter;
+
         public string UserID { get; private set; }
         public string UserName { get; private set; }
+
+        // MỚI: Lấy IP để Admin xem
+        public string ClientIP
+        {
+            get
+            {
+                try { return (_client.Client.RemoteEndPoint as IPEndPoint)?.Address.ToString(); }
+                catch { return "Unknown"; }
+            }
+        }
+
+        // MỚI: Thời gian đăng nhập
+        public DateTime LoginTime { get; private set; } = DateTime.Now;
 
         public ClientHandler(TcpClient client, Server server)
         {
@@ -27,7 +41,11 @@ namespace ChatAppServer
                 _stream = _client.GetStream();
                 _formatter = new BinaryFormatter();
             }
-            catch (Exception ex) { Logger.Error("Không thể lấy NetworkStream", ex); Close(); }
+            catch (Exception ex)
+            {
+                Logger.Error("Không thể khởi tạo ClientHandler", ex);
+                Close();
+            }
         }
 
         public async Task StartHandlingAsync()
@@ -41,10 +59,14 @@ namespace ChatAppServer
                     HandlePacket(receivedPacket);
                 }
             }
-            catch (IOException ioEx) { Logger.Warning($"[Client {UserID ?? "???"}] Lỗi I/O (mất kết nối?): {ioEx.Message}"); }
-            catch (SerializationException serEx) { Logger.Error($"[Client {UserID ?? "???"}] Lỗi Deserialize", serEx); }
-            catch (Exception ex) { Logger.Error($"[Client {UserID ?? "???"}] Lỗi không xác định", ex); }
-            finally { Logger.Warning($"[Client {UserID ?? "???"}] Dừng lắng nghe."); Close(); }
+            catch (Exception ex)
+            {
+                Logger.Warning($"[Client {UserID ?? "???"}] Đã ngắt kết nối: {ex.Message}");
+            }
+            finally
+            {
+                Close();
+            }
         }
 
         private void HandlePacket(object packet)
@@ -52,63 +74,61 @@ namespace ChatAppServer
             switch (packet)
             {
                 case LoginPacket p: HandleLogin(p); break;
-                case TextPacket p: Logger.Info($"[Chat] {p.SenderID}->{p.ReceiverID}"); _server.RelayPrivatePacket(p.ReceiverID, p); break;
-                case FilePacket p: Logger.Info($"[File] {p.SenderID}->{p.ReceiverID}"); _server.RelayPrivatePacket(p.ReceiverID, p); break;
-                case GameInvitePacket p: Logger.Info($"[Game] {p.SenderID} mời {p.ReceiverID}"); _server.RelayPrivatePacket(p.ReceiverID, p); break;
+                case TextPacket p:
+                    Logger.Info($"[Chat] {p.SenderID} -> {p.ReceiverID}: {p.MessageContent}");
+                    _server.RelayPrivatePacket(p.ReceiverID, p);
+                    break;
+                case FilePacket p:
+                    Logger.Info($"[File] {p.SenderID} -> {p.ReceiverID}: {p.FileName}");
+                    _server.RelayPrivatePacket(p.ReceiverID, p);
+                    break;
+                case GameInvitePacket p:
+                    Logger.Info($"[Game] {p.SenderID} mời {p.ReceiverID}");
+                    _server.RelayPrivatePacket(p.ReceiverID, p);
+                    break;
                 case GameResponsePacket p: _server.ProcessGameResponse(p); break;
-                case GameMovePacket p: Logger.Info($"[Move] {p.SenderID} đi {p.Row},{p.Col}"); _server.ProcessGameMove(p); break;
-                case RematchRequestPacket p:                      
-                    Logger.Info($"[Rematch] {p.SenderID} yêu cầu chơi lại game {p.GameID}");
+                case GameMovePacket p:
+                    Logger.Info($"[Move] {p.SenderID} đi {p.Row},{p.Col}");
+                    _server.ProcessGameMove(p);
+                    break;
+                case RematchRequestPacket p:
+                    Logger.Info($"[Rematch] {p.SenderID} yêu cầu chơi lại.");
                     _server.ProcessRematchRequest(p);
                     break;
-                case RematchResponsePacket p:                    
-                    Logger.Info($"[Rematch] {p.SenderID} phản hồi yêu cầu chơi lại game {p.GameID}");
+                case RematchResponsePacket p:
+                    Logger.Info($"[Rematch] {p.SenderID} phản hồi chơi lại.");
                     _server.ProcessRematchResponse(p);
                     break;
-                default:
-                    Logger.Warning($"[Warning] Gói tin không xác định: {packet.GetType().Name}");
-                    break;
+                default: Logger.Warning($"Packet lạ: {packet.GetType().Name}"); break;
             }
         }
 
-        // Xử lý Đăng nhập
         private void HandleLogin(LoginPacket p)
         {
-            // GỌI DATABASE ĐỂ KIỂM TRA
+            // Kiểm tra DB
             var user = DatabaseManager.Instance.Login(p.Username, p.Password);
 
-            if (user != null) // Đăng nhập thành công
+            if (user != null)
             {
-                this.UserID = user.Username;     // Lấy ID từ DB
-                this.UserName = user.DisplayName; // Lấy Tên hiển thị từ DB (VD: "Bạn Bè A")
+                this.UserID = user.Username;
+                this.UserName = user.DisplayName;
+                this.LoginTime = DateTime.Now; // Lưu thời gian
 
-                // --- (Phần code bên dưới giữ nguyên) ---
                 _server.RegisterClient(this.UserID, this);
                 var onlineUsers = _server.GetOnlineUsers(this.UserID);
 
-                var result = new LoginResultPacket
-                {
-                    Success = true,
-                    UserID = this.UserID,
-                    UserName = this.UserName,
-                    OnlineUsers = onlineUsers
-                };
+                var result = new LoginResultPacket { Success = true, UserID = this.UserID, UserName = this.UserName, OnlineUsers = onlineUsers };
                 SendPacket(result);
 
-                var statusPacket = new UserStatusPacket
-                {
-                    UserID = this.UserID,
-                    UserName = this.UserName,
-                    IsOnline = true
-                };
+                var statusPacket = new UserStatusPacket { UserID = this.UserID, UserName = this.UserName, IsOnline = true };
                 _server.BroadcastPacket(statusPacket, this.UserID);
 
-                Logger.Success($"[Login] User '{this.UserID}' ({this.UserName}) đã đăng nhập từ DB.");
+                Logger.Success($"[Login] {this.UserID} ({this.ClientIP}) đã đăng nhập.");
             }
-            else // Đăng nhập thất bại
+            else
             {
-                SendPacket(new LoginResultPacket { Success = false, Message = "Sai tên đăng nhập hoặc mật khẩu." });
-                Logger.Warning($"[Login] Thất bại: {p.Username} (Sai pass hoặc không tồn tại)");
+                SendPacket(new LoginResultPacket { Success = false, Message = "Sai thông tin đăng nhập." });
+                Logger.Warning($"[Login Fail] {p.Username} từ IP {this.ClientIP}");
                 Close();
             }
         }
@@ -118,18 +138,15 @@ namespace ChatAppServer
             if (_client.Connected && _stream != null)
             {
                 try { lock (_stream) { _formatter.Serialize(_stream, packet); } }
-                catch (Exception ex) { Logger.Error($"Không thể gửi gói tin cho {UserID}", ex); Close(); }
+                catch (Exception ex) { Logger.Error($"Gửi thất bại cho {UserID}", ex); Close(); }
             }
         }
 
         public void Close()
         {
-            if (this.UserID != null)
-            {
-                _server.RemoveClient(this.UserID);
-            }
-            _stream?.Close(); 
-            _client?.Close(); 
+            if (UserID != null) _server.RemoveClient(this.UserID);
+            _stream?.Close();
+            _client?.Close();
         }
     }
 }

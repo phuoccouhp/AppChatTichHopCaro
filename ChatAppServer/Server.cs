@@ -15,6 +15,8 @@ namespace ChatAppServer
         private readonly Dictionary<string, ClientHandler> _clients = new Dictionary<string, ClientHandler>();
         private readonly Dictionary<string, GameSession> _gameSessions = new Dictionary<string, GameSession>();
 
+        public event Action<List<string>> OnUserListChanged;
+
         public Server(int port)
         {
             _port = port;
@@ -29,8 +31,7 @@ namespace ChatAppServer
             }
             catch (Exception ex)
             {
-                Logger.Error($"Không thể khởi động listener trên port {_port}", ex);
-                Console.ReadKey();
+                Logger.Error($"Không thể start port {_port}", ex);
                 return;
             }
 
@@ -39,60 +40,105 @@ namespace ChatAppServer
                 try
                 {
                     TcpClient clientSocket = await _listener.AcceptTcpClientAsync();
-                    Logger.Info($"[Connect] Client mới từ {(clientSocket.Client.RemoteEndPoint as IPEndPoint)?.Address} đã kết nối.");
-
+                    Logger.Info($"[Connect] IP: {(clientSocket.Client.RemoteEndPoint as IPEndPoint)?.Address}");
                     ClientHandler clientHandler = new ClientHandler(clientSocket, this);
                     _ = clientHandler.StartHandlingAsync();
                 }
-                catch (ObjectDisposedException) { Logger.Warning("Listener đã dừng."); break; }
-                catch (Exception ex) { Logger.Error($"Lỗi khi chấp nhận client", ex); await Task.Delay(1000); }
+                catch (ObjectDisposedException) { break; }
+                catch (Exception ex) { Logger.Error($"Lỗi Accept Client", ex); await Task.Delay(1000); }
             }
         }
 
-        #region Quản lý Client
-        public void RegisterClient(string userID, ClientHandler handler) { lock (_clients) _clients[userID] = handler; }
+        #region Quản lý Client (Kick, Info, Register...)
+
+        public void RegisterClient(string userID, ClientHandler handler)
+        {
+            lock (_clients) { _clients[userID] = handler; }
+            NotifyUserListChanged();
+        }
+
         public void RemoveClient(string userID)
         {
             if (userID == null) return;
-            lock (_clients) _clients.Remove(userID);
+            lock (_clients) { _clients.Remove(userID); }
+
             var statusPacket = new UserStatusPacket { UserID = userID, IsOnline = false };
             BroadcastPacket(statusPacket, null);
-            Logger.Warning($"[Disconnect] User '{userID}' đã ngắt kết nối.");
+            Logger.Warning($"[Disconnect] User '{userID}' thoát.");
+            NotifyUserListChanged();
         }
+
+        // MỚI: Hàm Kick User
+        public void KickUser(string userID)
+        {
+            lock (_clients)
+            {
+                if (_clients.TryGetValue(userID, out ClientHandler client))
+                {
+                    client.Close(); // Đóng kết nối -> Tự động gọi RemoveClient
+                    Logger.Warning($"[Admin] Đã KICK user '{userID}'.");
+                }
+            }
+        }
+
+        // MỚI: Hàm Lấy thông tin User
+        public string GetUserInfo(string userID)
+        {
+            lock (_clients)
+            {
+                if (_clients.TryGetValue(userID, out ClientHandler client))
+                {
+                    TimeSpan duration = DateTime.Now - client.LoginTime;
+                    return $"ID: {client.UserID}\n" +
+                           $"Name: {client.UserName}\n" +
+                           $"IP: {client.ClientIP}\n" +
+                           $"Login At: {client.LoginTime:HH:mm:ss}\n" +
+                           $"Online: {duration.Hours}h {duration.Minutes}m {duration.Seconds}s";
+                }
+            }
+            return "Người dùng không tồn tại hoặc đã thoát.";
+        }
+
+        private void NotifyUserListChanged()
+        {
+            lock (_clients)
+            {
+                var list = _clients.Values.Select(c => $"{c.UserName} ({c.UserID})").ToList();
+                OnUserListChanged?.Invoke(list);
+            }
+        }
+
         public List<UserStatus> GetOnlineUsers(string excludeUserID)
         {
             lock (_clients)
             {
-                return _clients.Values
-                    .Where(c => c.UserID != null && c.UserID != excludeUserID)
-                    .Select(c => new UserStatus { UserID = c.UserID, UserName = c.UserName, IsOnline = true })
-                    .ToList();
+                return _clients.Values.Where(c => c.UserID != excludeUserID)
+                    .Select(c => new UserStatus { UserID = c.UserID, UserName = c.UserName, IsOnline = true }).ToList();
             }
         }
+
         #endregion
 
-        #region Gửi Gói Tin
+        #region Giao tiếp & Game (Giữ nguyên logic cũ)
+
         public void BroadcastPacket(object packet, string excludeUserID)
         {
             lock (_clients)
             {
-                foreach (var client in _clients.Values.ToList())
-                {
-                    if (client.UserID != excludeUserID) client.SendPacket(packet);
-                }
+                foreach (var c in _clients.Values.ToList())
+                    if (c.UserID != excludeUserID) c.SendPacket(packet);
             }
         }
+
         public void RelayPrivatePacket(string receiverID, object packet)
         {
             lock (_clients)
             {
-                if (_clients.TryGetValue(receiverID, out ClientHandler receiver)) receiver.SendPacket(packet);
-                else Logger.Warning($"[Warning] Không tìm thấy client '{receiverID}' để chuyển tin.");
+                if (_clients.TryGetValue(receiverID, out ClientHandler r)) r.SendPacket(packet);
+                else Logger.Warning($"Không tìm thấy user '{receiverID}'");
             }
         }
-        #endregion
 
-        #region Xử lý Logic Game
         public void ProcessGameResponse(GameResponsePacket response)
         {
             if (!response.Accepted)
@@ -101,98 +147,75 @@ namespace ChatAppServer
                 RelayPrivatePacket(response.ReceiverID, response);
                 return;
             }
+            Logger.Success($"[Game] Bắt đầu: {response.ReceiverID} vs {response.SenderID}");
 
-            Logger.Success($"[Game] {response.SenderID} đồng ý {response.ReceiverID}. Bắt đầu game!");
-            string player1_ID = response.ReceiverID;
-            string player2_ID = response.SenderID;
             string gameID = Guid.NewGuid().ToString("N").Substring(0, 10);
-            GameSession newGame = new GameSession(gameID, player1_ID, player2_ID);
+            GameSession newGame = new GameSession(gameID, response.ReceiverID, response.SenderID);
             lock (_gameSessions) _gameSessions.Add(gameID, newGame);
 
-            ClientHandler player1_Handler, player2_Handler;
+            // Gửi start packet
+            ClientHandler p1, p2;
             lock (_clients)
             {
-                _clients.TryGetValue(player1_ID, out player1_Handler);
-                _clients.TryGetValue(player2_ID, out player2_Handler);
+                _clients.TryGetValue(newGame.Player1_ID, out p1);
+                _clients.TryGetValue(newGame.Player2_ID, out p2);
             }
 
-            if (player1_Handler == null || player2_Handler == null)
+            if (p1 != null && p2 != null)
             {
-                Logger.Error("[Error] Không thể bắt đầu game, 1 trong 2 người đã offline.");
-                lock (_gameSessions) _gameSessions.Remove(gameID); 
-                return;
+                p1.SendPacket(new GameStartPacket { GameID = gameID, OpponentID = p2.UserID, OpponentName = p2.UserName, StartsFirst = true });
+                p2.SendPacket(new GameStartPacket { GameID = gameID, OpponentID = p1.UserID, OpponentName = p1.UserName, StartsFirst = false });
             }
-
-            var startPacket1 = new GameStartPacket { GameID = gameID, OpponentID = player2_Handler.UserID, OpponentName = player2_Handler.UserName, StartsFirst = true };
-            player1_Handler.SendPacket(startPacket1);
-            var startPacket2 = new GameStartPacket { GameID = gameID, OpponentID = player1_Handler.UserID, OpponentName = player1_Handler.UserName, StartsFirst = false };
-            player2_Handler.SendPacket(startPacket2);
         }
+
         public void ProcessGameMove(GameMovePacket move)
         {
-            GameSession session;
-            lock (_gameSessions) _gameSessions.TryGetValue(move.GameID, out session);
-            if (session != null)
+            lock (_gameSessions)
             {
-                string opponentID = session.GetOpponent(move.SenderID);
-                if (opponentID != null) RelayPrivatePacket(opponentID, move);
-                else Logger.Warning($"[GameMove] Không tìm thấy đối thủ cho {move.SenderID} trong game {move.GameID}");
+                if (_gameSessions.TryGetValue(move.GameID, out GameSession s))
+                {
+                    string oppID = s.GetOpponent(move.SenderID);
+                    if (oppID != null) RelayPrivatePacket(oppID, move);
+                }
             }
-            else Logger.Warning($"[GameMove] Nhận được nước đi cho GameID không tồn tại: {move.GameID}");
         }
+
         public void ProcessRematchRequest(RematchRequestPacket request)
         {
-            GameSession session;
-            lock (_gameSessions) _gameSessions.TryGetValue(request.GameID, out session);
-
-            if (session != null)
+            lock (_gameSessions)
             {
-                string opponentID = session.GetOpponent(request.SenderID);
-                if (opponentID != null)
+                if (_gameSessions.TryGetValue(request.GameID, out GameSession s))
                 {
-                    RelayPrivatePacket(opponentID, request);
+                    string oppID = s.GetOpponent(request.SenderID);
+                    if (oppID != null) RelayPrivatePacket(oppID, request);
                 }
-                else Logger.Warning($"[Rematch] Không tìm thấy đối thủ cho {request.SenderID} trong game {request.GameID}");
             }
-            else Logger.Warning($"[Rematch] Yêu cầu cho GameID không tồn tại: {request.GameID}");
         }
 
         public void ProcessRematchResponse(RematchResponsePacket response)
         {
             if (!response.Accepted)
             {
-                Logger.Warning($"[Rematch] {response.SenderID} từ chối chơi lại game {response.GameID}");
                 RelayPrivatePacket(response.ReceiverID, response);
                 return;
             }
-            Logger.Success($"[Rematch] {response.SenderID} đồng ý chơi lại game {response.GameID}. Reset game!");
-            GameSession session;
-            lock (_gameSessions) _gameSessions.TryGetValue(response.GameID, out session);
-
-            if (session != null)
+            // Reset game
+            lock (_gameSessions)
             {
-                ClientHandler player1_Handler, player2_Handler;
-                lock (_clients)
+                if (_gameSessions.TryGetValue(response.GameID, out GameSession s))
                 {
-                    _clients.TryGetValue(session.Player1_ID, out player1_Handler);
-                    _clients.TryGetValue(session.Player2_ID, out player2_Handler);
+                    ClientHandler p1, p2;
+                    lock (_clients) { _clients.TryGetValue(s.Player1_ID, out p1); _clients.TryGetValue(s.Player2_ID, out p2); }
+
+                    if (p1 != null && p2 != null)
+                    {
+                        bool p1Starts = (s.Player1_ID == response.SenderID);
+                        p1.SendPacket(new GameResetPacket { GameID = response.GameID, StartsFirst = p1Starts });
+                        p2.SendPacket(new GameResetPacket { GameID = response.GameID, StartsFirst = !p1Starts });
+                    }
                 }
-
-                if (player1_Handler != null && player2_Handler != null)
-                {
-                    bool player1Starts = (session.Player1_ID == response.SenderID);
-
-                    var resetPacket1 = new GameResetPacket { GameID = response.GameID, StartsFirst = player1Starts };
-                    player1_Handler.SendPacket(resetPacket1);
-
-                    var resetPacket2 = new GameResetPacket { GameID = response.GameID, StartsFirst = !player1Starts };
-                    player2_Handler.SendPacket(resetPacket2);
-                }
-                else Logger.Error($"[Rematch] Không tìm thấy client handler khi reset game {response.GameID}");
             }
-            else Logger.Warning($"[Rematch] Phản hồi cho GameID không tồn tại: {response.GameID}");
         }
-
         #endregion
     }
 }
