@@ -42,11 +42,11 @@
             // 
             lblTitle.AutoSize = true;
             lblTitle.BackColor = Color.Transparent;
-            lblTitle.Font = new Font("Montserrat", 20F, FontStyle.Bold);
+            lblTitle.Font = new Font("Microsoft Sans Serif", 20F, FontStyle.Bold);
             lblTitle.ForeColor = Color.FromArgb(0, 240, 255);
             lblTitle.Location = new Point(120, 67);
             lblTitle.Name = "lblTitle";
-            lblTitle.Size = new Size(361, 53);
+            lblTitle.Size = new Size(355, 39);
             lblTitle.TabIndex = 0;
             lblTitle.Text = "PASSWORD RESET";
             // 
@@ -54,11 +54,11 @@
             // 
             lblInstruction.AutoSize = true;
             lblInstruction.BackColor = Color.Transparent;
-            lblInstruction.Font = new Font("Montserrat", 11F);
+            lblInstruction.Font = new Font("Microsoft Sans Serif", 11F);
             lblInstruction.ForeColor = Color.White;
             lblInstruction.Location = new Point(119, 134);
             lblInstruction.Name = "lblInstruction";
-            lblInstruction.Size = new Size(361, 30);
+            lblInstruction.Size = new Size(322, 24);
             lblInstruction.TabIndex = 1;
             lblInstruction.Text = "Enter your email to receive OTP pass";
             lblInstruction.TextAlign = ContentAlignment.MiddleCenter;
@@ -76,13 +76,14 @@
             txtEmail.PlaceholderText = "Enter your E-mail address";
             txtEmail.Size = new Size(343, 60);
             txtEmail.TabIndex = 2;
+            txtEmail.Text = "Enter your E-mail address";
             // 
             // btnSend
             // 
             btnSend.BackColor = Color.FromArgb(12, 42, 82);
             btnSend.FlatAppearance.BorderSize = 0;
             btnSend.FlatStyle = FlatStyle.Flat;
-            btnSend.Font = new Font("Montserrat", 14F, FontStyle.Bold);
+            btnSend.Font = new Font("Microsoft Sans Serif", 14F, FontStyle.Bold);
             btnSend.ForeColor = Color.White;
             btnSend.Location = new Point(120, 364);
             btnSend.Margin = new Padding(3, 4, 3, 4);
@@ -91,16 +92,17 @@
             btnSend.TabIndex = 3;
             btnSend.Text = "Reset My Password";
             btnSend.UseVisualStyleBackColor = false;
+            btnSend.Click += btnResetPassword_Click;
             // 
             // lnkBack
             // 
             lnkBack.AutoSize = true;
             lnkBack.BackColor = Color.Transparent;
-            lnkBack.Font = new Font("Montserrat", 10F, FontStyle.Bold);
+            lnkBack.Font = new Font("Microsoft Sans Serif", 10F, FontStyle.Bold);
             lnkBack.LinkColor = Color.FromArgb(0, 132, 255);
             lnkBack.Location = new Point(223, 462);
             lnkBack.Name = "lnkBack";
-            lnkBack.Size = new Size(134, 27);
+            lnkBack.Size = new Size(125, 20);
             lnkBack.TabIndex = 4;
             lnkBack.TabStop = true;
             lnkBack.Text = "Back to Login";
@@ -111,7 +113,7 @@
             roundedButton1.BackColor = Color.FromArgb(153, 0, 17);
             roundedButton1.FlatAppearance.BorderSize = 0;
             roundedButton1.FlatStyle = FlatStyle.Flat;
-            roundedButton1.Font = new Font("Montserrat ExtraBold", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            roundedButton1.Font = new Font("Microsoft Sans Serif", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
             roundedButton1.ForeColor = Color.FromArgb(247, 197, 204);
             roundedButton1.Location = new Point(337, 279);
             roundedButton1.Margin = new Padding(3, 4, 3, 4);
@@ -120,6 +122,7 @@
             roundedButton1.TabIndex = 3;
             roundedButton1.Text = "Send OTP";
             roundedButton1.UseVisualStyleBackColor = false;
+            roundedButton1.Click += btnSendOTP_Click;
             // 
             // txtOTP
             // 
@@ -134,6 +137,7 @@
             txtOTP.PlaceholderText = "Enter your OTP";
             txtOTP.Size = new Size(222, 60);
             txtOTP.TabIndex = 2;
+            txtOTP.Text = "Enter your OTP";
             // 
             // frmForgotPass
             // 
@@ -158,7 +162,6 @@
             Text = "Forgot Password";
             ResumeLayout(false);
             PerformLayout();
-
         }
 
         #endregion

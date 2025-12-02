@@ -1,4 +1,4 @@
-﻿#pragma warning disable SYSLIB0011 
+﻿#pragma warning disable SYSLIB0011 // Tắt cảnh báo BinaryFormatter
 using ChatApp.Shared;
 using System;
 using System.IO;
@@ -28,6 +28,10 @@ namespace ChatAppServer
             }
         }
         public DateTime LoginTime { get; private set; } = DateTime.Now;
+
+        // --- Biến cho chức năng Quên mật khẩu ---
+        private string _currentOtp = null;
+        private string _currentResetEmail = null;
 
         public ClientHandler(TcpClient client, Server server)
         {
@@ -71,6 +75,14 @@ namespace ChatAppServer
             switch (packet)
             {
                 case LoginPacket p: HandleLogin(p); break;
+                case RegisterPacket p: HandleRegister(p); break;
+
+                // --- CÁC GÓI TIN QUÊN MẬT KHẨU ---
+                case ForgotPasswordPacket p: HandleForgotPasswordRequest(p); break;
+                case ResetPasswordPacket p: HandleResetPassword(p); break;
+
+                case UpdateProfilePacket p: HandleUpdateProfile(p); break;
+
                 case TextPacket p:
                     Logger.Info($"[Chat] {p.SenderID} -> {p.ReceiverID}: {p.MessageContent}");
                     _server.RelayPrivatePacket(p.ReceiverID, p);
@@ -97,36 +109,81 @@ namespace ChatAppServer
                     _server.ProcessRematchResponse(p);
                     break;
 
-                case UpdateProfilePacket p:
-                    HandleUpdateProfile(p);
-                    break;
-                case RegisterPacket p:
-                    HandleRegister(p);
-                    break;
-
                 default: Logger.Warning($"Packet lạ: {packet.GetType().Name}"); break;
             }
         }
-            private void HandleRegister(RegisterPacket p)
+
+        // --- XỬ LÝ QUÊN MẬT KHẨU ---
+        private void HandleForgotPasswordRequest(ForgotPasswordPacket p)
+        {
+            // 1. Kiểm tra email trong DB
+            if (!DatabaseManager.Instance.CheckEmailExists(p.Email))
+            {
+                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Email không tồn tại trong hệ thống." });
+                return;
+            }
+
+            // 2. Tạo OTP ngẫu nhiên (6 số)
+            Random r = new Random();
+            _currentOtp = r.Next(100000, 999999).ToString();
+            _currentResetEmail = p.Email;
+
+            // 3. Gửi Mail
+            // Lưu ý: Cần đảm bảo bạn đã tạo class EmailHelper và cấu hình App Password
+            bool mailSent = EmailHelper.SendOTP(p.Email, _currentOtp);
+
+            if (mailSent)
+            {
+                SendPacket(new ForgotPasswordResultPacket { Success = true, IsStep1Success = true, Message = "Đã gửi mã OTP. Vui lòng kiểm tra email." });
+                Logger.Info($"[Forgot Pass] Đã gửi OTP đến {p.Email}");
+            }
+            else
+            {
+                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Lỗi gửi email. Vui lòng thử lại sau." });
+            }
+        }
+
+        private void HandleResetPassword(ResetPasswordPacket p)
+        {
+            // Kiểm tra OTP
+            if (_currentOtp != null && _currentResetEmail == p.Email && _currentOtp == p.OtpCode)
+            {
+                // Đúng OTP -> Đổi pass trong DB
+                DatabaseManager.Instance.UpdatePassword(p.Email, p.NewPassword);
+
+                SendPacket(new ForgotPasswordResultPacket { Success = true, IsStep1Success = false, Message = "Đổi mật khẩu thành công! Hãy đăng nhập lại." });
+
+                // Xóa OTP cũ
+                _currentOtp = null;
+                _currentResetEmail = null;
+                Logger.Success($"[Reset Pass] Thành công cho {p.Email}");
+            }
+            else
+            {
+                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Mã OTP không đúng hoặc đã hết hạn." });
+            }
+        }
+
+        // --- CÁC HÀM XỬ LÝ KHÁC ---
+
+        private void HandleRegister(RegisterPacket p)
         {
             bool success = DatabaseManager.Instance.RegisterUser(p.Username, p.Password, p.Email);
-
             var result = new RegisterResultPacket
             {
                 Success = success,
                 Message = success ? "Đăng ký thành công!" : "Tên đăng nhập đã tồn tại hoặc lỗi hệ thống."
             };
-
             SendPacket(result);
             Logger.Info($"[Register] User '{p.Username}' đăng ký: {(success ? "Thành công" : "Thất bại")}");
         }
-        // --- HÀM MỚI ---
+
         private void HandleUpdateProfile(UpdateProfilePacket p)
         {
             DatabaseManager.Instance.UpdateDisplayName(p.UserID, p.NewDisplayName);
             this.UserName = p.NewDisplayName;
             Logger.Info($"[Profile] {p.UserID} đổi tên thành '{p.NewDisplayName}' {(p.HasNewAvatar ? "& đổi Avatar" : "")}");
-            _server.BroadcastPacket(p, null); // Gửi cho mọi người (bao gồm cả người gửi để họ cập nhật)
+            _server.BroadcastPacket(p, null);
         }
 
         private void HandleLogin(LoginPacket p)

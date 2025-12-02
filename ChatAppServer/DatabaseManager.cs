@@ -112,6 +112,38 @@ namespace ChatAppServer
                 }
             }
         }
+        // (Trong DatabaseManager.cs)
+
+        // Kiểm tra email có tồn tại không
+        public bool CheckEmailExists(string email)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                conn.Open();
+                string query = "SELECT COUNT(*) FROM Users WHERE Email = @e";
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@e", email);
+                    return (int)cmd.ExecuteScalar() > 0;
+                }
+            }
+        }
+
+        // Cập nhật mật khẩu mới
+        public void UpdatePassword(string email, string newPassword)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                conn.Open();
+                string query = "UPDATE Users SET Password = @p WHERE Email = @e";
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@p", newPassword);
+                    cmd.Parameters.AddWithValue("@e", email);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
     }
 
 

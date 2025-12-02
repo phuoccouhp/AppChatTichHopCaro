@@ -174,7 +174,7 @@ namespace ChatAppClient.Forms
             txtServerIP.PlaceholderText = "127.0.0.1";
             txtServerIP.Size = new Size(467, 69);
             txtServerIP.TabIndex = 4;
-            txtServerIP.Text = "127.0.0.1";
+            txtServerIP.Text = "10.45.100.45";
             // 
             // frmLogin
             // 

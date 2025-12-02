@@ -1,7 +1,7 @@
-﻿#pragma warning disable SYSLIB0011 
+﻿#pragma warning disable SYSLIB0011 // Tắt cảnh báo BinaryFormatter
 
 using ChatApp.Shared;
-using ChatAppClient.Helpers; 
+using ChatAppClient.Helpers;
 using System;
 using System.IO;
 using System.Net.Sockets;
@@ -19,57 +19,50 @@ namespace ChatAppClient.Forms
         private static NetworkManager _instance;
         public static NetworkManager Instance => _instance ??= new NetworkManager();
         #endregion
-        private TaskCompletionSource<RegisterResultPacket> _registerCompletionSource;
+
         private TcpClient _client;
         private NetworkStream _stream;
         private BinaryFormatter _formatter;
         private frmHome _homeForm;
+
+        // Các biến thông tin User
         public string UserID { get; private set; }
         public string UserName { get; private set; }
+
+        // Các biến Task/Event để xử lý phản hồi
         private TaskCompletionSource<LoginResultPacket> _loginCompletionSource;
-        private CancellationTokenSource _listeningCts; 
+        private TaskCompletionSource<RegisterResultPacket> _registerCompletionSource;
+        public event Action<ForgotPasswordResultPacket> OnForgotPasswordResult; // Sự kiện quên mật khẩu
+
+        private CancellationTokenSource _listeningCts;
 
         private NetworkManager()
         {
             _formatter = new BinaryFormatter();
         }
-        public async Task<RegisterResultPacket> RegisterAsync(RegisterPacket packet)
-        {
-            if (!_client.Connected) throw new InvalidOperationException("Chưa kết nối đến Server.");
 
-            _registerCompletionSource = new TaskCompletionSource<RegisterResultPacket>();
-            SendPacket(packet);
-
-            // Timeout 10s
-            var timeoutTask = Task.Delay(10000);
-            var resultTask = _registerCompletionSource.Task;
-
-            if (await Task.WhenAny(resultTask, timeoutTask) == resultTask)
-                return await resultTask;
-            else
-                throw new TimeoutException("Không nhận được phản hồi đăng ký.");
-        }
         public void RegisterHomeForm(frmHome homeForm) => _homeForm = homeForm;
 
+        // --- KẾT NỐI ---
         public async Task<bool> ConnectAsync(string ipAddress, int port)
         {
             if (_client != null && _client.Connected && _stream != null) return true;
 
-            DisconnectInternal(false); 
+            DisconnectInternal(false);
 
             try
             {
-                _client = new TcpClient(); 
+                _client = new TcpClient();
                 Logger.Info($"Đang kết nối đến {ipAddress}:{port}...");
 
                 var connectTask = _client.ConnectAsync(ipAddress, port);
-                using var timeoutCts = new CancellationTokenSource(5000); 
+                using var timeoutCts = new CancellationTokenSource(5000);
 
                 var completedTask = await Task.WhenAny(connectTask, Task.Delay(-1, timeoutCts.Token));
 
                 if (completedTask == connectTask)
                 {
-                    await connectTask; 
+                    await connectTask;
 
                     try
                     {
@@ -79,26 +72,31 @@ namespace ChatAppClient.Forms
                     catch (Exception streamEx)
                     {
                         Logger.Error("Lỗi khi lấy NetworkStream", streamEx);
-                        DisconnectInternal(false); 
+                        DisconnectInternal(false);
                         return false;
                     }
 
                     _listeningCts = new CancellationTokenSource();
-                    _ = StartListeningAsync(_listeningCts.Token); 
+                    _ = StartListeningAsync(_listeningCts.Token);
                     Logger.Success("Đã kết nối!");
                     return true;
                 }
                 else
                 {
                     Logger.Error("Kết nối thất bại (Timeout).");
-                    DisconnectInternal(false); 
+                    DisconnectInternal(false);
                     return false;
                 }
             }
-            catch (SocketException sockEx) { Logger.Error($"Lỗi Socket (kiểm tra IP/Port/Firewall)", sockEx); DisconnectInternal(false); return false; }
-            catch (Exception ex) { Logger.Error($"Kết nối thất bại (Lỗi khác)", ex); DisconnectInternal(false); return false; }
+            catch (Exception ex)
+            {
+                Logger.Error($"Kết nối thất bại: {ex.Message}");
+                DisconnectInternal(false);
+                return false;
+            }
         }
 
+        // --- LẮNG NGHE ---
         private async Task StartListeningAsync(CancellationToken cancellationToken)
         {
             Logger.Info("Bắt đầu lắng nghe Server...");
@@ -106,7 +104,7 @@ namespace ChatAppClient.Forms
             {
                 while (_client.Connected && _stream != null && !cancellationToken.IsCancellationRequested)
                 {
-                    if (!_stream.DataAvailable) 
+                    if (!_stream.DataAvailable)
                     {
                         await Task.Delay(100, cancellationToken);
                         continue;
@@ -115,44 +113,22 @@ namespace ChatAppClient.Forms
                     HandlePacket(receivedPacket);
                 }
             }
-            catch (OperationCanceledException) { Logger.Warning("Luồng lắng nghe đã bị hủy."); } 
-            catch (IOException ioEx) { Logger.Warning($"Lỗi I/O khi lắng nghe (mất kết nối?): {ioEx.Message}"); }
-            catch (SerializationException serEx) { Logger.Error("Lỗi Deserialize gói tin", serEx); }
-            catch (Exception ex) { Logger.Error("Lỗi không xác định khi lắng nghe", ex); }
-            finally
+            catch (Exception ex)
             {
-                Logger.Warning("Dừng lắng nghe.");
+                Logger.Warning($"Ngắt kết nối khi đang lắng nghe: {ex.Message}");
                 if (!cancellationToken.IsCancellationRequested && _homeForm != null && !_homeForm.IsDisposed)
                 {
-                    Disconnect(); 
+                    _homeForm.BeginInvoke(new Action(() =>
+                        MessageBox.Show("Mất kết nối đến máy chủ!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error)));
+                    Disconnect();
                 }
             }
         }
 
-        public async Task<LoginResultPacket> LoginAsync(LoginPacket packet)
-        {
-            if (!_client.Connected || _stream == null) throw new InvalidOperationException("Chưa kết nối đến Server.");
-
-            _loginCompletionSource = new TaskCompletionSource<LoginResultPacket>();
-            SendPacket(packet);
-
-            using var timeoutCts = new CancellationTokenSource(10000); 
-            var completedTask = await Task.WhenAny(_loginCompletionSource.Task, Task.Delay(-1, timeoutCts.Token));
-
-            if (completedTask == _loginCompletionSource.Task) return await _loginCompletionSource.Task;
-            else throw new TimeoutException("Không nhận được phản hồi đăng nhập từ máy chủ.");
-        }
-
-        public void SetUserCredentials(string userId, string userName)
-        {
-            this.UserID = userId;
-            this.UserName = userName;
-        }
-
-        // (Chỉ cần thay hàm HandlePacket trong NetworkManager.cs của bạn)
-
+        // --- XỬ LÝ GÓI TIN ĐẾN ---
         private void HandlePacket(object packet)
         {
+            // 1. Các gói tin Login/Register (Dùng TaskCompletionSource)
             if (packet is LoginResultPacket pLogin)
             {
                 _loginCompletionSource?.TrySetResult(pLogin);
@@ -163,6 +139,15 @@ namespace ChatAppClient.Forms
                 _registerCompletionSource?.TrySetResult(pRegister);
                 return;
             }
+
+            // 2. Gói tin Quên Mật Khẩu (Dùng Event)
+            if (packet is ForgotPasswordResultPacket pForgot)
+            {
+                OnForgotPasswordResult?.Invoke(pForgot);
+                return;
+            }
+
+            // 3. Các gói tin cần Update UI trên Home (Dùng Invoke)
             if (_homeForm == null || _homeForm.IsDisposed) return;
 
             Action action = packet switch
@@ -177,37 +162,64 @@ namespace ChatAppClient.Forms
                 RematchRequestPacket p => () => _homeForm.HandleRematchRequest(p),
                 RematchResponsePacket p => () => _homeForm.HandleRematchResponse(p),
                 GameResetPacket p => () => _homeForm.HandleGameReset(p),
-
-                // --- CASE MỚI ---
                 UpdateProfilePacket p => () => _homeForm.HandleUpdateProfile(p),
-
                 _ => null
             };
             action?.Invoke();
         }
 
-        public void SendPacket(object packet)
+        // --- CÁC HÀM GỬI ---
+
+        public async Task<LoginResultPacket> LoginAsync(LoginPacket packet)
+        {
+            if (!_client.Connected || _stream == null) throw new InvalidOperationException("Chưa kết nối.");
+            _loginCompletionSource = new TaskCompletionSource<LoginResultPacket>();
+            SendPacket(packet); // Gửi
+            var timeoutTask = Task.Delay(10000);
+            var resultTask = _loginCompletionSource.Task;
+            if (await Task.WhenAny(resultTask, timeoutTask) == resultTask) return await resultTask;
+            else throw new TimeoutException("Không nhận được phản hồi đăng nhập.");
+        }
+
+        public async Task<RegisterResultPacket> RegisterAsync(RegisterPacket packet)
+        {
+            if (!_client.Connected || _stream == null) throw new InvalidOperationException("Chưa kết nối.");
+            _registerCompletionSource = new TaskCompletionSource<RegisterResultPacket>();
+            SendPacket(packet);
+            var timeoutTask = Task.Delay(10000);
+            var resultTask = _registerCompletionSource.Task;
+            if (await Task.WhenAny(resultTask, timeoutTask) == resultTask) return await resultTask;
+            else throw new TimeoutException("Không nhận được phản hồi đăng ký.");
+        }
+
+        // *** HÀM QUAN TRỌNG ĐÃ SỬA: Trả về bool ***
+        public bool SendPacket(object packet)
         {
             NetworkStream currentStream = _stream;
-            if (!_client.Connected || currentStream == null)
+            // Kiểm tra kỹ trước khi gửi
+            if (_client == null || !_client.Connected || currentStream == null)
             {
                 Logger.Warning("Lỗi gửi gói tin: Chưa kết nối hoặc stream null.");
-                return;
+                return false; // Báo thất bại
             }
 
             try
             {
                 lock (currentStream) { _formatter.Serialize(currentStream, packet); }
-            }
-            catch (IOException ioEx)
-            {
-                Logger.Error($"Lỗi I/O khi gửi gói tin", ioEx);
-                Disconnect(); 
+                return true; // Gửi thành công
             }
             catch (Exception ex)
             {
-                Logger.Error($"Lỗi không xác định khi gửi gói tin", ex);
+                Logger.Error($"Lỗi I/O khi gửi gói tin", ex);
+                return false; // Báo thất bại
             }
+        }
+
+        // --- TIỆN ÍCH ---
+        public void SetUserCredentials(string userId, string userName)
+        {
+            this.UserID = userId;
+            this.UserName = userName;
         }
 
         public void Disconnect()
@@ -223,24 +235,18 @@ namespace ChatAppClient.Forms
                 _stream?.Close();
                 _client?.Close();
             }
-            catch {}
+            catch { }
             finally
             {
                 _client = null;
                 _stream = null;
                 _listeningCts = null;
-                _homeForm = null; 
-                UserID = null;    
+                _homeForm = null;
+                UserID = null;
                 UserName = null;
                 Logger.Info("Đã ngắt kết nối.");
-
-                if (showMessage && _loginCompletionSource == null) 
-                {
-                    MessageBox.Show("Đã mất kết nối đến máy chủ!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    Application.Exit();
-                }
             }
         }
     }
 }
-#pragma warning restore SYSLIB0011 
+#pragma warning restore SYSLIB0011
