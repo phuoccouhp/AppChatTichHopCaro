@@ -1,0 +1,437 @@
+﻿using ChatApp.Shared; // <-- Phải có
+using ChatAppClient.UserControls; // <-- Phải có
+using System;
+using System.Collections.Generic;
+using System.Windows.Forms;
+
+namespace ChatAppClient.Forms
+{
+    public partial class frmHome : Form
+    {
+        private Dictionary<string, ChatViewControl> openChatControls;
+        private Dictionary<string, frmCaroGame> openGameForms;
+        private Dictionary<string, frmTank> openTankForms = new Dictionary<string, frmTank>();
+
+        private List<UserStatus> _initialUsers;
+
+        private ChatViewControl _currentChatControl = null;
+
+        public frmHome(List<UserStatus> initialUsers)
+        {
+            InitializeComponent();
+            openChatControls = new Dictionary<string, ChatViewControl>();
+            openGameForms = new Dictionary<string, frmCaroGame>();
+            _initialUsers = initialUsers;
+        }
+
+        private void frmHome_Load(object sender, EventArgs e)
+        {
+            NetworkManager.Instance.RegisterHomeForm(this);
+            lblWelcome.Text = $"Chào mừng, {NetworkManager.Instance.UserName}!";
+            LoadInitialFriendList();
+            lblMainWelcome.Visible = true;
+        }
+
+        private void LoadInitialFriendList()
+        {
+            if (flpFriendsList == null) return;
+
+            flpFriendsList.SuspendLayout();
+            if (_initialUsers != null)
+            {
+                foreach (var user in _initialUsers)
+                {
+                    AddFriendToList(user.UserID, user.UserName, user.IsOnline ? "Online" : "Offline", user.IsOnline);
+                }
+            }
+            flpFriendsList.ResumeLayout();
+        }
+
+        // 1. Nhận lời mời
+        public void HandleTankInvite(TankInvitePacket invite)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => HandleTankInvite(invite)));
+                return;
+            }
+
+            DialogResult result = MessageBox.Show(
+                $"{invite.SenderName} muốn rủ bạn bắn Tank. Chơi không?",
+                "Mời Chơi Tank", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            var response = new TankResponsePacket
+            {
+                SenderID = NetworkManager.Instance.UserID,
+                ReceiverID = invite.SenderID,
+                Accepted = (result == DialogResult.Yes)
+            };
+            NetworkManager.Instance.SendPacket(response);
+        }
+
+        // 2. Nhận lệnh bắt đầu Game từ Server
+        public void HandleTankStart(TankStartPacket packet)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => HandleTankStart(packet)));
+                return;
+            }
+
+            // Nếu đã có form cùng GameID => đóng form cũ trước
+            try
+            {
+                if (openTankForms.ContainsKey(packet.GameID))
+                {
+                    var old = openTankForms[packet.GameID];
+                    if (!old.IsDisposed) old.Close();
+                    openTankForms.Remove(packet.GameID);
+                }
+
+                // Mở Form Tank của bạn
+                frmTank tankGame = new frmTank(packet.GameID, packet.OpponentID, packet.IsPlayer1);
+
+                openTankForms.Add(packet.GameID, tankGame);
+                tankGame.FormClosed += (s, e) =>
+                {
+                    if (openTankForms.ContainsKey(packet.GameID))
+                        openTankForms.Remove(packet.GameID);
+                };
+                tankGame.Show();
+            }
+            catch (Exception ex)
+            {
+                // Log hoặc show debug (đừng crash app)
+                Console.WriteLine($"HandleTankStart error: {ex}");
+            }
+        }
+
+        // 3. Nhận hành động của đối thủ (Di chuyển/Bắn)
+        public void HandleTankAction(TankActionPacket packet)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => HandleTankAction(packet)));
+                return;
+            }
+
+            if (openTankForms.TryGetValue(packet.GameID, out var gameForm))
+            {
+                try
+                {
+                    // Bạn cần viết hàm UpdateOpponent trong frmTank.cs
+                    gameForm.UpdateOpponent(packet.X, packet.Y, packet.Direction, packet.IsShooting);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"HandleTankAction error: {ex}");
+                }
+            }
+            else
+            {
+                // Optionally: log không có form nào cho GameID này
+                Console.WriteLine($"No open tank form for GameID {packet.GameID}");
+            }
+        }
+
+        private void FriendItem_Click(FriendListItem item)
+        {
+            if (item == null) return;
+
+            string friendId = item.FriendID;
+            string friendName = item.FriendName;
+
+            item.SetNewMessageAlert(false);
+
+            lblMainWelcome.Visible = false;
+
+            if (_currentChatControl != null && _currentChatControl.Name == friendId) return;
+
+            if (_currentChatControl != null) _currentChatControl.Visible = false;
+
+            ChatViewControl chatControl;
+            if (!openChatControls.TryGetValue(friendId, out chatControl))
+            {
+                chatControl = new ChatViewControl(friendId, friendName, this) { Name = friendId, Dock = DockStyle.Fill };
+                openChatControls.Add(friendId, chatControl);
+                pnlMain.Controls.Add(chatControl);
+            }
+
+            chatControl.Visible = true;
+            chatControl.BringToFront();
+            _currentChatControl = chatControl;
+        }
+
+        public void AddFriendToList(string id, string name, string status, bool isOnline)
+        {
+            if (flpFriendsList == null) return;
+
+            FriendListItem item = new FriendListItem();
+            item.SetData(id, name, status, isOnline);
+
+            // Sử dụng EventHandler chuẩn
+            EventHandler clickHandler = (sender, e) => FriendItem_Click(item);
+
+            item.Click += clickHandler;
+            // Đăng ký cho các control con trong item (để click ở bất kỳ chỗ nào cũng nhận)
+            foreach (Control control in item.Controls)
+            {
+                control.Click += clickHandler;
+            }
+
+            flpFriendsList.Controls.Add(item);
+        }
+
+        private void frmHome_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            // Đóng tất cả form con (nếu muốn)
+            try
+            {
+                // Clone keys để tránh sửa dictionary khi lặp
+                var tankKeys = new List<string>(openTankForms.Keys);
+                foreach (var k in tankKeys)
+                {
+                    if (openTankForms.TryGetValue(k, out var f) && !f.IsDisposed) f.Close();
+                }
+
+                var gameKeys = new List<string>(openGameForms.Keys);
+                foreach (var k in gameKeys)
+                {
+                    if (openGameForms.TryGetValue(k, out var f) && !f.IsDisposed) f.Close();
+                }
+            }
+            catch { /* ignore */ }
+
+            Application.Exit();
+        }
+
+        #region BỘ ĐIỀU PHỐI GÓI TIN 
+
+        public void HandleUserStatusUpdate(UserStatusPacket packet)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => HandleUserStatusUpdate(packet)));
+                return;
+            }
+
+            FriendListItem existingItem = null;
+            foreach (Control ctrl in flpFriendsList.Controls)
+            {
+                if (ctrl is FriendListItem item && item.FriendID == packet.UserID)
+                {
+                    existingItem = item;
+                    break;
+                }
+            }
+
+            if (packet.IsOnline)
+            {
+                if (existingItem == null) AddFriendToList(packet.UserID, packet.UserName, "Online", true);
+                else existingItem.SetData(packet.UserID, packet.UserName, "Online", true);
+            }
+            else
+            {
+                if (existingItem != null) existingItem.SetData(packet.UserID, packet.UserName, "Offline", false);
+            }
+        }
+
+        public void HandleIncomingTextMessage(TextPacket packet)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => HandleIncomingTextMessage(packet)));
+                return;
+            }
+
+            ChatViewControl chatControl;
+            if (!openChatControls.TryGetValue(packet.SenderID, out chatControl))
+            {
+                string senderName = packet.SenderID;
+                FriendListItem friendItem = null;
+                foreach (Control ctrl in flpFriendsList.Controls)
+                {
+                    if (ctrl is FriendListItem item && item.FriendID == packet.SenderID)
+                    {
+                        senderName = item.FriendName;
+                        friendItem = item;
+                        break;
+                    }
+                }
+
+                chatControl = new ChatViewControl(packet.SenderID, senderName, this) { Name = packet.SenderID, Dock = DockStyle.Fill, Visible = false };
+                openChatControls.Add(packet.SenderID, chatControl);
+                pnlMain.Controls.Add(chatControl);
+            }
+
+            // Nhận và hiển thị tin nhắn
+            try
+            {
+                chatControl.ReceiveMessage(packet.MessageContent);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ReceiveMessage error: {ex}");
+            }
+
+            // Nếu chat không mở/không phải chat hiện tại => bật alert cho friend item
+            if (_currentChatControl == null || _currentChatControl.Name != packet.SenderID)
+            {
+                FriendListItem friendItemToAlert = null;
+                foreach (Control ctrl in flpFriendsList.Controls)
+                {
+                    if (ctrl is FriendListItem item && item.FriendID == packet.SenderID)
+                    {
+                        friendItemToAlert = item;
+                        break;
+                    }
+                }
+                friendItemToAlert?.SetNewMessageAlert(true);
+            }
+        }
+
+        public void HandleIncomingFileMessage(FilePacket packet)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => HandleIncomingFileMessage(packet)));
+                return;
+            }
+
+            ChatViewControl chatControl;
+            if (!openChatControls.TryGetValue(packet.SenderID, out chatControl))
+            {
+                string senderName = packet.SenderID;
+                FriendListItem friendItem = null;
+                foreach (Control ctrl in flpFriendsList.Controls)
+                {
+                    if (ctrl is FriendListItem item && item.FriendID == packet.SenderID)
+                    {
+                        senderName = item.FriendName;
+                        friendItem = item;
+                        break;
+                    }
+                }
+
+                chatControl = new ChatViewControl(packet.SenderID, senderName, this) { Name = packet.SenderID, Dock = DockStyle.Fill, Visible = false };
+                openChatControls.Add(packet.SenderID, chatControl);
+                pnlMain.Controls.Add(chatControl);
+            }
+
+            try
+            {
+                chatControl.ReceiveFileMessage(packet, MessageType.Incoming);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ReceiveFileMessage error: {ex}");
+            }
+
+            if (_currentChatControl == null || _currentChatControl.Name != packet.SenderID)
+            {
+                FriendListItem friendItemToAlert = null;
+                foreach (Control ctrl in flpFriendsList.Controls)
+                {
+                    if (ctrl is FriendListItem item && item.FriendID == packet.SenderID)
+                    {
+                        friendItemToAlert = item;
+                        break;
+                    }
+                }
+                friendItemToAlert?.SetNewMessageAlert(true);
+            }
+        }
+
+        public void HandleIncomingGameInvite(GameInvitePacket invite)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => HandleIncomingGameInvite(invite)));
+                return;
+            }
+
+            DialogResult result = MessageBox.Show($"{invite.SenderName} muốn thách đấu Cờ Caro. Đồng ý?", "Lời Mời Chơi Game", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            bool accepted = (result == DialogResult.Yes);
+            var response = new GameResponsePacket { SenderID = NetworkManager.Instance.UserID, ReceiverID = invite.SenderID, Accepted = accepted };
+            NetworkManager.Instance.SendPacket(response);
+        }
+
+        public void HandleGameResponse(GameResponsePacket packet)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => HandleGameResponse(packet)));
+                return;
+            }
+
+            if (!packet.Accepted)
+            {
+                if (openChatControls.TryGetValue(packet.SenderID, out var chatControl))
+                {
+                    chatControl.HandleGameInviteDeclined();
+                }
+            }
+        }
+
+        public void HandleGameStart(GameStartPacket packet)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => HandleGameStart(packet)));
+                return;
+            }
+
+            // Reset nút trong ChatView nếu cần
+            if (openChatControls.TryGetValue(packet.OpponentID, out var chatControl))
+            {
+                chatControl.ResetGameButton();
+            }
+
+            try
+            {
+                if (openGameForms.ContainsKey(packet.GameID))
+                {
+                    var old = openGameForms[packet.GameID];
+                    if (!old.IsDisposed) old.Close();
+                    openGameForms.Remove(packet.GameID);
+                }
+
+                frmCaroGame gameForm = new frmCaroGame(packet.GameID, packet.OpponentID, packet.StartsFirst);
+                openGameForms.Add(packet.GameID, gameForm);
+                gameForm.FormClosed += (s, e) => { if (openGameForms.ContainsKey(packet.GameID)) openGameForms.Remove(packet.GameID); };
+                gameForm.Show();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"HandleGameStart error: {ex}");
+            }
+        }
+
+        public void HandleGameMove(GameMovePacket packet)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => HandleGameMove(packet)));
+                return;
+            }
+
+            if (openGameForms.TryGetValue(packet.GameID, out var gameForm))
+            {
+                try
+                {
+                    gameForm.ReceiveOpponentMove(packet.Row, packet.Col);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"HandleGameMove error: {ex}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"No open game form for GameID {packet.GameID}");
+            }
+        }
+
+        #endregion
+    }
+}

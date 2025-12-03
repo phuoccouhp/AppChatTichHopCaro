@@ -1,7 +1,6 @@
 ﻿using ChatApp.Shared;
 using ChatAppClient.Forms;
 using ChatAppClient.Helpers;
-using ChatAppClient.UserControls;
 using System;
 using System.Drawing;
 using System.IO;
@@ -14,7 +13,7 @@ namespace ChatAppClient.UserControls
         private string _friendId;
         private string _friendName;
         private Form _parentForm;
-        private string _myId;
+        private string _myId; // ID của chính user này
 
         public ChatViewControl(string friendId, string friendName, Form parentForm)
         {
@@ -27,11 +26,13 @@ namespace ChatAppClient.UserControls
 
         private void ChatViewControl_Load(object sender, EventArgs e)
         {
-            _myId = NetworkManager.Instance.UserID; 
+            _myId = NetworkManager.Instance.UserID;
 
             // Gán sự kiện
             btnSend.Click += BtnSend_Click;
-            btnStartGame.Click += BtnStartGame_Click;
+            btnStartGame.Click += BtnStartGame_Click; // Nút Caro
+            btnStartTank.Click += BtnStartTank_Click; // Nút Tank
+
             this.Resize += new System.EventHandler(this.ChatViewControl_Resize);
             btnSendImage.Click += BtnSendImage_Click;
             btnSendFile.Click += BtnSendFile_Click;
@@ -39,6 +40,9 @@ namespace ChatAppClient.UserControls
 
             LoadEmojis();
 
+            // Thiết lập icon mặc định cho các nút game
+            btnStartGame.Text = "🎲";
+            btnStartTank.Text = "🚜";
         }
 
         #region == GỬI TIN (TEXT, FILE, GAME) ==
@@ -56,21 +60,44 @@ namespace ChatAppClient.UserControls
             }
         }
 
+        // Gửi lời mời Caro
         private void BtnStartGame_Click(object sender, EventArgs e)
         {
-            var invite = new GameInvitePacket { SenderID = _myId, SenderName = NetworkManager.Instance.UserName, ReceiverID = _friendId };
+            var invite = new GameInvitePacket
+            {
+                SenderID = _myId,
+                SenderName = NetworkManager.Instance.UserName,
+                ReceiverID = _friendId
+            };
             NetworkManager.Instance.SendPacket(invite);
             btnStartGame.Enabled = false;
             btnStartGame.Text = "...";
             MessageBox.Show($"Đã gửi lời mời chơi Caro đến {_friendName}!\nĐang chờ phản hồi...", "Thông báo");
         }
 
+        // Gửi lời mời Tank
+        private void BtnStartTank_Click(object sender, EventArgs e)
+        {
+            var invite = new TankInvitePacket
+            {
+                SenderID = _myId,
+                SenderName = NetworkManager.Instance.UserName,
+                ReceiverID = _friendId
+            };
+            NetworkManager.Instance.SendPacket(invite);
+            btnStartTank.Enabled = false;
+            btnStartTank.Text = "...";
+            MessageBox.Show($"Đã gửi lời mời bắn Tank đến {_friendName}!\nĐang chờ phản hồi...", "Thông báo");
+        }
+
+        // Gửi Ảnh
         private void BtnSendImage_Click(object sender, EventArgs e)
         {
             OpenFileDialog dialog = new OpenFileDialog { Filter = "Image Files|*.jpg;*.jpeg;*.png;*.gif;*.bmp" };
             if (dialog.ShowDialog() == DialogResult.OK) SendFile(dialog.FileName, true);
         }
 
+        // Gửi File
         private void BtnSendFile_Click(object sender, EventArgs e)
         {
             OpenFileDialog dialog = new OpenFileDialog { Filter = "All Files|*.*" };
@@ -83,9 +110,16 @@ namespace ChatAppClient.UserControls
             {
                 byte[] fileData = File.ReadAllBytes(filePath);
                 string fileName = Path.GetFileName(filePath);
-                var filePacket = new FilePacket { SenderID = _myId, ReceiverID = _friendId, FileName = fileName, FileData = fileData, IsImage = isImage };
+                var filePacket = new FilePacket
+                {
+                    SenderID = _myId,
+                    ReceiverID = _friendId,
+                    FileName = fileName,
+                    FileData = fileData,
+                    IsImage = isImage
+                };
                 NetworkManager.Instance.SendPacket(filePacket);
-                AddFileBubble(filePacket, MessageType.Outgoing); // Hiển thị ngay
+                AddFileBubble(filePacket, MessageType.Outgoing);
             }
             catch (Exception ex)
             {
@@ -99,7 +133,8 @@ namespace ChatAppClient.UserControls
 
         public void ReceiveFileMessage(FilePacket packet, MessageType type = MessageType.Incoming)
         {
-            if (_parentForm != null && _parentForm.InvokeRequired) _parentForm.Invoke(new Action(() => AddFileBubble(packet, type)));
+            if (_parentForm != null && _parentForm.InvokeRequired)
+                _parentForm.Invoke(new Action(() => AddFileBubble(packet, type)));
             else AddFileBubble(packet, type);
         }
 
@@ -130,7 +165,8 @@ namespace ChatAppClient.UserControls
 
         public void ReceiveMessage(string message)
         {
-            if (_parentForm != null && _parentForm.InvokeRequired) _parentForm.Invoke(new Action(() => AddMessage(message, MessageType.Incoming)));
+            if (_parentForm != null && _parentForm.InvokeRequired)
+                _parentForm.Invoke(new Action(() => AddMessage(message, MessageType.Incoming)));
             else AddMessage(message, MessageType.Incoming);
         }
 
@@ -146,29 +182,34 @@ namespace ChatAppClient.UserControls
 
         #region == UI & TIỆN ÍCH ==
 
+        // Xử lý khi bị từ chối Caro
         public void HandleGameInviteDeclined()
         {
             if (this.InvokeRequired) { this.Invoke(new Action(HandleGameInviteDeclined)); return; }
             MessageBox.Show($"{_friendName} đã từ chối lời mời.", "Tiếc quá!");
-            ResetGameButtonInternal(); 
+            ResetGameButtonInternal(btnStartGame); // Reset Caro
+            ResetGameButtonInternal(btnStartTank); // Reset Tank (nếu muốn)
         }
 
         public void ResetGameButton()
         {
             if (this.InvokeRequired) { this.Invoke(new Action(ResetGameButton)); return; }
-            ResetGameButtonInternal();
+            ResetGameButtonInternal(btnStartGame);
+            ResetGameButtonInternal(btnStartTank);
         }
 
-        private void ResetGameButtonInternal()
+        private void ResetGameButtonInternal(Button button)
         {
-            btnStartGame.Enabled = true;
-            btnStartGame.Text = "🎲";
+            button.Enabled = true;
+            if (button == btnStartGame) button.Text = "🎲";
+            else if (button == btnStartTank) button.Text = "🚜";
+            else button.Text = "...";
         }
 
         private int GetUsableWidth()
         {
             int width = flpMessages.ClientSize.Width - (flpMessages.Padding.Left + flpMessages.Padding.Right);
-           
+
             if (flpMessages.VerticalScroll.Visible)
             {
                 width -= SystemInformation.VerticalScrollBarWidth;
@@ -183,9 +224,18 @@ namespace ChatAppClient.UserControls
 
             foreach (Control control in flpMessages.Controls)
             {
-                if (control is ChatMessageBubble textBubble) textBubble.UpdateMargins(usableWidth);
-                else if (control is ImageBubble imgBubble) imgBubble.UpdateMargins(usableWidth);
-                else if (control is FileBubble fileBubble) fileBubble.UpdateMargins(usableWidth);
+                switch (control)
+                {
+                    case ChatMessageBubble textBubble:
+                        textBubble.UpdateMargins(usableWidth);
+                        break;
+                    case ImageBubble imgBubble:
+                        imgBubble.UpdateMargins(usableWidth);
+                        break;
+                    case FileBubble fileBubble:
+                        fileBubble.UpdateMargins(usableWidth);
+                        break;
+                }
             }
         }
 
@@ -215,7 +265,7 @@ namespace ChatAppClient.UserControls
         }
         private void EmojiButton_Click(object sender, EventArgs e)
         {
-            txtMessage.AppendText(((Button)sender).Text); 
+            txtMessage.AppendText(((Button)sender).Text);
             pnlEmojiPicker.Visible = false;
             txtMessage.Focus();
         }

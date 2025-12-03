@@ -17,7 +17,10 @@
       },
       "ChatApp.Shared/1.0.0": {
         "runtime": {
-          "ChatApp.Shared.dll": {}
+          "ChatApp.Shared.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
         }
       },
       "ChatAppClient/1.0.0": {
@@ -25,7 +28,10 @@
           "ChatApp.Shared": "1.0.0"
         },
         "runtime": {
-          "ChatAppClient.dll": {}
+          "ChatAppClient.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
         }
       }
     }

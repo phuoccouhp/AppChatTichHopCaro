@@ -1,0 +1,112 @@
+﻿using System;
+using System.Drawing;
+using System.Windows.Forms;
+
+namespace ChatAppClient.Forms
+{
+    public partial class FrmTank : Form
+    {
+        private int tankSpeed = 5;
+        private int bulletSpeed = 10;
+
+        private bool goUp, goDown, goLeft, goRight;
+        private string facing = "Up";
+
+        public FrmTank()
+        {
+            InitializeComponent();
+            SetupEvents();
+        }
+
+        private void SetupEvents()
+        {
+            gameTimer.Tick += GameTimer_Tick;
+            this.KeyDown += KeyIsDown;
+            this.KeyUp += KeyIsUp;
+        }
+
+        private void GameTimer_Tick(object sender, EventArgs e)
+        {
+            // --- Di chuyển Tank ---
+            if (goLeft && tank.Left > 0)
+            {
+                tank.Left -= tankSpeed;
+                facing = "Left";
+            }
+            if (goRight && tank.Right < this.ClientSize.Width)
+            {
+                tank.Left += tankSpeed;
+                facing = "Right";
+            }
+            if (goUp && tank.Top > 0)
+            {
+                tank.Top -= tankSpeed;
+                facing = "Up";
+            }
+            if (goDown && tank.Bottom < this.ClientSize.Height)
+            {
+                tank.Top += tankSpeed;
+                facing = "Down";
+            }
+
+            // --- Di chuyển Bullet ---
+            foreach (Control c in this.Controls)
+            {
+                if (c is PictureBox && c.Tag?.ToString() == "bullet")
+                {
+                    string dir = c.Name; // ⭐ FIX: dùng Name để lưu hướng
+
+                    if (dir == "Up") c.Top -= bulletSpeed;
+                    if (dir == "Down") c.Top += bulletSpeed;
+                    if (dir == "Left") c.Left -= bulletSpeed;
+                    if (dir == "Right") c.Left += bulletSpeed;
+
+                    // Xoá đạn
+                    if (c.Top < 0 || c.Top > this.ClientSize.Height ||
+                        c.Left < 0 || c.Left > this.ClientSize.Width)
+                    {
+                        c.Dispose();
+                    }
+                }
+            }
+        }
+
+        private void KeyIsDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Left) goLeft = true;
+            if (e.KeyCode == Keys.Right) goRight = true;
+            if (e.KeyCode == Keys.Up) goUp = true;
+            if (e.KeyCode == Keys.Down) goDown = true;
+        }
+
+        private void KeyIsUp(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Left) goLeft = false;
+            if (e.KeyCode == Keys.Right) goRight = false;
+            if (e.KeyCode == Keys.Up) goUp = false;
+            if (e.KeyCode == Keys.Down) goDown = false;
+
+            if (e.KeyCode == Keys.Space)
+                Shoot();
+        }
+
+        private void Shoot()
+        {
+            PictureBox bullet = new PictureBox
+            {
+                Size = new Size(8, 8),
+                BackColor = Color.Yellow,
+                Tag = "bullet",
+                Name = facing // ⭐ Hướng lưu ở Name
+            };
+
+            if (facing == "Up") bullet.Location = new Point(tank.Left + 23, tank.Top - 10);
+            if (facing == "Down") bullet.Location = new Point(tank.Left + 23, tank.Bottom + 5);
+            if (facing == "Left") bullet.Location = new Point(tank.Left - 10, tank.Top + 23);
+            if (facing == "Right") bullet.Location = new Point(tank.Right + 5, tank.Top + 23);
+
+            this.Controls.Add(bullet);
+            bullet.BringToFront();
+        }
+    }
+}

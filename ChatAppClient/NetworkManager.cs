@@ -1,13 +1,13 @@
 ﻿#pragma warning disable SYSLIB0011 
 
 using ChatApp.Shared;
-using ChatAppClient.Helpers; 
+using ChatAppClient.Helpers;
 using System;
 using System.IO;
 using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
-using System.Threading; // Thêm
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -27,7 +27,7 @@ namespace ChatAppClient.Forms
         public string UserID { get; private set; }
         public string UserName { get; private set; }
         private TaskCompletionSource<LoginResultPacket> _loginCompletionSource;
-        private CancellationTokenSource _listeningCts; 
+        private CancellationTokenSource _listeningCts;
 
         private NetworkManager()
         {
@@ -40,21 +40,21 @@ namespace ChatAppClient.Forms
         {
             if (_client != null && _client.Connected && _stream != null) return true;
 
-            DisconnectInternal(false); 
+            DisconnectInternal(false);
 
             try
             {
-                _client = new TcpClient(); 
+                _client = new TcpClient();
                 Logger.Info($"Đang kết nối đến {ipAddress}:{port}...");
 
                 var connectTask = _client.ConnectAsync(ipAddress, port);
-                using var timeoutCts = new CancellationTokenSource(5000); 
+                using var timeoutCts = new CancellationTokenSource(5000);
 
                 var completedTask = await Task.WhenAny(connectTask, Task.Delay(-1, timeoutCts.Token));
 
                 if (completedTask == connectTask)
                 {
-                    await connectTask; 
+                    await connectTask;
 
                     try
                     {
@@ -64,19 +64,19 @@ namespace ChatAppClient.Forms
                     catch (Exception streamEx)
                     {
                         Logger.Error("Lỗi khi lấy NetworkStream", streamEx);
-                        DisconnectInternal(false); 
+                        DisconnectInternal(false);
                         return false;
                     }
 
                     _listeningCts = new CancellationTokenSource();
-                    _ = StartListeningAsync(_listeningCts.Token); 
+                    _ = StartListeningAsync(_listeningCts.Token);
                     Logger.Success("Đã kết nối!");
                     return true;
                 }
                 else
                 {
                     Logger.Error("Kết nối thất bại (Timeout).");
-                    DisconnectInternal(false); 
+                    DisconnectInternal(false);
                     return false;
                 }
             }
@@ -91,7 +91,7 @@ namespace ChatAppClient.Forms
             {
                 while (_client.Connected && _stream != null && !cancellationToken.IsCancellationRequested)
                 {
-                    if (!_stream.DataAvailable) 
+                    if (!_stream.DataAvailable)
                     {
                         await Task.Delay(100, cancellationToken);
                         continue;
@@ -100,7 +100,7 @@ namespace ChatAppClient.Forms
                     HandlePacket(receivedPacket);
                 }
             }
-            catch (OperationCanceledException) { Logger.Warning("Luồng lắng nghe đã bị hủy."); } 
+            catch (OperationCanceledException) { Logger.Warning("Luồng lắng nghe đã bị hủy."); }
             catch (IOException ioEx) { Logger.Warning($"Lỗi I/O khi lắng nghe (mất kết nối?): {ioEx.Message}"); }
             catch (SerializationException serEx) { Logger.Error("Lỗi Deserialize gói tin", serEx); }
             catch (Exception ex) { Logger.Error("Lỗi không xác định khi lắng nghe", ex); }
@@ -109,7 +109,7 @@ namespace ChatAppClient.Forms
                 Logger.Warning("Dừng lắng nghe.");
                 if (!cancellationToken.IsCancellationRequested && _homeForm != null && !_homeForm.IsDisposed)
                 {
-                    Disconnect(); 
+                    Disconnect();
                 }
             }
         }
@@ -121,7 +121,7 @@ namespace ChatAppClient.Forms
             _loginCompletionSource = new TaskCompletionSource<LoginResultPacket>();
             SendPacket(packet);
 
-            using var timeoutCts = new CancellationTokenSource(10000); // 10 giây timeout
+            using var timeoutCts = new CancellationTokenSource(10000);
             var completedTask = await Task.WhenAny(_loginCompletionSource.Task, Task.Delay(-1, timeoutCts.Token));
 
             if (completedTask == _loginCompletionSource.Task) return await _loginCompletionSource.Task;
@@ -143,18 +143,48 @@ namespace ChatAppClient.Forms
             }
             if (_homeForm == null || _homeForm.IsDisposed) return;
 
-            Action action = packet switch
+            switch (packet)
             {
-                UserStatusPacket p => () => _homeForm.HandleUserStatusUpdate(p),
-                TextPacket p => () => _homeForm.HandleIncomingTextMessage(p),
-                FilePacket p => () => _homeForm.HandleIncomingFileMessage(p),
-                GameInvitePacket p => () => _homeForm.HandleIncomingGameInvite(p),
-                GameResponsePacket p => () => _homeForm.HandleGameResponse(p),
-                GameStartPacket p => () => _homeForm.HandleGameStart(p),
-                GameMovePacket p => () => _homeForm.HandleGameMove(p),
-                _ => null
-            };
-            action?.Invoke(); 
+                // User & Chat
+                case UserStatusPacket p:
+                    _homeForm.Invoke(new Action(() => _homeForm.HandleUserStatusUpdate(p)));
+                    break;
+                case TextPacket p:
+                    _homeForm.Invoke(new Action(() => _homeForm.HandleIncomingTextMessage(p)));
+                    break;
+                case FilePacket p:
+                    _homeForm.Invoke(new Action(() => _homeForm.HandleIncomingFileMessage(p)));
+                    break;
+
+                // Caro
+                case GameInvitePacket p:
+                    _homeForm.Invoke(new Action(() => _homeForm.HandleIncomingGameInvite(p)));
+                    break;
+                case GameResponsePacket p:
+                    _homeForm.Invoke(new Action(() => _homeForm.HandleGameResponse(p)));
+                    break;
+                case GameStartPacket p:
+                    _homeForm.Invoke(new Action(() => _homeForm.HandleGameStart(p)));
+                    break;
+                case GameMovePacket p:
+                    _homeForm.Invoke(new Action(() => _homeForm.HandleGameMove(p)));
+                    break;
+
+                // Tank
+                case TankInvitePacket p:
+                    _homeForm.Invoke(new Action(() => _homeForm.HandleTankInvite(p)));
+                    break;
+                case TankStartPacket p:
+                    _homeForm.Invoke(new Action(() => _homeForm.HandleTankStart(p)));
+                    break;
+                case TankActionPacket p:
+                    _homeForm.Invoke(new Action(() => _homeForm.HandleTankAction(p)));
+                    break;
+
+                default:
+                    Logger.Warning("Received unknown packet type: " + packet.GetType().Name);
+                    break;
+            }
         }
 
         public void SendPacket(object packet)
@@ -173,7 +203,7 @@ namespace ChatAppClient.Forms
             catch (IOException ioEx)
             {
                 Logger.Error($"Lỗi I/O khi gửi gói tin", ioEx);
-                Disconnect(); 
+                Disconnect();
             }
             catch (Exception ex)
             {
@@ -194,18 +224,18 @@ namespace ChatAppClient.Forms
                 _stream?.Close();
                 _client?.Close();
             }
-            catch {}
+            catch { }
             finally
             {
                 _client = null;
                 _stream = null;
                 _listeningCts = null;
-                _homeForm = null; 
-                UserID = null;    
+                _homeForm = null;
+                UserID = null;
                 UserName = null;
                 Logger.Info("Đã ngắt kết nối.");
 
-                if (showMessage && _loginCompletionSource == null) 
+                if (showMessage && _loginCompletionSource == null)
                 {
                     MessageBox.Show("Đã mất kết nối đến máy chủ!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     Application.Exit();
@@ -214,4 +244,4 @@ namespace ChatAppClient.Forms
         }
     }
 }
-#pragma warning restore SYSLIB0011 
+#pragma warning restore SYSLIB0011
