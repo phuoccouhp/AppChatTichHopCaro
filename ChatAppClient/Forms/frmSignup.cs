@@ -12,6 +12,9 @@ namespace ChatAppClient.Forms
         public frmSignup()
         {
             InitializeComponent();
+            txtPass.IsPassword = true;
+            txtConfirm.IsPassword = true;
+            this.ActiveControl = lblTitle;
         }
 
         private void frmSignup_Load(object sender, EventArgs e)

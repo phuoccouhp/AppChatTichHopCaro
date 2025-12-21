@@ -48,7 +48,7 @@ namespace ChatAppClient.Forms
             lblTitle.BackColor = Color.Transparent;
             lblTitle.Font = new Font("Microsoft Sans Serif", 24F, FontStyle.Bold, GraphicsUnit.Point, 0);
             lblTitle.ForeColor = Color.FromArgb(0, 240, 255);
-            lblTitle.Location = new Point(150, 49);
+            lblTitle.Location = new Point(159, 49);
             lblTitle.Margin = new Padding(4, 0, 4, 0);
             lblTitle.Name = "lblTitle";
             lblTitle.Size = new Size(361, 46);
@@ -107,7 +107,7 @@ namespace ChatAppClient.Forms
             lnkForgot.BackColor = Color.Transparent;
             lnkForgot.Font = new Font("Microsoft Sans Serif", 10F);
             lnkForgot.LinkColor = Color.White;
-            lnkForgot.Location = new Point(358, 432);
+            lnkForgot.Location = new Point(388, 432);
             lnkForgot.Margin = new Padding(4, 0, 4, 0);
             lnkForgot.Name = "lnkForgot";
             lnkForgot.Size = new Size(180, 20);

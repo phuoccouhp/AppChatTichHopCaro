@@ -199,10 +199,10 @@ namespace ChatAppClient.UserControls
         #region Logic Emoji (Không đổi)
         private void LoadEmojis()
         {
-            string[] emojis = { "😊", "😂", "❤️", "👍", "🤔", "😢", "😠", "😮" };
+            string[] emojis = { "😊", "😂", "❤️", "👍", "🤔", "😢", "😠", "😮", "😎", "😶‍🌫️", "😥", "🤐", "😭", "💀", "💩"};
             foreach (string emoji in emojis)
             {
-                Button btn = new Button { Text = emoji, Font = new Font("Segoe UI Emoji", 12), Size = new Size(40, 40), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
+                Button btn = new Button { Text = emoji, Font = new Font("Segoe UI Emoji", 16), Size = new Size(40, 40), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
                 btn.FlatAppearance.BorderSize = 0;
                 btn.Click += EmojiButton_Click;
                 pnlEmojiPicker.Controls.Add(btn);

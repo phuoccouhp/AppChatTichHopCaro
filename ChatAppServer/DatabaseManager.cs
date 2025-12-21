@@ -9,7 +9,9 @@ namespace ChatAppServer
         // Bạn cần sửa lại cho đúng với máy của bạn
         // Server=Tên_Máy_Của_Bạn; Database=ChatAppDB; Trusted_Connection=True; (Nếu dùng Windows Auth)
         // Hoặc: Server=...; User Id=sa; Password=...; (Nếu dùng SQL Auth)
-        private readonly string _connectionString = @"Data Source=localhost;Initial Catalog=ChatAppDB;Integrated Security=True";
+        private readonly string _connectionString =
+       @"Server=(localdb)\MSSQLLocalDB;Database=ChatAppDB;Integrated Security=True;TrustServerCertificate=True";
+
         private static DatabaseManager _instance;
         public static DatabaseManager Instance => _instance ??= new DatabaseManager();
 
