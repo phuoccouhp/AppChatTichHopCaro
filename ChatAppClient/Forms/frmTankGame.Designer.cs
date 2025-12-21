@@ -1,0 +1,12 @@
+namespace ChatAppClient.Forms
+{
+    partial class frmTankGame
+    {
+        /// <summary>
+        /// Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
+        private System.Windows.Forms.Label lblScore;
+        private System.Windows.Forms.Label lblHits;
+        protected override void Dispose(bool disposing)
+        {            if (disposing && (components != null))            {                components.Dispose();            }            base.Dispose(disposing);        }        private void InitializeComponent()        {            this.components = new System.ComponentModel.Container();            this.lblScore = new System.Windows.Forms.Label();            this.lblHits = new System.Windows.Forms.Label();            this.SuspendLayout();            //             // lblScore            //             this.lblScore.AutoSize = true;            this.lblScore.Font = new System.Drawing.Font("Segoe UI", 12F);            this.lblScore.Location = new System.Drawing.Point(12, 9);            this.lblScore.Name = "lblScore";            this.lblScore.Size = new System.Drawing.Size(111, 21);            this.lblScore.TabIndex = 0;            this.lblScore.Text = "Score: 0";            //             // lblHits            //             this.lblHits.AutoSize = true;            this.lblHits.Font = new System.Drawing.Font("Segoe UI", 12F);            this.lblHits.Location = new System.Drawing.Point(12, 40);            this.lblHits.Name = "lblHits";            this.lblHits.Size = new System.Drawing.Size(106, 21);            this.lblHits.TabIndex = 1;            this.lblHits.Text = "Hits: 0";            //             // frmTankGame            //             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;            this.ClientSize = new System.Drawing.Size(400, 300);            this.Controls.Add(this.lblHits);            this.Controls.Add(this.lblScore);            this.Name = "frmTankGame";            this.Text = "Tank Game";            this.ResumeLayout(false);            this.PerformLayout();        }    }}

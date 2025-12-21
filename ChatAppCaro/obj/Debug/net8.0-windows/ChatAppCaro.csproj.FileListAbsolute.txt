@@ -15,3 +15,20 @@ C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppCaro\obj\Debug\net8.0-wind
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppCaro\obj\Debug\net8.0-windows\ChatAppCaro.pdb
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppCaro\obj\Debug\net8.0-windows\ChatAppCaro.genruntimeconfig.cache
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppCaro\obj\Debug\net8.0-windows\ref\ChatAppCaro.dll
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppCaro\bin\Debug\net8.0-windows\ChatAppCaro.exe
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppCaro\bin\Debug\net8.0-windows\ChatAppCaro.deps.json
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppCaro\bin\Debug\net8.0-windows\ChatAppCaro.runtimeconfig.json
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppCaro\bin\Debug\net8.0-windows\ChatAppCaro.dll
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppCaro\bin\Debug\net8.0-windows\ChatAppCaro.pdb
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppCaro\obj\Debug\net8.0-windows\ChatAppCaro.Form1.resources
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppCaro\obj\Debug\net8.0-windows\ChatAppCaro.csproj.GenerateResource.cache
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppCaro\obj\Debug\net8.0-windows\ChatAppCaro.GeneratedMSBuildEditorConfig.editorconfig
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppCaro\obj\Debug\net8.0-windows\ChatAppCaro.AssemblyInfoInputs.cache
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppCaro\obj\Debug\net8.0-windows\ChatAppCaro.AssemblyInfo.cs
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppCaro\obj\Debug\net8.0-windows\ChatAppCaro.csproj.CoreCompileInputs.cache
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppCaro\obj\Debug\net8.0-windows\ChatAppCaro.sourcelink.json
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppCaro\obj\Debug\net8.0-windows\ChatAppCaro.dll
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppCaro\obj\Debug\net8.0-windows\refint\ChatAppCaro.dll
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppCaro\obj\Debug\net8.0-windows\ChatAppCaro.pdb
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppCaro\obj\Debug\net8.0-windows\ChatAppCaro.genruntimeconfig.cache
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppCaro\obj\Debug\net8.0-windows\ref\ChatAppCaro.dll

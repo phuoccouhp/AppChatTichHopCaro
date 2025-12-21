@@ -1,0 +1,16 @@
+﻿using ChatApp.Shared;
+using ChatAppClient.Helpers;
+using System;
+using System.Windows.Forms;
+
+namespace ChatAppClient.Forms
+{
+    public partial class frmTankGame : Form
+    {
+        private string _gameId;
+        private string _opponentId;
+        private string _myId;
+        private int _myScore = 0;
+        private int _myHits = 0;
+        public frmTankGame(string gameId, string opponentId, bool isPlayer1)        {            InitializeComponent();            _gameId = gameId; _opponentId = opponentId; _myId = NetworkManager.Instance.UserID;        }        // Call this when local client fires and hits opponent. Send TankHitPacket to server.        private void OnLocalHit(int damage)        {            var p = new TankHitPacket{ GameID = _gameId, SenderID = _myId, VictimID = _opponentId, Damage = damage };            NetworkManager.Instance.SendPacket(p);        }        // Receive server-updated hit/score info via NetworkManager -> home form -> open game form system.        public void HandleTankHit(TankHitPacket p)        {            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleTankHit(p))); return; }            // Update local view if this client is the shooter            if (p.SenderID == _myId)            {                _myHits = p.ShooterHits;                _myScore = p.ShooterScore;                // update UI accordingly (labels/progress)            }            else if (p.VictimID == _myId)            {
+                // apply damage to this client            }        }    }}
