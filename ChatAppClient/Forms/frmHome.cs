@@ -28,7 +28,50 @@ namespace ChatAppClient.Forms
             {
                 btnSettings.BackColor = Color.FromArgb(55, 58, 70); // Màu xám tối ban đầu
             };
+            Color separatorColor = Color.FromArgb(32, 34, 37);
 
+            // 1. Tạo các đường kẻ (Nếu chưa có)
+            // Kẻ dưới Header chính
+            Panel lineHeader = new Panel { Height = 2, Dock = DockStyle.Bottom, BackColor = separatorColor };
+            pnlHeader.Controls.Add(lineHeader);
+
+            // Kẻ dọc ngăn cách Sidebar
+            Panel lineVertical = new Panel { Width = 2, Dock = DockStyle.Right, BackColor = separatorColor };
+            pnlSidebar.Controls.Add(lineVertical);
+
+            // Kẻ ngăn cách Tiêu đề và Tìm kiếm
+            Panel lineSidebarTitle = new Panel { Height = 2, Dock = DockStyle.Top, BackColor = separatorColor };
+
+            // 2. [QUAN TRỌNG] XÓA HẾT VÀ ADD LẠI THEO ĐÚNG THỨ TỰ MONG MUỐN
+            // Để đảm bảo không bao giờ bị nhảy lung tung, ta gỡ hết ra và gắn lại.
+
+            pnlSidebar.Controls.Clear(); // Xóa sạch Sidebar tạm thời
+
+            // THỨ TỰ ADD: Cái nào nằm DƯỚI CÙNG thì Add TRƯỚC (Quy tắc Dock)
+
+            // B1: Add Kẻ dọc (Nằm bên phải cùng)
+            pnlSidebar.Controls.Add(lineVertical);
+
+            // B2: Add Danh sách bạn bè (Fill - Lấp đầy khoảng trống còn lại)
+            pnlSidebar.Controls.Add(flpFriendsList);
+
+            // B3: Add Thanh tìm kiếm (Dock Top - Nằm ngay trên danh sách)
+            if (pnlSearchBox != null)
+            {
+                pnlSearchBox.Dock = DockStyle.Top; // Đảm bảo Dock đúng
+                pnlSidebar.Controls.Add(pnlSearchBox);
+            }
+
+            // B4: Add Đường kẻ ngang (Dock Top - Nằm trên thanh tìm kiếm)
+            pnlSidebar.Controls.Add(lineSidebarTitle);
+
+            // B5: Add Tiêu đề (Dock Top - Nằm trên cùng, đỉnh chóp)
+            // Cần chỉnh lại Title một chút để không bị co cụm
+            lblFriendsTitle.AutoSize = false; // Tắt tự co giãn để chiếm hết chiều ngang
+            lblFriendsTitle.Height = 50;      // Chiều cao cố định
+            lblFriendsTitle.Dock = DockStyle.Top;
+            lblFriendsTitle.TextAlign = ContentAlignment.MiddleLeft; // Căn giữa dọc, trái ngang
+            pnlSidebar.Controls.Add(lblFriendsTitle);
         }
 
         private void frmHome_Load(object sender, EventArgs e)

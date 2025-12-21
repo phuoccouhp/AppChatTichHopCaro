@@ -32,6 +32,7 @@
             pnlHeader = new Panel();
             btnStartGame = new Button();
             lblFriendName = new Label();
+            pnlSeparator = new Panel();
             pnlInput = new Panel();
             btnEmoji = new Button();
             btnAttach = new Button();
@@ -49,9 +50,10 @@
             // 
             // pnlHeader
             // 
-            pnlHeader.BackColor = Color.FromArgb(40, 43, 55);
+            pnlHeader.BackColor = Color.FromArgb(50, 49, 54);
             pnlHeader.Controls.Add(btnStartGame);
             pnlHeader.Controls.Add(lblFriendName);
+            pnlHeader.Controls.Add(pnlSeparator);
             pnlHeader.Dock = DockStyle.Top;
             pnlHeader.Location = new Point(0, 0);
             pnlHeader.Name = "pnlHeader";
@@ -85,6 +87,15 @@
             lblFriendName.Size = new Size(121, 34);
             lblFriendName.TabIndex = 0;
             lblFriendName.Text = "Bạn Bè A";
+            // 
+            // pnlSeparator
+            // 
+            pnlSeparator.BackColor = Color.FromArgb(32, 34, 37);
+            pnlSeparator.Dock = DockStyle.Bottom;
+            pnlSeparator.Location = new Point(0, 59);
+            pnlSeparator.Name = "pnlSeparator";
+            pnlSeparator.Size = new Size(520, 1);
+            pnlSeparator.TabIndex = 10;
             // 
             // pnlInput
             // 
@@ -157,7 +168,7 @@
             // btnSend
             // 
             btnSend.Anchor = AnchorStyles.Right;
-            this.btnSend.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(47)))), ((int)(((byte)(49)))), ((int)(((byte)(54)))));
+            btnSend.BackColor = Color.FromArgb(47, 49, 54);
             btnSend.BorderRadius = 20;
             btnSend.ButtonColor = Color.FromArgb(88, 101, 242);
             btnSend.FlatAppearance.BorderSize = 0;
@@ -242,5 +253,6 @@
         private System.Windows.Forms.TextBox txtMessage;
         private System.Windows.Forms.FlowLayoutPanel flpMessages;
         private System.Windows.Forms.FlowLayoutPanel pnlEmojiPicker;
+        private System.Windows.Forms.Panel pnlSeparator;
     }
 }
