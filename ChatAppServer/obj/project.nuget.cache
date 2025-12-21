@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "agFx3imCgNwBRcuGbDzTyKKuDGz7Yt5YNCpKkNp01mGRuifn7f3EXt7ZDHuz6PT0jWpCP3qdtXbmtGJb58NVEQ==",
+  "dgSpecHash": "AZhHM2cX57Y=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\ChatAppServer.csproj",
+  "projectFilePath": "D:\\HK5-UIT\\Lập Trình Mạng\\AppChatTichHopCaro\\ChatAppServer\\ChatAppServer.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Admin\\.nuget\\packages\\microsoft.netcore.platforms\\3.1.0\\microsoft.netcore.platforms.3.1.0.nupkg.sha512",
     "C:\\Users\\Admin\\.nuget\\packages\\microsoft.win32.registry\\4.7.0\\microsoft.win32.registry.4.7.0.nupkg.sha512",
