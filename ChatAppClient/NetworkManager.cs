@@ -56,14 +56,38 @@ namespace ChatAppClient.Forms
                 _client = new TcpClient();
                 Logger.Info($"Đang kết nối đến {ipAddress}:{port}...");
 
+                // Tăng timeout lên 10 giây để đảm bảo đủ thời gian kết nối
                 var connectTask = _client.ConnectAsync(ipAddress, port);
-                using var timeoutCts = new CancellationTokenSource(5000);
+                using var timeoutCts = new CancellationTokenSource(10000);
 
-                var completedTask = await Task.WhenAny(connectTask, Task.Delay(5000, timeoutCts.Token));
+                var completedTask = await Task.WhenAny(connectTask, Task.Delay(10000, timeoutCts.Token));
 
                 if (completedTask == connectTask)
                 {
-                    await connectTask;
+                    try
+                    {
+                        await connectTask;
+                    }
+                    catch (SocketException sockEx)
+                    {
+                        Logger.Error($"Lỗi kết nối Socket: {sockEx.Message} (ErrorCode: {sockEx.ErrorCode})");
+                        DisconnectInternal(false);
+                        return false;
+                    }
+                    catch (Exception connectEx)
+                    {
+                        Logger.Error($"Lỗi khi kết nối: {connectEx.Message}", connectEx);
+                        DisconnectInternal(false);
+                        return false;
+                    }
+
+                    // Kiểm tra kết nối đã thành công chưa
+                    if (!_client.Connected)
+                    {
+                        Logger.Error("Kết nối không thành công (TcpClient.Connected = false)");
+                        DisconnectInternal(false);
+                        return false;
+                    }
 
                     try
                     {
@@ -79,19 +103,25 @@ namespace ChatAppClient.Forms
 
                     _listeningCts = new CancellationTokenSource();
                     _ = StartListeningAsync(_listeningCts.Token);
-                    Logger.Success("Đã kết nối!");
+                    Logger.Success($"Đã kết nối thành công đến {ipAddress}:{port}!");
                     return true;
                 }
                 else
                 {
-                    Logger.Error("Kết nối thất bại (Timeout).");
+                    Logger.Error($"Kết nối thất bại (Timeout sau 10 giây) đến {ipAddress}:{port}");
                     DisconnectInternal(false);
                     return false;
                 }
             }
+            catch (SocketException sockEx)
+            {
+                Logger.Error($"Lỗi Socket khi kết nối đến {ipAddress}:{port}: {sockEx.Message} (ErrorCode: {sockEx.ErrorCode})", sockEx);
+                DisconnectInternal(false);
+                return false;
+            }
             catch (Exception ex)
             {
-                Logger.Error($"Kết nối thất bại: {ex.Message}");
+                Logger.Error($"Kết nối thất bại đến {ipAddress}:{port}: {ex.Message}", ex);
                 DisconnectInternal(false);
                 return false;
             }

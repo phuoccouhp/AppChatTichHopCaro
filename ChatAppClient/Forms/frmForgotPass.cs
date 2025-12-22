@@ -38,6 +38,13 @@ namespace ChatAppClient.Forms
                 return;
             }
 
+            // Validate email format
+            if (!IsValidEmail(email))
+            {
+                MessageBox.Show("Email không hợp lệ. Vui lòng nhập đúng định dạng email.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             // --- KIỂM TRA KẾT NỐI ---
             // Tạm dùng IP mặc định localhost nếu user chưa login
             string defaultIp = "127.0.0.1";
@@ -75,22 +82,14 @@ namespace ChatAppClient.Forms
 
             if (string.IsNullOrEmpty(otp))
             {
-                MessageBox.Show("Vui lòng nhập mã OTP.", "Cảnh báo");
+                MessageBox.Show("Vui lòng nhập mã OTP.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // Hỏi mật khẩu mới (Vì giao diện chưa có ô nhập Pass mới)
-            string? newPass = ShowPasswordInputDialog("Nhập mật khẩu mới:", "Đặt lại mật khẩu");
-            if (string.IsNullOrEmpty(newPass)) return;
-
-            var packet = new ResetPasswordPacket
-            {
-                Email = txtEmail.Text.Trim(),
-                OtpCode = otp,
-                NewPassword = newPass
-            };
-
-            NetworkManager.Instance.SendPacket(packet);
+            // Mở form reset password
+            frmResetPassword resetForm = new frmResetPassword(txtEmail.Text.Trim(), otp);
+            resetForm.Show();
+            this.Hide();
         }
 
         // Xử lý kết quả từ Server trả về
@@ -120,8 +119,11 @@ namespace ChatAppClient.Forms
                 else
                 {
                     // Đổi pass thành công
-                    MessageBox.Show(result.Message, "Thành Công");
-                    this.Close(); // Đóng form quay về Login
+                    MessageBox.Show(result.Message, "Thành Công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    // Quay về form login
+                    frmLogin loginForm = new frmLogin();
+                    loginForm.Show();
+                    this.Hide();
                 }
             }
             else
@@ -140,7 +142,10 @@ namespace ChatAppClient.Forms
 
         private void lnkBack_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            this.Close();
+            // Hiển thị lại form login thay vì chỉ đóng form
+            frmLogin loginForm = new frmLogin();
+            loginForm.Show();
+            this.Hide();
         }
 
         private void frmForgotPass_FormClosed(object sender, FormClosedEventArgs e)
@@ -183,6 +188,20 @@ namespace ChatAppClient.Forms
                 return textBox.Text;
             }
             return null;
+        }
+
+        // Hàm kiểm tra email hợp lệ
+        private bool IsValidEmail(string email)
+        {
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

@@ -40,6 +40,8 @@ namespace ChatAppClient.Forms
             lblNoAccount = new Label();
             lnkSignup = new LinkLabel();
             txtServerIP = new RoundedTextBox();
+            rdoUsername = new RadioButton();
+            rdoEmail = new RadioButton();
             SuspendLayout();
             // 
             // lblTitle
@@ -62,7 +64,7 @@ namespace ChatAppClient.Forms
             txtUser.Icon = (Image)resources.GetObject("txtUser.Icon");
             txtUser.IconEnd = null;
             txtUser.IsPassword = false;
-            txtUser.Location = new Point(101, 247);
+            txtUser.Location = new Point(101, 260);
             txtUser.Margin = new Padding(4, 5, 4, 5);
             txtUser.Name = "txtUser";
             txtUser.Padding = new Padding(13, 8, 13, 8);
@@ -78,7 +80,7 @@ namespace ChatAppClient.Forms
             txtPass.Icon = (Image)resources.GetObject("txtPass.Icon");
             txtPass.IconEnd = (Image)resources.GetObject("txtPass.IconEnd");
             txtPass.IsPassword = true;
-            txtPass.Location = new Point(101, 339);
+            txtPass.Location = new Point(101, 352);
             txtPass.Margin = new Padding(4, 5, 4, 5);
             txtPass.Name = "txtPass";
             txtPass.Padding = new Padding(13, 8, 13, 8);
@@ -93,7 +95,7 @@ namespace ChatAppClient.Forms
             chkRemember.BackColor = Color.Transparent;
             chkRemember.Font = new Font("Segoe UI", 10.5F);
             chkRemember.ForeColor = Color.White;
-            chkRemember.Location = new Point(101, 431);
+            chkRemember.Location = new Point(101, 444);
             chkRemember.Margin = new Padding(4, 5, 4, 5);
             chkRemember.Name = "chkRemember";
             chkRemember.Size = new Size(141, 24);
@@ -107,7 +109,7 @@ namespace ChatAppClient.Forms
             lnkForgot.BackColor = Color.Transparent;
             lnkForgot.Font = new Font("Segoe UI", 10.5F);
             lnkForgot.LinkColor = Color.White;
-            lnkForgot.Location = new Point(358, 432);
+            lnkForgot.Location = new Point(358, 445);
             lnkForgot.Margin = new Padding(4, 0, 4, 0);
             lnkForgot.Name = "lnkForgot";
             lnkForgot.Size = new Size(180, 20);
@@ -123,7 +125,7 @@ namespace ChatAppClient.Forms
             btnLogin.FlatStyle = FlatStyle.Flat;
             btnLogin.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
             btnLogin.ForeColor = Color.White;
-            btnLogin.Location = new Point(101, 493);
+            btnLogin.Location = new Point(101, 506);
             btnLogin.Margin = new Padding(4, 5, 4, 5);
             btnLogin.Name = "btnLogin";
             btnLogin.Size = new Size(467, 77);
@@ -174,7 +176,36 @@ namespace ChatAppClient.Forms
             txtServerIP.PlaceholderText = "127.0.0.1";
             txtServerIP.Size = new Size(467, 69);
             txtServerIP.TabIndex = 4;
-            txtServerIP.Text = "10.45.100.45";
+            // 
+            // rdoUsername
+            // 
+            rdoUsername.AutoSize = true;
+            rdoUsername.BackColor = Color.Transparent;
+            rdoUsername.Checked = true;
+            rdoUsername.Font = new Font("Segoe UI", 10F);
+            rdoUsername.ForeColor = Color.White;
+            rdoUsername.Location = new Point(101, 220);
+            rdoUsername.Name = "rdoUsername";
+            rdoUsername.Size = new Size(88, 23);
+            rdoUsername.TabIndex = 11;
+            rdoUsername.TabStop = true;
+            rdoUsername.Text = "Username";
+            rdoUsername.UseVisualStyleBackColor = false;
+            rdoUsername.CheckedChanged += RdoLoginType_CheckedChanged;
+            // 
+            // rdoEmail
+            // 
+            rdoEmail.AutoSize = true;
+            rdoEmail.BackColor = Color.Transparent;
+            rdoEmail.Font = new Font("Segoe UI", 10F);
+            rdoEmail.ForeColor = Color.White;
+            rdoEmail.Location = new Point(220, 220);
+            rdoEmail.Name = "rdoEmail";
+            rdoEmail.Size = new Size(58, 23);
+            rdoEmail.TabIndex = 12;
+            rdoEmail.Text = "Email";
+            rdoEmail.UseVisualStyleBackColor = false;
+            rdoEmail.CheckedChanged += RdoLoginType_CheckedChanged;
             // 
             // frmLogin
             // 
@@ -183,6 +214,8 @@ namespace ChatAppClient.Forms
             BackgroundImage = (Image)resources.GetObject("$this.BackgroundImage");
             BackgroundImageLayout = ImageLayout.Stretch;
             ClientSize = new Size(667, 660);
+            Controls.Add(rdoEmail);
+            Controls.Add(rdoUsername);
             Controls.Add(lnkSignup);
             Controls.Add(lblNoAccount);
             Controls.Add(btnLogin);
@@ -216,5 +249,7 @@ namespace ChatAppClient.Forms
         private System.Windows.Forms.Label lblNoAccount;
         public System.Windows.Forms.LinkLabel lnkSignup;
         public RoundedTextBox txtServerIP;
+        private System.Windows.Forms.RadioButton rdoUsername;
+        private System.Windows.Forms.RadioButton rdoEmail;
     }
 }

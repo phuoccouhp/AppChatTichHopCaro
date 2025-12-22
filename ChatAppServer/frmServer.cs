@@ -67,13 +67,29 @@ namespace ChatAppServer
             lblStatus.ForeColor = Color.Green;
 
             // Lấy và hiển thị địa chỉ IP local
-            string localIPs = GetLocalIPAddresses();
-            lblServerIP.Text = $"Server IP: {localIPs} (Port: {PORT})";
+            string serverIPs = GetLocalIPAddresses();
+            lblServerIP.Text = $"Server IP: {serverIPs} (Port: {PORT})";
             lblServerIP.ForeColor = Color.DarkBlue;
             
-            Logger.Info($"Địa chỉ IP của máy chủ: {localIPs}");
-            Logger.Info($"Clients cần kết nối đến một trong các IP trên với port {PORT}");
-            Logger.Info("Đảm bảo cả hai máy đều cùng mạng và firewall cho phép port 9000");
+            Logger.Info($"Địa chỉ IP của máy chủ: {serverIPs}");
+            Logger.Info($"Clients có thể kết nối đến:");
+            Logger.Info($"  - 127.0.0.1:{PORT} (nếu chạy trên cùng máy - localhost)");
+            // Tách IP mạng từ chuỗi (format: "127.0.0.1, 192.168.x.x")
+            string networkIP = null;
+            if (serverIPs.Contains(","))
+            {
+                var parts = serverIPs.Split(',');
+                if (parts.Length > 1)
+                {
+                    networkIP = parts[1].Trim();
+                }
+            }
+            if (!string.IsNullOrEmpty(networkIP) && networkIP != "127.0.0.1")
+            {
+                Logger.Info($"  - {networkIP}:{PORT} (nếu kết nối từ máy khác trên cùng WiFi)");
+            }
+            Logger.Info("Lưu ý: Chỉ nhập MỘT IP vào form Login (127.0.0.1 hoặc IP mạng)");
+            Logger.Info("Đảm bảo cả hai máy đều cùng mạng WiFi và firewall cho phép port 9000");
 
             _server = new Server(PORT);
             _server.OnUserListChanged += Server_OnUserListChanged;
@@ -81,7 +97,7 @@ namespace ChatAppServer
             Task.Run(async () =>
             {
                 Logger.Success($"Server khởi động tại port {PORT}...");
-                Logger.Success($"Đang lắng nghe kết nối từ mạng chung...");
+                Logger.Success($"Đang lắng nghe kết nối từ TẤT CẢ interfaces (localhost + IP mạng)...");
                 await _server.StartAsync();
             });
         }
@@ -161,48 +177,60 @@ namespace ChatAppServer
         #region Lấy địa chỉ IP Local
 
         /// <summary>
-        /// Lấy tất cả địa chỉ IP local của máy (loại trừ loopback và IPv6)
+        /// Lấy địa chỉ IP: trả về cả 127.0.0.1 (localhost) và IP mạng (để kết nối từ máy khác)
         /// </summary>
         private string GetLocalIPAddresses()
         {
+            string networkIP = null;
+            
+            // Lấy IP từ interface đang active (interface đang kết nối internet/WiFi)
             try
             {
-                var ipAddresses = new List<string>();
-                
-                // Lấy tất cả các địa chỉ IP từ tất cả các network interface
-                var host = Dns.GetHostEntry(Dns.GetHostName());
-                
-                foreach (var ip in host.AddressList)
+                using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
                 {
-                    // Chỉ lấy IPv4 và không phải loopback (127.0.0.1)
-                    if (ip.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(ip))
+                    socket.Connect("8.8.8.8", 65530);
+                    var endPoint = socket.LocalEndPoint as IPEndPoint;
+                    if (endPoint != null)
                     {
-                        ipAddresses.Add(ip.ToString());
+                        networkIP = endPoint.Address.ToString();
                     }
                 }
+            }
+            catch
+            {
+                // Nếu không kết nối được internet, bỏ qua và thử cách khác
+            }
 
-                if (ipAddresses.Count == 0)
+            // Fallback: Nếu không lấy được bằng cách trên, thử lấy từ host entry
+            if (string.IsNullOrEmpty(networkIP))
+            {
+                try
                 {
-                    // Nếu không tìm thấy IP nào, thử cách khác
-                    using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+                    var host = Dns.GetHostEntry(Dns.GetHostName());
+                    foreach (var ip in host.AddressList)
                     {
-                        socket.Connect("8.8.8.8", 65530);
-                        var endPoint = socket.LocalEndPoint as IPEndPoint;
-                        if (endPoint != null)
+                        // Chỉ lấy IPv4 và không phải loopback (127.0.0.1)
+                        if (ip.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(ip))
                         {
-                            ipAddresses.Add(endPoint.Address.ToString());
+                            networkIP = ip.ToString();
+                            break;
                         }
                     }
                 }
-
-                return ipAddresses.Count > 0 
-                    ? string.Join(", ", ipAddresses) 
-                    : "Không tìm thấy IP (kiểm tra kết nối mạng)";
+                catch (Exception ex)
+                {
+                    Logger.Error($"Lỗi khi lấy địa chỉ IP từ host entry: {ex.Message}");
+                }
             }
-            catch (Exception ex)
+
+            // Trả về cả 127.0.0.1 và IP mạng (dùng dấu phẩy để dễ copy)
+            if (!string.IsNullOrEmpty(networkIP))
             {
-                Logger.Error($"Lỗi khi lấy địa chỉ IP: {ex.Message}");
-                return "Lỗi khi lấy IP";
+                return $"127.0.0.1, {networkIP}";
+            }
+            else
+            {
+                return "127.0.0.1";
             }
         }
 

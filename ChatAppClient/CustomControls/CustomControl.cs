@@ -23,6 +23,7 @@ namespace ChatAppClient
         private Color _placeholderColor = Color.Gray;
         private Color _textColor = Color.Black;
         private bool _isPasswordMode = false;
+        private bool _isTogglingEye = false; // Flag để tránh xóa text khi toggle
 
         public RoundedTextBox()
         {
@@ -44,9 +45,13 @@ namespace ChatAppClient
             InnerTextBox.BackColor = _boxColor;
             InnerTextBox.ForeColor = _textColor;
             InnerTextBox.Multiline = true; // Mặc định bật để chữ đẹp
+            InnerTextBox.UseSystemPasswordChar = false; // Mặc định tắt, sẽ bật khi IsPassword = true
 
             // Chặn phím Enter
             InnerTextBox.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) e.SuppressKeyPress = true; };
+            
+            // Thêm event KeyPress để đảm bảo UseSystemPasswordChar được bật ngay khi người dùng nhập
+            InnerTextBox.KeyPress += InnerTextBox_KeyPress;
 
             // 3. Icon Trái
             IconLeft.Size = new Size(24, 24);
@@ -61,15 +66,18 @@ namespace ChatAppClient
             IconRight.BackColor = Color.Transparent;
             IconRight.Visible = false;
             IconRight.Cursor = Cursors.Hand;
+            IconRight.TabStop = false; // Không can thiệp vào tab navigation
             IconRight.Click += ToggleEye;
 
             this.Controls.Add(IconLeft);
-            this.Controls.Add(IconRight);
             this.Controls.Add(InnerTextBox);
+            this.Controls.Add(IconRight); // Thêm IconRight sau để nó ở trên cùng, có thể click được
+            IconRight.BringToFront(); // Đảm bảo icon ở trên cùng để có thể click được
 
             // Events
             InnerTextBox.Enter += RemovePlaceholder;
             InnerTextBox.Leave += SetPlaceholder;
+            InnerTextBox.TextChanged += InnerTextBox_TextChanged;
             this.Click += (s, e) => InnerTextBox.Focus();
             this.Resize += (s, e) => CenterContent();
 
@@ -102,6 +110,7 @@ namespace ChatAppClient
             {
                 IconRight.Visible = true;
                 IconRight.Location = new Point(this.Width - 34, iconY);
+                IconRight.BringToFront(); // Đảm bảo icon ở trên cùng để có thể click được
             }
             else IconRight.Visible = false;
 
@@ -127,12 +136,52 @@ namespace ChatAppClient
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public override string? Text
         {
-            get { return InnerTextBox.Text; }
+            get 
+            { 
+                // Nếu đang là placeholder, trả về rỗng
+                if (_isPlaceholder) return "";
+                return InnerTextBox.Text; 
+            }
             set
             {
-                InnerTextBox.Text = value ?? "";
-                // Khi gán text bằng code, cần kiểm tra placeholder
-                SetPlaceholder(null, null);
+                string newText = value ?? "";
+                
+                if (string.IsNullOrWhiteSpace(newText))
+                {
+                    // Text rỗng, set placeholder
+                    SetPlaceholder(null, null);
+                }
+                else
+                {
+                    // Kiểm tra xem text có giống placeholder text không
+                    // Nếu giống VÀ chưa có text thực sự từ người dùng (chưa focus vào), coi là placeholder
+                    // Nếu khác hoặc đã có text thực sự, coi là text thực sự
+                    bool isPlaceholderValue = !string.IsNullOrEmpty(_placeholderText) && newText == _placeholderText;
+                    
+                    if (isPlaceholderValue && !InnerTextBox.Focused)
+                    {
+                        // Set như placeholder (khi set từ code, chưa focus)
+                        _isPlaceholder = true;
+                        InnerTextBox.Text = _placeholderText;
+                        InnerTextBox.ForeColor = _placeholderColor;
+                        if (_isPasswordMode)
+                        {
+                            InnerTextBox.UseSystemPasswordChar = false;
+                        }
+                    }
+                    else
+                    {
+                        // Text thực sự
+                        _isPlaceholder = false;
+                        InnerTextBox.Text = newText;
+                        InnerTextBox.ForeColor = _textColor;
+                        if (_isPasswordMode)
+                        {
+                            InnerTextBox.UseSystemPasswordChar = true;
+                        }
+                    }
+                }
+                this.Invalidate();
             }
         }
         [Category("Custom Properties")]
@@ -145,12 +194,24 @@ namespace ChatAppClient
                 if (value)
                 {
                     InnerTextBox.Multiline = false;
-                    if (!_isPlaceholder) InnerTextBox.UseSystemPasswordChar = true;
+                    // Luôn bật UseSystemPasswordChar nếu không phải placeholder
+                    if (!_isPlaceholder && !string.IsNullOrEmpty(InnerTextBox.Text) && InnerTextBox.Text != _placeholderText)
+                    {
+                        InnerTextBox.UseSystemPasswordChar = true;
+                    }
+                    // Đảm bảo IconRight hiển thị nếu có IconEnd
+                    if (IconRight.Image != null)
+                    {
+                        IconRight.Visible = true;
+                        IconRight.BringToFront(); // Đảm bảo icon ở trên cùng
+                    }
                 }
                 else
                 {
                     InnerTextBox.Multiline = true;
                     InnerTextBox.UseSystemPasswordChar = false;
+                    // Ẩn IconRight nếu không phải password mode
+                    IconRight.Visible = false;
                 }
                 CenterContent();
             }
@@ -173,7 +234,17 @@ namespace ChatAppClient
         public Image IconEnd
         {
             get { return IconRight.Image; }
-            set { IconRight.Image = value; CenterContent(); }
+            set 
+            { 
+                IconRight.Image = value; 
+                // Đảm bảo IconRight hiển thị khi có image và là password mode
+                if (value != null && _isPasswordMode)
+                {
+                    IconRight.Visible = true;
+                    IconRight.BringToFront(); // Đảm bảo icon ở trên cùng
+                }
+                CenterContent(); 
+            }
         }
 
         [Category("Custom Properties")]
@@ -191,10 +262,97 @@ namespace ChatAppClient
         }
 
         // --- Logic Mắt & Placeholder ---
+        private void InnerTextBox_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            // Khi người dùng nhập ký tự, nếu là password mode, đảm bảo UseSystemPasswordChar được bật
+            if (_isPasswordMode)
+            {
+                // Nếu đang là placeholder, xóa nó trước
+                if (_isPlaceholder)
+                {
+                    InnerTextBox.Text = "";
+                    _isPlaceholder = false;
+                    InnerTextBox.ForeColor = _textColor;
+                }
+                // Bật UseSystemPasswordChar ngay lập tức
+                InnerTextBox.UseSystemPasswordChar = true;
+            }
+        }
+
         private void ToggleEye(object sender, EventArgs e)
         {
-            if (_isPlaceholder) return;
+            // Chỉ toggle nếu là password mode
+            if (!_isPasswordMode) return;
+            
+            // Đặt flag để tránh sự kiện Leave xóa text
+            _isTogglingEye = true;
+            
+            // Lưu text hiện tại (nếu không phải placeholder)
+            string currentText = "";
+            bool wasPlaceholder = _isPlaceholder;
+            if (!_isPlaceholder)
+            {
+                currentText = InnerTextBox.Text;
+            }
+            
+            // Nếu đang là placeholder, xóa nó trước khi toggle
+            if (_isPlaceholder)
+            {
+                InnerTextBox.Text = "";
+                InnerTextBox.ForeColor = _textColor;
+                _isPlaceholder = false;
+            }
+            
+            // Toggle password visibility
             InnerTextBox.UseSystemPasswordChar = !InnerTextBox.UseSystemPasswordChar;
+            
+            // Khôi phục text ngay lập tức nếu có (đảm bảo không bị mất)
+            if (!wasPlaceholder && !string.IsNullOrEmpty(currentText))
+            {
+                InnerTextBox.Text = currentText;
+            }
+            
+            // Đảm bảo TextBox vẫn focus để người dùng có thể tiếp tục nhập
+            InnerTextBox.Focus();
+            
+            // Tắt flag sau một khoảng thời gian ngắn (sử dụng Application.DoEvents để xử lý các sự kiện đang chờ)
+            System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
+            timer.Interval = 50; // 50ms
+            timer.Tick += (s, args) =>
+            {
+                _isTogglingEye = false;
+                timer.Stop();
+                timer.Dispose();
+            };
+            timer.Start();
+        }
+
+        private void InnerTextBox_TextChanged(object sender, EventArgs e)
+        {
+            // Khi người dùng thay đổi text, nếu text khác placeholder text, coi là text thực sự
+            if (!string.IsNullOrEmpty(InnerTextBox.Text) && InnerTextBox.Text != _placeholderText)
+            {
+                // Text thực sự từ người dùng
+                _isPlaceholder = false;
+                InnerTextBox.ForeColor = _textColor;
+                if (_isPasswordMode)
+                {
+                    InnerTextBox.UseSystemPasswordChar = true;
+                }
+            }
+            else if (string.IsNullOrWhiteSpace(InnerTextBox.Text) || InnerTextBox.Text == _placeholderText)
+            {
+                // Có thể là placeholder, nhưng chỉ set nếu không đang focus (người dùng đang nhập)
+                if (!InnerTextBox.Focused)
+                {
+                    _isPlaceholder = true;
+                    InnerTextBox.ForeColor = _placeholderColor;
+                    if (_isPasswordMode)
+                    {
+                        InnerTextBox.UseSystemPasswordChar = false;
+                    }
+                }
+            }
         }
 
         private void RemovePlaceholder(object sender, EventArgs e)
@@ -204,14 +362,30 @@ namespace ChatAppClient
                 InnerTextBox.Text = "";
                 InnerTextBox.ForeColor = _textColor;
                 _isPlaceholder = false;
-                if (_isPasswordMode) InnerTextBox.UseSystemPasswordChar = true;
+                // QUAN TRỌNG: Bật UseSystemPasswordChar ngay khi người dùng click vào ô nhập
+                if (_isPasswordMode)
+                {
+                    InnerTextBox.UseSystemPasswordChar = true;
+                }
+            }
+            else
+            {
+                // Nếu không phải placeholder nhưng là password mode, đảm bảo UseSystemPasswordChar được bật
+                if (_isPasswordMode && !string.IsNullOrEmpty(InnerTextBox.Text) && InnerTextBox.Text != _placeholderText)
+                {
+                    InnerTextBox.UseSystemPasswordChar = true;
+                }
             }
             this.Invalidate();
         }
 
         private void SetPlaceholder(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(InnerTextBox.Text))
+            // Không set placeholder nếu đang toggle eye (tránh xóa mật khẩu)
+            if (_isTogglingEye) return;
+            
+            // Chỉ set placeholder nếu text rỗng hoặc giống placeholder text VÀ không đang focus
+            if (string.IsNullOrWhiteSpace(InnerTextBox.Text) || (InnerTextBox.Text == _placeholderText && !InnerTextBox.Focused))
             {
                 _isPlaceholder = true;
                 InnerTextBox.Text = _placeholderText;
@@ -219,6 +393,17 @@ namespace ChatAppClient
                 InnerTextBox.UseSystemPasswordChar = false;
                 if (!InnerTextBox.Multiline) InnerTextBox.Multiline = true;
                 CenterContent();
+            }
+            else if (!string.IsNullOrEmpty(InnerTextBox.Text) && InnerTextBox.Text != _placeholderText)
+            {
+                // Có text thực sự
+                _isPlaceholder = false;
+                InnerTextBox.ForeColor = _textColor;
+                // Nếu có text thực sự và là password mode, đảm bảo UseSystemPasswordChar được bật
+                if (_isPasswordMode)
+                {
+                    InnerTextBox.UseSystemPasswordChar = true;
+                }
             }
             this.Invalidate();
         }

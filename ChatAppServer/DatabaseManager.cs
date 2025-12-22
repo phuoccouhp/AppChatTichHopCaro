@@ -15,20 +15,28 @@ namespace ChatAppServer
 
         private DatabaseManager() { }
 
-        // Hàm kiểm tra đăng nhập
-        public UserData? Login(string username, string password)
+        // Hàm kiểm tra đăng nhập (hỗ trợ cả username và email)
+        public UserData? Login(string usernameOrEmail, string password, bool useEmail = false)
         {
             using (SqlConnection conn = new SqlConnection(_connectionString))
             {
                 try
                 {
                     conn.Open();
-                    string query = "SELECT Username, DisplayName FROM Users WHERE Username = @u AND Password = @p";
+                    string query;
+                    if (useEmail)
+                    {
+                        query = "SELECT Username, DisplayName FROM Users WHERE Email = @u AND Password = @p";
+                    }
+                    else
+                    {
+                        query = "SELECT Username, DisplayName FROM Users WHERE Username = @u AND Password = @p";
+                    }
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
                         // Dùng tham số (@u, @p) để chống hack SQL Injection
-                        cmd.Parameters.AddWithValue("@u", username);
+                        cmd.Parameters.AddWithValue("@u", usernameOrEmail);
                         cmd.Parameters.AddWithValue("@p", password);
 
                         using (SqlDataReader reader = cmd.ExecuteReader())

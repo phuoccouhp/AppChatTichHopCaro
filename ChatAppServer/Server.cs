@@ -25,6 +25,8 @@ namespace ChatAppServer
         public Server(int port)
         {
             _port = port;
+            // Sử dụng IPAddress.Any để lắng nghe trên tất cả interfaces
+            // Điều này cho phép kết nối từ cả 127.0.0.1 và IP mạng
             _listener = new TcpListener(IPAddress.Any, _port);
             TankGameManager = new TankGameManager();
         }
@@ -33,8 +35,23 @@ namespace ChatAppServer
         {
             try
             {
+                // Đảm bảo server có thể nhận kết nối từ cả localhost và IP mạng
+                // Bằng cách set SocketOption trước khi Start
+                _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 _listener.Start();
-                // Logger.Success($"Server đang lắng nghe tại port {_port}..."); // Có thể log ở đây hoặc ở ngoài
+                
+                // Log thông tin chi tiết về địa chỉ server đang lắng nghe
+                var localEndpoint = _listener.LocalEndpoint as IPEndPoint;
+                if (localEndpoint != null)
+                {
+                    Logger.Success($"Server đang lắng nghe tại {localEndpoint.Address}:{localEndpoint.Port}");
+                    if (localEndpoint.Address.Equals(IPAddress.Any) || localEndpoint.Address.Equals(IPAddress.IPv6Any))
+                    {
+                        Logger.Info("Server lắng nghe trên TẤT CẢ interfaces (bao gồm 127.0.0.1 và IP mạng)");
+                        Logger.Info($"✓ Có thể kết nối qua 127.0.0.1:{_port} (localhost)");
+                        Logger.Info($"✓ Có thể kết nối qua IP mạng WiFi:{_port}");
+                    }
+                }
             }
             catch (Exception ex)
             {

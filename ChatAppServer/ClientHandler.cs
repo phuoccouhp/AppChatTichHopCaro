@@ -209,7 +209,9 @@ namespace ChatAppServer
 
         private void HandleLogin(LoginPacket p)
         {
-            var user = DatabaseManager.Instance.Login(p.Username, p.Password);
+            // Hỗ trợ đăng nhập bằng username hoặc email
+            string loginValue = p.UseEmailLogin ? (p.Email ?? "") : (p.Username ?? "");
+            var user = DatabaseManager.Instance.Login(loginValue, p.Password, p.UseEmailLogin);
             if (user != null)
             {
                 this.UserID = user.Username;

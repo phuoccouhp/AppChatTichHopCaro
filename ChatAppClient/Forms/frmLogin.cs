@@ -12,17 +12,40 @@ namespace ChatAppClient.Forms
         public frmLogin()
         {
             InitializeComponent();
+            // Đảm bảo IsPassword được set sau khi InitializeComponent
+            txtPass.IsPassword = true;
         }
 
         private void frmLogin_Load(object sender, EventArgs e)
         {
             // Gán sự kiện Click cho nút Đăng nhập
             this.btnLogin.Click += BtnLogin_Click;
-
+            
+            // Thiết lập mặc định
+            UpdateLoginFieldPlaceholder();
             // (Optional) Pre-fill for testing if you want
             // txtServerIP.Text = "127.0.0.1";
             // txtUser.Text = "user1";
             // txtPass.Text = "123";
+        }
+
+        private void RdoLoginType_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateLoginFieldPlaceholder();
+        }
+
+        private void UpdateLoginFieldPlaceholder()
+        {
+            if (rdoEmail.Checked)
+            {
+                txtUser.PlaceholderText = "Email";
+                txtUser.Text = "Email";
+            }
+            else
+            {
+                txtUser.PlaceholderText = "Username";
+                txtUser.Text = "Username";
+            }
         }
 
         // Sự kiện click nút Đăng nhập (Async)
@@ -31,8 +54,9 @@ namespace ChatAppClient.Forms
             // Lấy dữ liệu từ các RoundedTextBox
             // Lưu ý: RoundedTextBox thường dùng thuộc tính .Text giống TextBox thường
             string serverIp = txtServerIP.Text.Trim();
-            string username = txtUser.Text.Trim();
+            string usernameOrEmail = txtUser.Text.Trim();
             string password = txtPass.Text.Trim();
+            bool useEmail = rdoEmail.Checked;
 
             // 1. Kiểm tra đầu vào
             if (string.IsNullOrEmpty(serverIp))
@@ -45,9 +69,17 @@ namespace ChatAppClient.Forms
                     "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            if (string.IsNullOrEmpty(usernameOrEmail) || string.IsNullOrEmpty(password))
             {
-                MessageBox.Show("Please enter Username and Password.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                string fieldName = useEmail ? "Email" : "Username";
+                MessageBox.Show($"Vui lòng nhập {fieldName} và Password.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Validate email format nếu đăng nhập bằng email
+            if (useEmail && !IsValidEmail(usernameOrEmail))
+            {
+                MessageBox.Show("Email không hợp lệ. Vui lòng nhập đúng định dạng email.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -72,7 +104,13 @@ namespace ChatAppClient.Forms
 
                 // 4. Gửi gói tin Login
                 btnLogin.Text = "Logging in...";
-                var loginPacket = new LoginPacket { Username = username, Password = password };
+                var loginPacket = new LoginPacket 
+                { 
+                    Username = useEmail ? null : usernameOrEmail,
+                    Email = useEmail ? usernameOrEmail : null,
+                    Password = password,
+                    UseEmailLogin = useEmail
+                };
 
                 // Gọi hàm async trong NetworkManager
                 LoginResultPacket result = await NetworkManager.Instance.LoginAsync(loginPacket);
@@ -155,6 +193,20 @@ namespace ChatAppClient.Forms
         private void frmLogin_FormClosing(object sender, FormClosingEventArgs e)
         {
             Application.Exit();
+        }
+
+        // Hàm kiểm tra email hợp lệ
+        private bool IsValidEmail(string email)
+        {
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }
