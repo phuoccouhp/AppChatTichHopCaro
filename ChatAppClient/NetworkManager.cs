@@ -35,6 +35,7 @@ namespace ChatAppClient.Forms
         public event Action<ForgotPasswordResultPacket> OnForgotPasswordResult; // Sự kiện quên mật khẩu
 
         private CancellationTokenSource _listeningCts;
+        private readonly object _loginLock = new object(); // Lock cho thread safety
 
         private NetworkManager()
         {
@@ -58,7 +59,7 @@ namespace ChatAppClient.Forms
                 var connectTask = _client.ConnectAsync(ipAddress, port);
                 using var timeoutCts = new CancellationTokenSource(5000);
 
-                var completedTask = await Task.WhenAny(connectTask, Task.Delay(-1, timeoutCts.Token));
+                var completedTask = await Task.WhenAny(connectTask, Task.Delay(5000, timeoutCts.Token));
 
                 if (completedTask == connectTask)
                 {
@@ -104,13 +105,28 @@ namespace ChatAppClient.Forms
             {
                 while (_client.Connected && _stream != null && !cancellationToken.IsCancellationRequested)
                 {
-                    if (!_stream.DataAvailable)
+                    // BinaryFormatter.Deserialize sẽ block cho đến khi có dữ liệu
+                    // Không cần check DataAvailable, chỉ cần deserialize trực tiếp
+                    object receivedPacket = null;
+                    try
                     {
-                        await Task.Delay(100, cancellationToken);
-                        continue;
+                        receivedPacket = await Task.Run(() => _formatter.Deserialize(_stream), cancellationToken);
                     }
-                    object receivedPacket = await Task.Run(() => _formatter.Deserialize(_stream), cancellationToken);
-                    HandlePacket(receivedPacket);
+                    catch (Exception deserializeEx)
+                    {
+                        // Nếu connection bị đóng trong khi deserialize, có thể vẫn còn packet chưa xử lý
+                        // Kiểm tra xem có phải do server đóng connection sau khi gửi packet không
+                        if (deserializeEx is IOException || deserializeEx.InnerException is IOException)
+                        {
+                            Logger.Warning($"Lỗi deserialize (có thể do server đóng connection): {deserializeEx.Message}");
+                        }
+                        throw;
+                    }
+                    
+                    if (receivedPacket != null)
+                    {
+                        HandlePacket(receivedPacket);
+                    }
                 }
             }
             catch (Exception ex)
@@ -131,12 +147,40 @@ namespace ChatAppClient.Forms
             // 1. Các gói tin Login/Register (Dùng TaskCompletionSource)
             if (packet is LoginResultPacket pLogin)
             {
-                _loginCompletionSource?.TrySetResult(pLogin);
+                Logger.Info($"Nhận được LoginResultPacket: Success={pLogin.Success}, UserID={pLogin.UserID}");
+                
+                TaskCompletionSource<LoginResultPacket> completionSource;
+                lock (_loginLock)
+                {
+                    completionSource = _loginCompletionSource;
+                }
+                
+                // Chỉ set result nếu TaskCompletionSource vẫn còn tồn tại và chưa được set
+                if (completionSource != null && !completionSource.Task.IsCompleted)
+                {
+                    bool setResult = completionSource.TrySetResult(pLogin);
+                    if (setResult)
+                    {
+                        Logger.Success("Đã set result vào LoginCompletionSource thành công.");
+                    }
+                    else
+                    {
+                        Logger.Warning("Không thể set result vào LoginCompletionSource (có thể đã completed).");
+                    }
+                }
+                else
+                {
+                    Logger.Warning($"LoginCompletionSource is null hoặc đã completed. completionSource={completionSource != null}, IsCompleted={completionSource?.Task.IsCompleted}");
+                }
                 return;
             }
             if (packet is RegisterResultPacket pRegister)
             {
-                _registerCompletionSource?.TrySetResult(pRegister);
+                // Chỉ set result nếu TaskCompletionSource vẫn còn tồn tại và chưa được set
+                if (_registerCompletionSource != null && !_registerCompletionSource.Task.IsCompleted)
+                {
+                    _registerCompletionSource.TrySetResult(pRegister);
+                }
                 return;
             }
 
@@ -163,6 +207,11 @@ namespace ChatAppClient.Forms
                 RematchResponsePacket p => () => _homeForm.HandleRematchResponse(p),
                 GameResetPacket p => () => _homeForm.HandleGameReset(p),
                 UpdateProfilePacket p => () => _homeForm.HandleUpdateProfile(p),
+                TankInvitePacket p => () => _homeForm.HandleTankInvite(p),
+                TankResponsePacket p => () => _homeForm.HandleTankResponse(p),
+                TankStartPacket p => () => _homeForm.HandleTankStart(p),
+                TankActionPacket p => () => _homeForm.HandleTankAction(p),
+                TankHitPacket p => () => _homeForm.HandleTankHit(p),
                 _ => null
             };
             action?.Invoke();
@@ -173,12 +222,62 @@ namespace ChatAppClient.Forms
         public async Task<LoginResultPacket> LoginAsync(LoginPacket packet)
         {
             if (!_client.Connected || _stream == null) throw new InvalidOperationException("Chưa kết nối.");
-            _loginCompletionSource = new TaskCompletionSource<LoginResultPacket>();
-            SendPacket(packet); // Gửi
-            var timeoutTask = Task.Delay(10000);
-            var resultTask = _loginCompletionSource.Task;
-            if (await Task.WhenAny(resultTask, timeoutTask) == resultTask) return await resultTask;
-            else throw new TimeoutException("Không nhận được phản hồi đăng nhập.");
+            
+            TaskCompletionSource<LoginResultPacket> completionSource;
+            lock (_loginLock)
+            {
+                // Tạo TaskCompletionSource mới (không hủy task cũ để tránh lỗi cancel)
+                _loginCompletionSource = new TaskCompletionSource<LoginResultPacket>();
+                completionSource = _loginCompletionSource;
+            }
+            
+            if (!SendPacket(packet)) // Gửi
+            {
+                lock (_loginLock)
+                {
+                    _loginCompletionSource = null;
+                }
+                throw new InvalidOperationException("Không thể gửi gói tin đăng nhập.");
+            }
+            
+            Logger.Info("Đã gửi LoginPacket, đang chờ phản hồi...");
+            
+            try
+            {
+                var timeoutTask = Task.Delay(10000);
+                var resultTask = completionSource.Task;
+                var completedTask = await Task.WhenAny(resultTask, timeoutTask);
+                
+                // Kiểm tra xem resultTask đã completed chưa
+                // (có thể completed ngay cả khi timeoutTask hoàn thành trước do race condition)
+                if (resultTask.IsCompleted)
+                {
+                    var result = await resultTask;
+                    Logger.Success($"Đã nhận được phản hồi đăng nhập: Success={result.Success}");
+                    lock (_loginLock)
+                    {
+                        _loginCompletionSource = null; // Clear sau khi nhận được kết quả
+                    }
+                    return result;
+                }
+                
+                // Nếu đến đây nghĩa là timeout xảy ra và resultTask chưa completed
+                Logger.Error("Timeout: Không nhận được phản hồi đăng nhập sau 10 giây.");
+                lock (_loginLock)
+                {
+                    _loginCompletionSource = null;
+                }
+                throw new TimeoutException("Không nhận được phản hồi đăng nhập.");
+            }
+            catch (TaskCanceledException)
+            {
+                Logger.Warning("Đăng nhập bị hủy.");
+                lock (_loginLock)
+                {
+                    _loginCompletionSource = null;
+                }
+                throw new InvalidOperationException("Đăng nhập bị hủy.");
+            }
         }
 
         public async Task<RegisterResultPacket> RegisterAsync(RegisterPacket packet)
@@ -205,7 +304,11 @@ namespace ChatAppClient.Forms
 
             try
             {
-                lock (currentStream) { _formatter.Serialize(currentStream, packet); }
+                lock (currentStream) 
+                { 
+                    _formatter.Serialize(currentStream, packet);
+                    currentStream.Flush(); // Đảm bảo dữ liệu được gửi ngay lập tức
+                }
                 return true; // Gửi thành công
             }
             catch (Exception ex)

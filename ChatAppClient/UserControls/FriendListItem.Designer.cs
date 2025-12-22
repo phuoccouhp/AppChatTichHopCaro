@@ -33,11 +33,9 @@
             this.lblFriendName = new System.Windows.Forms.Label();
             this.lblStatus = new System.Windows.Forms.Label();
             this.pnlStatusDot = new System.Windows.Forms.Panel();
-            this.lblNewMessageBadge = new System.Windows.Forms.Label(); // <--- ĐÃ SỬA: Thêm dòng này
-
+            this.lblNewMessageBadge = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pbAvatar)).BeginInit();
             this.SuspendLayout();
-
             // 
             // pbAvatar
             // 
@@ -58,12 +56,19 @@
             this.pbAvatar.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
             this.pbAvatar.TabIndex = 0;
             this.pbAvatar.TabStop = false;
+            this.pbAvatar.Location = new System.Drawing.Point(10, 10);
+            this.pbAvatar.Name = "pbAvatar";
+            this.pbAvatar.Size = new System.Drawing.Size(50, 50);
+            this.pbAvatar.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pbAvatar.TabIndex = 0;
+            this.pbAvatar.TabStop = false;
             // 
             // lblFriendName
             // 
             this.lblFriendName.AutoSize = true;
-            this.lblFriendName.Font = new System.Drawing.Font("Segoe UI", 10.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblFriendName.Location = new System.Drawing.Point(70, 10);
+            this.lblFriendName.Font = new System.Drawing.Font("Montserrat", 11F, System.Drawing.FontStyle.Bold);
+            this.lblFriendName.ForeColor = System.Drawing.Color.White; // Chữ trắng
+            this.lblFriendName.Location = new System.Drawing.Point(70, 12);
             this.lblFriendName.Name = "lblFriendName";
             this.lblFriendName.Size = new System.Drawing.Size(123, 25);
             this.lblFriendName.TabIndex = 1;
@@ -72,8 +77,8 @@
             // lblStatus
             // 
             this.lblStatus.AutoSize = true;
-            this.lblStatus.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblStatus.ForeColor = System.Drawing.Color.Gray;
+            this.lblStatus.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.lblStatus.ForeColor = System.Drawing.Color.DarkGray; // Chữ xám
             this.lblStatus.Location = new System.Drawing.Point(88, 38);
             this.lblStatus.Name = "lblStatus";
             this.lblStatus.Size = new System.Drawing.Size(54, 20);
@@ -91,8 +96,8 @@
             // lblNewMessageBadge
             // 
             this.lblNewMessageBadge.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.lblNewMessageBadge.BackColor = System.Drawing.Color.Red;
-            this.lblNewMessageBadge.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblNewMessageBadge.BackColor = System.Drawing.Color.Crimson;
+            this.lblNewMessageBadge.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.lblNewMessageBadge.ForeColor = System.Drawing.Color.White;
             this.lblNewMessageBadge.Location = new System.Drawing.Point(240, 22);
             this.lblNewMessageBadge.Name = "lblNewMessageBadge";
@@ -100,12 +105,12 @@
             this.lblNewMessageBadge.TabIndex = 4;
             this.lblNewMessageBadge.Text = "N";
             this.lblNewMessageBadge.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.lblNewMessageBadge.Visible = false; // Ẩn mặc định
+            this.lblNewMessageBadge.Visible = false;
             // 
             // FriendListItem
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
-            this.BackColor = System.Drawing.Color.White;
+            this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(33)))), ((int)(((byte)(45))))); // Nền tối trùng Sidebar
             this.Controls.Add(this.lblNewMessageBadge);
             this.Controls.Add(this.pnlStatusDot);
             this.Controls.Add(this.lblStatus);
@@ -114,13 +119,11 @@
             this.Cursor = System.Windows.Forms.Cursors.Hand;
             this.Margin = new System.Windows.Forms.Padding(0);
             this.Name = "FriendListItem";
-            this.Size = new System.Drawing.Size(280, 70);
+            this.Size = new System.Drawing.Size(330, 70);
             ((System.ComponentModel.ISupportInitialize)(this.pbAvatar)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
-
         }
-
         #endregion
 
         private System.Windows.Forms.PictureBox pbAvatar;

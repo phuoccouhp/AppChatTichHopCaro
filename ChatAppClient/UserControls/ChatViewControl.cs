@@ -27,7 +27,7 @@ namespace ChatAppClient.UserControls
 
         private void ChatViewControl_Load(object sender, EventArgs e)
         {
-            _myId = NetworkManager.Instance.UserID; 
+            _myId = NetworkManager.Instance.UserID;
 
             // Gán sự kiện
             btnSend.Click += BtnSend_Click;
@@ -36,6 +36,12 @@ namespace ChatAppClient.UserControls
             btnSendImage.Click += BtnSendImage_Click;
             btnSendFile.Click += BtnSendFile_Click;
             btnEmoji.Click += BtnEmoji_Click;
+            
+            // Thêm context menu cho nút game để chọn loại game
+            ContextMenuStrip gameMenu = new ContextMenuStrip();
+            gameMenu.Items.Add("Chơi Caro", null, (s, e) => InviteCaroGame());
+            gameMenu.Items.Add("Chơi Tank Game", null, (s, e) => InviteTankGame());
+            btnStartGame.ContextMenuStrip = gameMenu;
 
             LoadEmojis();
 
@@ -58,11 +64,26 @@ namespace ChatAppClient.UserControls
 
         private void BtnStartGame_Click(object sender, EventArgs e)
         {
+            // Mặc định mời chơi Caro
+            InviteCaroGame();
+        }
+
+        private void InviteCaroGame()
+        {
             var invite = new GameInvitePacket { SenderID = _myId, SenderName = NetworkManager.Instance.UserName, ReceiverID = _friendId };
             NetworkManager.Instance.SendPacket(invite);
             btnStartGame.Enabled = false;
             btnStartGame.Text = "...";
             MessageBox.Show($"Đã gửi lời mời chơi Caro đến {_friendName}!\nĐang chờ phản hồi...", "Thông báo");
+        }
+
+        private void InviteTankGame()
+        {
+            var invite = new TankInvitePacket { SenderID = _myId, SenderName = NetworkManager.Instance.UserName, ReceiverID = _friendId };
+            NetworkManager.Instance.SendPacket(invite);
+            btnStartGame.Enabled = false;
+            btnStartGame.Text = "...";
+            MessageBox.Show($"Đã gửi lời mời chơi Tank Game đến {_friendName}!\nĐang chờ phản hồi...", "Thông báo");
         }
 
         private void BtnSendImage_Click(object sender, EventArgs e)
@@ -150,7 +171,7 @@ namespace ChatAppClient.UserControls
         {
             if (this.InvokeRequired) { this.Invoke(new Action(HandleGameInviteDeclined)); return; }
             MessageBox.Show($"{_friendName} đã từ chối lời mời.", "Tiếc quá!");
-            ResetGameButtonInternal(); 
+            ResetGameButtonInternal();
         }
 
         public void ResetGameButton()
@@ -168,7 +189,7 @@ namespace ChatAppClient.UserControls
         private int GetUsableWidth()
         {
             int width = flpMessages.ClientSize.Width - (flpMessages.Padding.Left + flpMessages.Padding.Right);
-           
+
             if (flpMessages.VerticalScroll.Visible)
             {
                 width -= SystemInformation.VerticalScrollBarWidth;
@@ -199,10 +220,10 @@ namespace ChatAppClient.UserControls
         #region Logic Emoji (Không đổi)
         private void LoadEmojis()
         {
-            string[] emojis = { "😊", "😂", "❤️", "👍", "🤔", "😢", "😠", "😮" };
+            string[] emojis = { "😊", "😂", "❤️", "👍", "🤔", "😢", "😠", "😮", "😎", "😶‍🌫️", "😥", "🤐", "😭", "💀", "💩" };
             foreach (string emoji in emojis)
             {
-                Button btn = new Button { Text = emoji, Font = new Font("Segoe UI Emoji", 12), Size = new Size(40, 40), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
+                Button btn = new Button { Text = emoji, Font = new Font("Segoe UI Emoji", 16), Size = new Size(40, 40), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
                 btn.FlatAppearance.BorderSize = 0;
                 btn.Click += EmojiButton_Click;
                 pnlEmojiPicker.Controls.Add(btn);
@@ -215,7 +236,7 @@ namespace ChatAppClient.UserControls
         }
         private void EmojiButton_Click(object sender, EventArgs e)
         {
-            txtMessage.AppendText(((Button)sender).Text); 
+            txtMessage.AppendText(((Button)sender).Text);
             pnlEmojiPicker.Visible = false;
             txtMessage.Focus();
         }

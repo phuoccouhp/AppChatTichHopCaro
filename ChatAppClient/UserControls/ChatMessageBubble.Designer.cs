@@ -28,35 +28,36 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.lblMessage = new System.Windows.Forms.Label();
-            this.SuspendLayout();
+            lblMessage = new Label();
+            SuspendLayout();
             // 
             // lblMessage
             // 
-            this.lblMessage.AutoSize = true;
-            this.lblMessage.BackColor = System.Drawing.Color.Transparent;
-            this.lblMessage.Font = new System.Drawing.Font("Segoe UI", 10.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblMessage.Location = new System.Drawing.Point(10, 10);
-            this.lblMessage.Margin = new System.Windows.Forms.Padding(0);
-            this.lblMessage.MaximumSize = new System.Drawing.Size(400, 0);
-            this.lblMessage.Name = "lblMessage";
-            this.lblMessage.Size = new System.Drawing.Size(73, 23);
-            this.lblMessage.TabIndex = 0;
-            this.lblMessage.Text = "Message";
+            lblMessage.AutoSize = true;
+            lblMessage.BackColor = Color.Transparent;
+            lblMessage.Font = new Font("Microsoft Sans Serif", 12F);
+            lblMessage.Location = new Point(0, 7);
+            lblMessage.Margin = new Padding(0);
+            lblMessage.MaximumSize = new Size(400, 0);
+            lblMessage.Name = "lblMessage";
+            lblMessage.Size = new Size(93, 25);
+            lblMessage.TabIndex = 0;
+            lblMessage.Text = "Message";
+            lblMessage.TextAlign = ContentAlignment.MiddleCenter;
             // 
             // ChatMessageBubble
             // 
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
-            this.AutoSize = true;
-            this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.BackColor = System.Drawing.Color.Transparent;
-            this.Controls.Add(this.lblMessage);
-            this.Margin = new System.Windows.Forms.Padding(5, 5, 100, 5);
-            this.MinimumSize = new System.Drawing.Size(50, 30);
-            this.Name = "ChatMessageBubble";
-            this.Size = new System.Drawing.Size(83, 33);
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            AutoScaleMode = AutoScaleMode.None;
+            AutoSize = true;
+            AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            BackColor = Color.Transparent;
+            Controls.Add(lblMessage);
+            Margin = new Padding(5, 5, 100, 5);
+            MinimumSize = new Size(50, 30);
+            Name = "ChatMessageBubble";
+            Size = new Size(93, 32);
+            ResumeLayout(false);
+            PerformLayout();
 
         }
 

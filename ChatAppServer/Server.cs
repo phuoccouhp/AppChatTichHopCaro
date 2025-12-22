@@ -323,6 +323,85 @@ namespace ChatAppServer
             else Logger.Warning($"[Rematch] Phản hồi cho GameID không tồn tại: {response.GameID}");
         }
 
+        // --- XỬ LÝ TANK GAME ---
+        public void ProcessTankResponse(TankResponsePacket response)
+        {
+            if (!response.Accepted)
+            {
+                Logger.Warning($"[Tank Game] {response.SenderID} từ chối {response.ReceiverID}");
+                RelayPrivatePacket(response.ReceiverID, response);
+                return;
+            }
+
+            Logger.Success($"[Tank Game] {response.SenderID} đồng ý {response.ReceiverID}. Bắt đầu game!");
+            string player1_ID = response.ReceiverID; // Người mời
+            string player2_ID = response.SenderID;   // Người nhận
+
+            string gameID = Guid.NewGuid().ToString("N").Substring(0, 10);
+
+            GameSession newGame = new GameSession(gameID, player1_ID, player2_ID);
+            lock (_gameSessions)
+            {
+                _gameSessions.Add(gameID, newGame);
+            }
+
+            ClientHandler player1_Handler;
+            ClientHandler player2_Handler;
+            lock (_clients)
+            {
+                _clients.TryGetValue(player1_ID, out player1_Handler);
+                _clients.TryGetValue(player2_ID, out player2_Handler);
+            }
+
+            if (player1_Handler == null || player2_Handler == null)
+            {
+                Logger.Error("[Error] Không thể bắt đầu tank game, 1 trong 2 người đã offline.");
+                lock (_gameSessions) _gameSessions.Remove(gameID);
+                return;
+            }
+
+            // Khởi tạo game trong TankGameManager
+            TankGameManager.StartGame(gameID, player1_ID, player2_ID);
+
+            // Gửi gói tin bắt đầu
+            var startPacket1 = new TankStartPacket
+            {
+                GameID = gameID,
+                OpponentID = player2_Handler.UserID,
+                OpponentName = player2_Handler.UserName,
+                StartsFirst = true
+            };
+            player1_Handler.SendPacket(startPacket1);
+
+            var startPacket2 = new TankStartPacket
+            {
+                GameID = gameID,
+                OpponentID = player1_Handler.UserID,
+                OpponentName = player1_Handler.UserName,
+                StartsFirst = false
+            };
+            player2_Handler.SendPacket(startPacket2);
+        }
+
+        public void ProcessTankAction(TankActionPacket action)
+        {
+            GameSession session;
+            lock (_gameSessions)
+            {
+                _gameSessions.TryGetValue(action.GameID, out session);
+            }
+
+            if (session != null)
+            {
+                string opponentID = (session.Player1_ID == action.SenderID) ? session.Player2_ID : session.Player1_ID;
+                RelayPrivatePacket(opponentID, action);
+            }
+            else
+            {
+                Logger.Warning($"[Tank Action] GameID không tồn tại: {action.GameID}");
+            }
+        }
+
         #endregion
     }
 }

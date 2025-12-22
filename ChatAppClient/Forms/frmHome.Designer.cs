@@ -28,61 +28,56 @@
         /// </summary>
         private void InitializeComponent()
         {
-            pnlHeader = new Panel();
-            lblWelcome = new Label();
+            pbUserAvatar = new PictureBox();
             pnlSidebar = new Panel();
             flpFriendsList = new FlowLayoutPanel();
             lblFriendsTitle = new Label();
+            pnlSearchBox = new Panel();
+            lblSearchIcon = new Label();
+            txtSearch = new TextBox();
             pnlMain = new Panel();
             lblMainWelcome = new Label();
-            pnlHeader.SuspendLayout();
+            btnSettings = new Button();
+            lblWelcome = new Label();
+            pnlHeader = new Panel();
+            ((System.ComponentModel.ISupportInitialize)pbUserAvatar).BeginInit();
             pnlSidebar.SuspendLayout();
+            pnlSearchBox.SuspendLayout();
             pnlMain.SuspendLayout();
+            pnlHeader.SuspendLayout();
             SuspendLayout();
             // 
-            // pnlHeader
+            // pbUserAvatar
             // 
-            pnlHeader.BackColor = Color.FromArgb(0, 145, 255);
-            pnlHeader.Controls.Add(lblWelcome);
-            pnlHeader.Dock = DockStyle.Top;
-            pnlHeader.Location = new Point(0, 0);
-            pnlHeader.Margin = new Padding(3, 4, 3, 4);
-            pnlHeader.Name = "pnlHeader";
-            pnlHeader.Size = new Size(800, 75);
-            pnlHeader.TabIndex = 0;
-            // 
-            // lblWelcome
-            // 
-            lblWelcome.AutoSize = true;
-            lblWelcome.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblWelcome.ForeColor = Color.White;
-            lblWelcome.Location = new Point(12, 20);
-            lblWelcome.Name = "lblWelcome";
-            lblWelcome.Size = new Size(194, 28);
-            lblWelcome.TabIndex = 0;
-            lblWelcome.Text = "Chào mừng, [User]!";
+            pbUserAvatar.BackColor = Color.WhiteSmoke;
+            pbUserAvatar.Location = new Point(19, 12);
+            pbUserAvatar.Name = "pbUserAvatar";
+            pbUserAvatar.Size = new Size(50, 50);
+            pbUserAvatar.SizeMode = PictureBoxSizeMode.StretchImage;
+            pbUserAvatar.TabIndex = 1;
+            pbUserAvatar.TabStop = false;
             // 
             // pnlSidebar
             // 
-            pnlSidebar.BackColor = Color.White;
+            pnlSidebar.BackColor = Color.FromArgb(30, 33, 45);
             pnlSidebar.Controls.Add(flpFriendsList);
             pnlSidebar.Controls.Add(lblFriendsTitle);
+            pnlSidebar.Controls.Add(pnlSearchBox);
             pnlSidebar.Dock = DockStyle.Left;
             pnlSidebar.Location = new Point(0, 75);
-            pnlSidebar.Margin = new Padding(3, 4, 3, 4);
             pnlSidebar.Name = "pnlSidebar";
-            pnlSidebar.Size = new Size(280, 675);
+            pnlSidebar.Size = new Size(280, 747);
             pnlSidebar.TabIndex = 1;
             // 
             // flpFriendsList
             // 
             flpFriendsList.AutoScroll = true;
+            flpFriendsList.BackColor = Color.FromArgb(30, 33, 45);
             flpFriendsList.Dock = DockStyle.Fill;
             flpFriendsList.FlowDirection = FlowDirection.TopDown;
-            flpFriendsList.Location = new Point(0, 44);
-            flpFriendsList.Margin = new Padding(3, 4, 3, 4);
+            flpFriendsList.Location = new Point(0, 92);
             flpFriendsList.Name = "flpFriendsList";
-            flpFriendsList.Size = new Size(280, 631);
+            flpFriendsList.Size = new Size(280, 655);
             flpFriendsList.TabIndex = 1;
             flpFriendsList.WrapContents = false;
             // 
@@ -90,69 +85,151 @@
             // 
             lblFriendsTitle.AutoSize = true;
             lblFriendsTitle.Dock = DockStyle.Top;
-            lblFriendsTitle.Font = new Font("Segoe UI", 10.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblFriendsTitle.ForeColor = Color.Gray;
-            lblFriendsTitle.Location = new Point(0, 0);
+            lblFriendsTitle.Font = new Font("Montserrat Medium", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblFriendsTitle.ForeColor = Color.Gainsboro;
+            lblFriendsTitle.Location = new Point(0, 40);
             lblFriendsTitle.Name = "lblFriendsTitle";
-            lblFriendsTitle.Padding = new Padding(10, 19, 0, 0);
-            lblFriendsTitle.Size = new Size(177, 44);
+            lblFriendsTitle.Padding = new Padding(15, 15, 0, 10);
+            lblFriendsTitle.Size = new Size(208, 52);
             lblFriendsTitle.TabIndex = 0;
-            lblFriendsTitle.Text = "Danh Sách Bạn Bè";
+            lblFriendsTitle.Text = "DANH SÁCH BẠN BÈ";
+            // 
+            // pnlSearchBox
+            // 
+            pnlSearchBox.BackColor = Color.FromArgb(40, 43, 55);
+            pnlSearchBox.Controls.Add(lblSearchIcon);
+            pnlSearchBox.Controls.Add(txtSearch);
+            pnlSearchBox.Dock = DockStyle.Top;
+            pnlSearchBox.Location = new Point(0, 0);
+            pnlSearchBox.Name = "pnlSearchBox";
+            pnlSearchBox.Padding = new Padding(10, 5, 10, 5);
+            pnlSearchBox.Size = new Size(280, 40);
+            pnlSearchBox.TabIndex = 2;
+            // 
+            // lblSearchIcon
+            // 
+            lblSearchIcon.AutoSize = true;
+            lblSearchIcon.Font = new Font("Segoe UI Emoji", 10F);
+            lblSearchIcon.ForeColor = Color.Gray;
+            lblSearchIcon.Location = new Point(8, 10);
+            lblSearchIcon.Name = "lblSearchIcon";
+            lblSearchIcon.Size = new Size(33, 22);
+            lblSearchIcon.TabIndex = 1;
+            lblSearchIcon.Text = "🔍";
+            // 
+            // txtSearch
+            // 
+            txtSearch.BackColor = Color.FromArgb(40, 43, 55);
+            txtSearch.BorderStyle = BorderStyle.None;
+            txtSearch.Font = new Font("Montserrat", 11F);
+            txtSearch.ForeColor = Color.White;
+            txtSearch.Location = new Point(47, 8);
+            txtSearch.Name = "txtSearch";
+            txtSearch.Size = new Size(220, 23);
+            txtSearch.TabIndex = 0;
+            txtSearch.Text = "Tìm kiếm...";
+            txtSearch.TextChanged += txtSearch_TextChanged;
+            txtSearch.Enter += txtSearch_Enter;
+            txtSearch.Leave += txtSearch_Leave;
             // 
             // pnlMain
             // 
-            pnlMain.BackColor = Color.FromArgb(229, 221, 213);
+            pnlMain.BackColor = Color.FromArgb(54, 57, 63);
             pnlMain.Controls.Add(lblMainWelcome);
             pnlMain.Dock = DockStyle.Fill;
             pnlMain.Location = new Point(280, 75);
-            pnlMain.Margin = new Padding(3, 4, 3, 4);
             pnlMain.Name = "pnlMain";
-            pnlMain.Size = new Size(520, 675);
+            pnlMain.Size = new Size(673, 747);
             pnlMain.TabIndex = 2;
             // 
             // lblMainWelcome
             // 
             lblMainWelcome.Anchor = AnchorStyles.None;
             lblMainWelcome.AutoSize = true;
-            lblMainWelcome.Font = new Font("Segoe UI", 13.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            lblMainWelcome.Font = new Font("Montserrat", 16F, FontStyle.Italic);
             lblMainWelcome.ForeColor = Color.Gray;
-            lblMainWelcome.Location = new Point(60, 318);
+            lblMainWelcome.Location = new Point(94, 326);
             lblMainWelcome.Name = "lblMainWelcome";
-            lblMainWelcome.Size = new Size(393, 31);
+            lblMainWelcome.Size = new Size(524, 42);
             lblMainWelcome.TabIndex = 0;
             lblMainWelcome.Text = "Chọn một người bạn để bắt đầu chat";
             // 
+            // btnSettings
+            // 
+            btnSettings.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnSettings.BackColor = Color.FromArgb(55, 58, 70);
+            btnSettings.Cursor = Cursors.Hand;
+            btnSettings.FlatAppearance.BorderSize = 0;
+            btnSettings.FlatStyle = FlatStyle.Flat;
+            btnSettings.Font = new Font("Montserrat", 15F);
+            btnSettings.ForeColor = Color.White;
+            btnSettings.Location = new Point(891, 16);
+            btnSettings.Name = "btnSettings";
+            btnSettings.Size = new Size(45, 45);
+            btnSettings.TabIndex = 1;
+            btnSettings.Text = "⚙️";
+            btnSettings.UseVisualStyleBackColor = false;
+            btnSettings.Click += btnSettings_Click;
+            // 
+            // lblWelcome
+            // 
+            lblWelcome.AutoSize = true;
+            lblWelcome.Font = new Font("Montserrat", 14F, FontStyle.Bold);
+            lblWelcome.ForeColor = Color.White;
+            lblWelcome.Location = new Point(75, 22);
+            lblWelcome.Name = "lblWelcome";
+            lblWelcome.Size = new Size(260, 38);
+            lblWelcome.TabIndex = 0;
+            lblWelcome.Text = "Chào mừng, [User]!";
+            // 
+            // pnlHeader
+            // 
+            pnlHeader.BackColor = Color.FromArgb(40, 43, 55);
+            pnlHeader.Controls.Add(lblWelcome);
+            pnlHeader.Controls.Add(btnSettings);
+            pnlHeader.Controls.Add(pbUserAvatar);
+            pnlHeader.Dock = DockStyle.Top;
+            pnlHeader.Location = new Point(0, 0);
+            pnlHeader.Name = "pnlHeader";
+            pnlHeader.Size = new Size(953, 75);
+            pnlHeader.TabIndex = 0;
+            // 
             // frmHome
             // 
-            AutoScaleDimensions = new SizeF(8F, 20F);
-            AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 750);
+            AutoScaleMode = AutoScaleMode.None;
+            ClientSize = new Size(953, 822);
             Controls.Add(pnlMain);
             Controls.Add(pnlSidebar);
             Controls.Add(pnlHeader);
-            Margin = new Padding(3, 4, 3, 4);
-            MinimumSize = new Size(700, 613);
             Name = "frmHome";
+            StartPosition = FormStartPosition.CenterScreen;
             Text = "Chat & Caro - Trang Chủ";
             FormClosing += frmHome_FormClosing;
             Load += frmHome_Load;
-            pnlHeader.ResumeLayout(false);
-            pnlHeader.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)pbUserAvatar).EndInit();
             pnlSidebar.ResumeLayout(false);
             pnlSidebar.PerformLayout();
+            pnlSearchBox.ResumeLayout(false);
+            pnlSearchBox.PerformLayout();
             pnlMain.ResumeLayout(false);
             pnlMain.PerformLayout();
+            pnlHeader.ResumeLayout(false);
+            pnlHeader.PerformLayout();
             ResumeLayout(false);
         }
 
         #endregion
-
-        private System.Windows.Forms.Panel pnlHeader;
-        private System.Windows.Forms.Label lblWelcome;
         private System.Windows.Forms.Panel pnlSidebar;
         private System.Windows.Forms.Label lblFriendsTitle;
         private System.Windows.Forms.FlowLayoutPanel flpFriendsList;
         private System.Windows.Forms.Panel pnlMain;
         private System.Windows.Forms.Label lblMainWelcome;
+        private System.Windows.Forms.PictureBox pbUserAvatar;
+        private Button btnSettings;
+        private Label lblWelcome;
+        private Panel pnlHeader;
+        private System.Windows.Forms.Panel pnlSearchBox;
+        private System.Windows.Forms.TextBox txtSearch;
+        private Label lblSearchIcon;
     }
 }

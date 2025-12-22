@@ -11,28 +11,69 @@ namespace ChatAppClient.Forms
     {
         private Dictionary<string, ChatViewControl> openChatControls;
         private Dictionary<string, frmCaroGame> openGameForms;
+        private Dictionary<string, frmTankGame> openTankGameForms;
         private List<UserStatus> _initialUsers;
         private ChatViewControl _currentChatControl = null;
-
-        // Thêm nút Setting vào giao diện bằng Code
-        private Button btnSettings;
 
         public frmHome(List<UserStatus> initialUsers)
         {
             InitializeComponent();
             openChatControls = new Dictionary<string, ChatViewControl>();
             openGameForms = new Dictionary<string, frmCaroGame>();
+            openTankGameForms = new Dictionary<string, frmTankGame>();
             _initialUsers = initialUsers;
+            btnSettings.MouseEnter += (s, e) =>
+            {
+                btnSettings.BackColor = Color.FromArgb(80, 83, 95); // Màu xám sáng
+            };
+            btnSettings.MouseLeave += (s, e) =>
+            {
+                btnSettings.BackColor = Color.FromArgb(55, 58, 70); // Màu xám tối ban đầu
+            };
+            Color separatorColor = Color.FromArgb(32, 34, 37);
 
-            // Tạo nút Setting thủ công (để không cần sửa designer file)
-            btnSettings = new Button();
-            btnSettings.Text = "⚙️";
-            btnSettings.Font = new Font("Segoe UI Emoji", 12F);
-            btnSettings.Size = new Size(40, 40);
-            btnSettings.Location = new Point(pnlHeader.Width - 50, 10); // Góc phải header
-            btnSettings.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnSettings.Click += btnSettings_Click;
-            pnlHeader.Controls.Add(btnSettings);
+            // 1. Tạo các đường kẻ (Nếu chưa có)
+            // Kẻ dưới Header chính
+            Panel lineHeader = new Panel { Height = 2, Dock = DockStyle.Bottom, BackColor = separatorColor };
+            pnlHeader.Controls.Add(lineHeader);
+
+            // Kẻ dọc ngăn cách Sidebar
+            Panel lineVertical = new Panel { Width = 2, Dock = DockStyle.Right, BackColor = separatorColor };
+            pnlSidebar.Controls.Add(lineVertical);
+
+            // Kẻ ngăn cách Tiêu đề và Tìm kiếm
+            Panel lineSidebarTitle = new Panel { Height = 2, Dock = DockStyle.Top, BackColor = separatorColor };
+
+            // 2. [QUAN TRỌNG] XÓA HẾT VÀ ADD LẠI THEO ĐÚNG THỨ TỰ MONG MUỐN
+            // Để đảm bảo không bao giờ bị nhảy lung tung, ta gỡ hết ra và gắn lại.
+
+            pnlSidebar.Controls.Clear(); // Xóa sạch Sidebar tạm thời
+
+            // THỨ TỰ ADD: Cái nào nằm DƯỚI CÙNG thì Add TRƯỚC (Quy tắc Dock)
+
+            // B1: Add Kẻ dọc (Nằm bên phải cùng)
+            pnlSidebar.Controls.Add(lineVertical);
+
+            // B2: Add Danh sách bạn bè (Fill - Lấp đầy khoảng trống còn lại)
+            pnlSidebar.Controls.Add(flpFriendsList);
+
+            // B3: Add Thanh tìm kiếm (Dock Top - Nằm ngay trên danh sách)
+            if (pnlSearchBox != null)
+            {
+                pnlSearchBox.Dock = DockStyle.Top; // Đảm bảo Dock đúng
+                pnlSidebar.Controls.Add(pnlSearchBox);
+            }
+
+            // B4: Add Đường kẻ ngang (Dock Top - Nằm trên thanh tìm kiếm)
+            pnlSidebar.Controls.Add(lineSidebarTitle);
+
+            // B5: Add Tiêu đề (Dock Top - Nằm trên cùng, đỉnh chóp)
+            // Cần chỉnh lại Title một chút để không bị co cụm
+            lblFriendsTitle.AutoSize = false; // Tắt tự co giãn để chiếm hết chiều ngang
+            lblFriendsTitle.Height = 50;      // Chiều cao cố định
+            lblFriendsTitle.Dock = DockStyle.Top;
+            lblFriendsTitle.TextAlign = ContentAlignment.MiddleLeft; // Căn giữa dọc, trái ngang
+            pnlSidebar.Controls.Add(lblFriendsTitle);
         }
 
         private void frmHome_Load(object sender, EventArgs e)
@@ -41,8 +82,82 @@ namespace ChatAppClient.Forms
             lblWelcome.Text = $"Chào mừng, {NetworkManager.Instance.UserName}!";
             LoadInitialFriendList();
             lblMainWelcome.Visible = true;
+            LoadMyAvatar();
+        }
+        private void txtSearch_TextChanged(object sender, EventArgs e)
+        {
+            string keyword = txtSearch.Text.Trim().ToLower();
+
+            // Nếu đang là chữ "Tìm kiếm..." (placeholder) thì coi như rỗng
+            if (keyword == "tìm kiếm...") keyword = "";
+
+            // Tạm dừng vẽ để không bị nháy hình
+            flpFriendsList.SuspendLayout();
+
+            foreach (Control c in flpFriendsList.Controls)
+            {
+                if (c is ChatAppClient.UserControls.FriendListItem item)
+                {
+                    // Nếu ô tìm kiếm trống -> Hiện tất cả
+                    if (string.IsNullOrEmpty(keyword))
+                    {
+                        item.Visible = true;
+                    }
+                    else
+                    {
+                        // Kiểm tra xem Tên bạn bè có chứa từ khóa không (bỏ qua hoa thường)
+                        bool isMatch = item.FriendName.ToLower().Contains(keyword);
+                        item.Visible = isMatch;
+                    }
+                }
+            }
+
+            // Vẽ lại danh sách
+            flpFriendsList.ResumeLayout();
         }
 
+        // 2. Sự kiện khi bấm vào ô tìm kiếm (Xóa chữ "Tìm kiếm...")
+        private void txtSearch_Enter(object sender, EventArgs e)
+        {
+            if (txtSearch.Text == "Tìm kiếm...")
+            {
+                txtSearch.Text = "";
+                txtSearch.ForeColor = Color.White; // Chữ khi gõ màu trắng
+            }
+        }
+
+        // 3. Sự kiện khi rời khỏi ô tìm kiếm (Nếu trống thì hiện lại chữ "Tìm kiếm...")
+        private void txtSearch_Leave(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtSearch.Text))
+            {
+                txtSearch.Text = "Tìm kiếm...";
+                txtSearch.ForeColor = Color.Gray; // Chữ placeholder màu xám
+            }
+        }
+        private void LoadMyAvatar()
+        {
+            // [TEST] Đặt màu đỏ để biết chắc chắn PictureBox đang nằm ở đó
+            pbUserAvatar.BackColor = Color.White;
+
+            string myId = NetworkManager.Instance.UserID;
+            string imagePath = System.IO.Path.Combine("Images", $"{myId}.png");
+
+            // ... (code load ảnh cũ của bạn) ...
+            if (System.IO.File.Exists(imagePath))
+            {
+                using (var bmp = new Bitmap(imagePath))
+                {
+                    pbUserAvatar.Image = new Bitmap(bmp);
+                    pbUserAvatar.BackColor = Color.Transparent; // Nếu có ảnh thì bỏ màu đỏ đi
+                }
+            }
+
+            // Bo tròn
+            System.Drawing.Drawing2D.GraphicsPath gp = new System.Drawing.Drawing2D.GraphicsPath();
+            gp.AddEllipse(0, 0, pbUserAvatar.Width, pbUserAvatar.Height);
+            pbUserAvatar.Region = new Region(gp);
+        }
         private void LoadInitialFriendList()
         {
             if (_initialUsers == null) return;
@@ -144,6 +259,7 @@ namespace ChatAppClient.Forms
             {
                 NetworkManager.Instance.SetUserCredentials(packet.UserID, packet.NewDisplayName);
                 lblWelcome.Text = $"Chào mừng, {packet.NewDisplayName}!";
+                LoadMyAvatar();
             }
         }
 
@@ -268,6 +384,77 @@ namespace ChatAppClient.Forms
             if (openGameForms.TryGetValue(packet.GameID, out var gameForm)) gameForm.HandleGameReset(packet);
         }
 
+        // --- XỬ LÝ TANK GAME ---
+        public void HandleTankInvite(TankInvitePacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleTankInvite(packet))); return; }
+            
+            DialogResult result = MessageBox.Show(
+                $"{packet.SenderName} mời bạn chơi Tank Game. Bạn có muốn chơi không?",
+                "Lời mời chơi Tank Game",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            var response = new TankResponsePacket
+            {
+                SenderID = NetworkManager.Instance.UserID,
+                ReceiverID = packet.SenderID,
+                Accepted = (result == DialogResult.Yes)
+            };
+            NetworkManager.Instance.SendPacket(response);
+        }
+
+        public void HandleTankResponse(TankResponsePacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleTankResponse(packet))); return; }
+            if (!packet.Accepted && openChatControls.TryGetValue(packet.SenderID, out var chatControl))
+            {
+                // Có thể thêm thông báo từ chối
+            }
+        }
+
+        public void HandleTankStart(TankStartPacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleTankStart(packet))); return; }
+            if (openChatControls.TryGetValue(packet.OpponentID, out var chatControl))
+            {
+                // Reset button nếu có
+            }
+
+            frmTankGame tankGameForm = new frmTankGame(packet.GameID, packet.OpponentID, packet.StartsFirst);
+            openTankGameForms.Add(packet.GameID, tankGameForm);
+            tankGameForm.FormClosed += (s, e) => { openTankGameForms.Remove(packet.GameID); };
+            tankGameForm.Show();
+        }
+
+        public void HandleTankAction(TankActionPacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleTankAction(packet))); return; }
+            if (openTankGameForms.TryGetValue(packet.GameID, out var gameForm))
+            {
+                gameForm.ReceiveOpponentAction(packet);
+            }
+        }
+
+        public void HandleTankHit(TankHitPacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleTankHit(packet))); return; }
+            if (openTankGameForms.TryGetValue(packet.GameID, out var gameForm))
+            {
+                gameForm.ReceiveHit(packet);
+            }
+        }
+
         #endregion
+
+        private void pnlMain_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void lblFriendsTitle_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }

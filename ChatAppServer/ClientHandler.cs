@@ -109,6 +109,24 @@ namespace ChatAppServer
                     _server.ProcessRematchResponse(p);
                     break;
 
+                case TankInvitePacket p:
+                    Logger.Info($"[Tank Game] {p.SenderID} mời {p.ReceiverID}");
+                    _server.RelayPrivatePacket(p.ReceiverID, p);
+                    break;
+                case TankResponsePacket p: _server.ProcessTankResponse(p); break;
+                case TankActionPacket p:
+                    Logger.Info($"[Tank Action] {p.SenderID} - {p.ActionType}");
+                    _server.ProcessTankAction(p);
+                    if (p.ActionType == TankActionType.Shoot)
+                    {
+                        _server.TankGameManager.AddBullet(p.GameID, p.SenderID, p.X, p.Y, p.Angle);
+                    }
+                    break;
+                case TankHitPacket p:
+                    // Client gửi hit packet khi phát hiện va chạm
+                    _server.TankGameManager.ProcessHit(p.GameID, p.HitPlayerID, p.Damage, _server);
+                    break;
+
                 default: Logger.Warning($"Packet lạ: {packet.GetType().Name}"); break;
             }
         }
@@ -208,7 +226,16 @@ namespace ChatAppServer
             }
             else
             {
-                SendPacket(new LoginResultPacket { Success = false, Message = "Sai thông tin đăng nhập." });
+                var result = new LoginResultPacket { Success = false, Message = "Sai thông tin đăng nhập." };
+                SendPacket(result);
+                // Đảm bảo flush stream trước khi đóng để client nhận được phản hồi
+                try
+                {
+                    _stream?.Flush();
+                    // Đợi một chút để đảm bảo packet được gửi đi
+                    System.Threading.Thread.Sleep(100);
+                }
+                catch { }
                 Logger.Warning($"[Login Fail] {p.Username} từ IP {this.ClientIP}");
                 Close();
             }
@@ -218,7 +245,14 @@ namespace ChatAppServer
         {
             if (_client.Connected && _stream != null)
             {
-                try { lock (_stream) { _formatter.Serialize(_stream, packet); } }
+                try 
+                { 
+                    lock (_stream) 
+                    { 
+                        _formatter.Serialize(_stream, packet);
+                        _stream.Flush(); // Đảm bảo dữ liệu được gửi ngay lập tức
+                    } 
+                }
                 catch (Exception ex) { Logger.Error($"Gửi thất bại cho {UserID}", ex); Close(); }
             }
         }

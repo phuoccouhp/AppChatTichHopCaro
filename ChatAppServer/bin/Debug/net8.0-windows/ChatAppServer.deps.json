@@ -92,7 +92,10 @@
       "System.Security.Principal.Windows/4.7.0": {},
       "ChatApp.Shared/1.0.0": {
         "runtime": {
-          "ChatApp.Shared.dll": {}
+          "ChatApp.Shared.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
         }
       }
     }
