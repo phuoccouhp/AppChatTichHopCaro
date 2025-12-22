@@ -155,10 +155,7 @@
         },
         "runtime": {
           "bin/placeholder/ChatApp.Shared.dll": {}
-        },
-        "frameworkReferences": [
-          "Microsoft.WindowsDesktop.App.WindowsForms"
-        ]
+        }
       }
     }
   },

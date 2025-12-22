@@ -46,7 +46,7 @@ namespace ChatAppClient.Forms
             // 
             lblTitle.AutoSize = true;
             lblTitle.BackColor = Color.Transparent;
-            lblTitle.Font = new Font("Microsoft Sans Serif", 24F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblTitle.Font = new Font("Segoe UI", 26F, FontStyle.Bold, GraphicsUnit.Point, 0);
             lblTitle.ForeColor = Color.FromArgb(0, 240, 255);
             lblTitle.Location = new Point(150, 49);
             lblTitle.Margin = new Padding(4, 0, 4, 0);
@@ -58,7 +58,7 @@ namespace ChatAppClient.Forms
             // txtUser
             // 
             txtUser.BackColor = Color.Transparent;
-            txtUser.Font = new Font("Microsoft Sans Serif", 9F);
+            txtUser.Font = new Font("Segoe UI", 11F);
             txtUser.Icon = (Image)resources.GetObject("txtUser.Icon");
             txtUser.IconEnd = null;
             txtUser.IsPassword = false;
@@ -74,7 +74,7 @@ namespace ChatAppClient.Forms
             // txtPass
             // 
             txtPass.BackColor = Color.Transparent;
-            txtPass.Font = new Font("Microsoft Sans Serif", 9F);
+            txtPass.Font = new Font("Segoe UI", 11F);
             txtPass.Icon = (Image)resources.GetObject("txtPass.Icon");
             txtPass.IconEnd = (Image)resources.GetObject("txtPass.IconEnd");
             txtPass.IsPassword = true;
@@ -91,7 +91,7 @@ namespace ChatAppClient.Forms
             // 
             chkRemember.AutoSize = true;
             chkRemember.BackColor = Color.Transparent;
-            chkRemember.Font = new Font("Microsoft Sans Serif", 10F);
+            chkRemember.Font = new Font("Segoe UI", 10.5F);
             chkRemember.ForeColor = Color.White;
             chkRemember.Location = new Point(101, 431);
             chkRemember.Margin = new Padding(4, 5, 4, 5);
@@ -105,7 +105,7 @@ namespace ChatAppClient.Forms
             // 
             lnkForgot.AutoSize = true;
             lnkForgot.BackColor = Color.Transparent;
-            lnkForgot.Font = new Font("Microsoft Sans Serif", 10F);
+            lnkForgot.Font = new Font("Segoe UI", 10.5F);
             lnkForgot.LinkColor = Color.White;
             lnkForgot.Location = new Point(358, 432);
             lnkForgot.Margin = new Padding(4, 0, 4, 0);
@@ -121,7 +121,7 @@ namespace ChatAppClient.Forms
             btnLogin.BackColor = Color.FromArgb(12, 42, 82);
             btnLogin.FlatAppearance.BorderSize = 0;
             btnLogin.FlatStyle = FlatStyle.Flat;
-            btnLogin.Font = new Font("Microsoft Sans Serif", 16F, FontStyle.Bold);
+            btnLogin.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
             btnLogin.ForeColor = Color.White;
             btnLogin.Location = new Point(101, 493);
             btnLogin.Margin = new Padding(4, 5, 4, 5);
@@ -136,7 +136,7 @@ namespace ChatAppClient.Forms
             // 
             lblNoAccount.AutoSize = true;
             lblNoAccount.BackColor = Color.Transparent;
-            lblNoAccount.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            lblNoAccount.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
             lblNoAccount.ForeColor = Color.White;
             lblNoAccount.Location = new Point(201, 601);
             lblNoAccount.Margin = new Padding(4, 0, 4, 0);
@@ -149,7 +149,7 @@ namespace ChatAppClient.Forms
             // 
             lnkSignup.AutoSize = true;
             lnkSignup.BackColor = Color.Transparent;
-            lnkSignup.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
+            lnkSignup.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             lnkSignup.LinkColor = Color.FromArgb(0, 132, 255);
             lnkSignup.Location = new Point(338, 601);
             lnkSignup.Margin = new Padding(4, 0, 4, 0);
@@ -163,7 +163,7 @@ namespace ChatAppClient.Forms
             // txtServerIP
             // 
             txtServerIP.BackColor = Color.Transparent;
-            txtServerIP.Font = new Font("Microsoft Sans Serif", 9F);
+            txtServerIP.Font = new Font("Segoe UI", 11F);
             txtServerIP.Icon = (Image)resources.GetObject("txtServerIP.Icon");
             txtServerIP.IconEnd = null;
             txtServerIP.IsPassword = false;

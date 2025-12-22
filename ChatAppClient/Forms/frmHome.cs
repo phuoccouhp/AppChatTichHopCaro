@@ -13,7 +13,7 @@ namespace ChatAppClient.Forms
         private Dictionary<string, frmCaroGame> openGameForms;
         private Dictionary<string, frmTankGame> openTankGameForms;
         private List<UserStatus> _initialUsers;
-        private ChatViewControl _currentChatControl = null;
+        private ChatViewControl? _currentChatControl = null;
 
         public frmHome(List<UserStatus> initialUsers)
         {
@@ -79,7 +79,8 @@ namespace ChatAppClient.Forms
         private void frmHome_Load(object sender, EventArgs e)
         {
             NetworkManager.Instance.RegisterHomeForm(this);
-            lblWelcome.Text = $"Chào mừng, {NetworkManager.Instance.UserName}!";
+            string? userName = NetworkManager.Instance.UserName ?? "User";
+            lblWelcome.Text = $"Chào mừng, {userName}!";
             LoadInitialFriendList();
             lblMainWelcome.Visible = true;
             LoadMyAvatar();
@@ -140,7 +141,8 @@ namespace ChatAppClient.Forms
             // [TEST] Đặt màu đỏ để biết chắc chắn PictureBox đang nằm ở đó
             pbUserAvatar.BackColor = Color.White;
 
-            string myId = NetworkManager.Instance.UserID;
+            string? myId = NetworkManager.Instance.UserID;
+            if (string.IsNullOrEmpty(myId)) return;
             string imagePath = System.IO.Path.Combine("Images", $"{myId}.png");
 
             // ... (code load ảnh cũ của bạn) ...
@@ -170,6 +172,13 @@ namespace ChatAppClient.Forms
 
         private void FriendItem_Click(FriendListItem item)
         {
+            // Kiểm tra xem đã login chưa (UserID phải được set)
+            if (string.IsNullOrEmpty(NetworkManager.Instance.UserID))
+            {
+                MessageBox.Show("Vui lòng đợi quá trình đăng nhập hoàn tất.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             string friendId = item.FriendID;
             string friendName = item.FriendName;
             item.SetNewMessageAlert(false);
@@ -186,11 +195,19 @@ namespace ChatAppClient.Forms
             }
             else
             {
-                chatControl = new ChatViewControl(friendId, friendName, this);
-                chatControl.Name = friendId;
-                chatControl.Dock = DockStyle.Fill;
-                openChatControls.Add(friendId, chatControl);
-                pnlMain.Controls.Add(chatControl);
+                try
+                {
+                    chatControl = new ChatViewControl(friendId, friendName, this);
+                    chatControl.Name = friendId;
+                    chatControl.Dock = DockStyle.Fill;
+                    openChatControls.Add(friendId, chatControl);
+                    pnlMain.Controls.Add(chatControl);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Lỗi khi tạo cửa sổ chat: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
             }
             _currentChatControl = chatControl;
             chatControl.BringToFront();
@@ -204,6 +221,19 @@ namespace ChatAppClient.Forms
             item.Click += (sender, e) => FriendItem_Click(item);
             foreach (Control control in item.Controls) control.Click += (sender, e) => FriendItem_Click(item);
             flpFriendsList.Controls.Add(item);
+        }
+
+        public List<(string id, string name)> GetFriendsList()
+        {
+            var friends = new List<(string id, string name)>();
+            foreach (Control ctrl in flpFriendsList.Controls)
+            {
+                if (ctrl is FriendListItem item)
+                {
+                    friends.Add((item.FriendID, item.FriendName));
+                }
+            }
+            return friends;
         }
 
         private void frmHome_FormClosing(object sender, FormClosingEventArgs e)
@@ -339,13 +369,31 @@ namespace ChatAppClient.Forms
             if (this.InvokeRequired) { this.Invoke(new Action(() => HandleIncomingGameInvite(invite))); return; }
 
             DialogResult result = MessageBox.Show($"{invite.SenderName} muốn thách đấu Caro. Đồng ý?", "Lời Mời", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            NetworkManager.Instance.SendPacket(new GameResponsePacket { SenderID = NetworkManager.Instance.UserID, ReceiverID = invite.SenderID, Accepted = (result == DialogResult.Yes) });
+            string? myId = NetworkManager.Instance.UserID;
+            if (myId != null)
+            {
+                NetworkManager.Instance.SendPacket(new GameResponsePacket { SenderID = myId, ReceiverID = invite.SenderID, Accepted = (result == DialogResult.Yes) });
+            }
         }
 
         public void HandleGameResponse(GameResponsePacket packet)
         {
             if (this.InvokeRequired) { this.Invoke(new Action(() => HandleGameResponse(packet))); return; }
-            if (!packet.Accepted && openChatControls.TryGetValue(packet.SenderID, out var chatControl)) chatControl.HandleGameInviteDeclined();
+            
+            // Tìm chat control của người nhận lời mời (người gửi response)
+            // packet.SenderID là người phản hồi, packet.ReceiverID là người gửi lời mời
+            if (openChatControls.TryGetValue(packet.ReceiverID, out var chatControl))
+            {
+                if (!packet.Accepted)
+                {
+                    chatControl.HandleGameInviteDeclined();
+                }
+                else
+                {
+                    // Nếu chấp nhận, reset button để chờ GameStartPacket
+                    chatControl.ResetGameButton();
+                }
+            }
         }
 
         public void HandleGameStart(GameStartPacket packet)
@@ -369,19 +417,48 @@ namespace ChatAppClient.Forms
         public void HandleRematchRequest(RematchRequestPacket packet)
         {
             if (this.InvokeRequired) { this.Invoke(new Action(() => HandleRematchRequest(packet))); return; }
-            if (openGameForms.TryGetValue(packet.GameID, out var gameForm)) gameForm.HandleRematchRequest(packet);
+            
+            // Kiểm tra xem là Caro Game hay Tank Game
+            if (openGameForms.TryGetValue(packet.GameID, out var gameForm))
+            {
+                gameForm.HandleRematchRequest(packet);
+            }
+            else if (openTankGameForms.TryGetValue(packet.GameID, out var tankGameForm))
+            {
+                tankGameForm.HandleRematchRequest(packet);
+            }
         }
 
         public void HandleRematchResponse(RematchResponsePacket packet)
         {
             if (this.InvokeRequired) { this.Invoke(new Action(() => HandleRematchResponse(packet))); return; }
-            if (openGameForms.TryGetValue(packet.GameID, out var gameForm)) gameForm.HandleRematchResponse(packet);
+            
+            // Kiểm tra xem là Caro Game hay Tank Game
+            if (openGameForms.TryGetValue(packet.GameID, out var gameForm))
+            {
+                gameForm.HandleRematchResponse(packet);
+            }
+            else if (openTankGameForms.TryGetValue(packet.GameID, out var tankGameForm))
+            {
+                tankGameForm.HandleRematchResponse(packet);
+            }
         }
 
         public void HandleGameReset(GameResetPacket packet)
         {
             if (this.InvokeRequired) { this.Invoke(new Action(() => HandleGameReset(packet))); return; }
             if (openGameForms.TryGetValue(packet.GameID, out var gameForm)) gameForm.HandleGameReset(packet);
+        }
+        
+        // Xử lý Tank Game Reset (dùng TankStartPacket để reset)
+        public void HandleTankGameReset(TankStartPacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleTankGameReset(packet))); return; }
+            if (string.IsNullOrEmpty(packet.GameID)) return;
+            if (openTankGameForms.TryGetValue(packet.GameID, out var tankGameForm))
+            {
+                tankGameForm.HandleTankGameReset(packet);
+            }
         }
 
         // --- XỬ LÝ TANK GAME ---
@@ -395,41 +472,82 @@ namespace ChatAppClient.Forms
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 
-            var response = new TankResponsePacket
+            string? myId = NetworkManager.Instance.UserID;
+            if (myId != null)
             {
-                SenderID = NetworkManager.Instance.UserID,
-                ReceiverID = packet.SenderID,
-                Accepted = (result == DialogResult.Yes)
-            };
-            NetworkManager.Instance.SendPacket(response);
+                var response = new TankResponsePacket
+                {
+                    SenderID = myId,
+                    ReceiverID = packet.SenderID,
+                    Accepted = (result == DialogResult.Yes)
+                };
+                NetworkManager.Instance.SendPacket(response);
+            }
         }
 
         public void HandleTankResponse(TankResponsePacket packet)
         {
             if (this.InvokeRequired) { this.Invoke(new Action(() => HandleTankResponse(packet))); return; }
-            if (!packet.Accepted && openChatControls.TryGetValue(packet.SenderID, out var chatControl))
+            
+            // Tìm chat control của người nhận lời mời (người gửi response)
+            // packet.SenderID là người phản hồi, packet.ReceiverID là người gửi lời mời
+            if (openChatControls.TryGetValue(packet.ReceiverID, out var chatControl))
             {
-                // Có thể thêm thông báo từ chối
+                if (!packet.Accepted)
+                {
+                    chatControl.HandleGameInviteDeclined();
+                }
+                else
+                {
+                    // Nếu chấp nhận, reset button để chờ TankStartPacket
+                    chatControl.ResetGameButton();
+                }
             }
         }
 
         public void HandleTankStart(TankStartPacket packet)
         {
             if (this.InvokeRequired) { this.Invoke(new Action(() => HandleTankStart(packet))); return; }
+            
+            if (string.IsNullOrEmpty(packet.GameID) || string.IsNullOrEmpty(packet.OpponentID))
+            {
+                MessageBox.Show("Lỗi: Thông tin game không hợp lệ.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            
+            // Reset button trong chat control
             if (openChatControls.TryGetValue(packet.OpponentID, out var chatControl))
             {
-                // Reset button nếu có
+                chatControl.ResetGameButton();
             }
 
-            frmTankGame tankGameForm = new frmTankGame(packet.GameID, packet.OpponentID, packet.StartsFirst);
-            openTankGameForms.Add(packet.GameID, tankGameForm);
-            tankGameForm.FormClosed += (s, e) => { openTankGameForms.Remove(packet.GameID); };
-            tankGameForm.Show();
+            // Kiểm tra xem game đã tồn tại chưa (rematch) hay là game mới
+            if (openTankGameForms.TryGetValue(packet.GameID, out var existingForm))
+            {
+                // Game đã tồn tại - reset game
+                existingForm.HandleTankGameReset(packet);
+            }
+            else
+            {
+                // Game mới - tạo form mới
+                try
+                {
+                    frmTankGame tankGameForm = new frmTankGame(packet.GameID, packet.OpponentID, packet.StartsFirst);
+                    openTankGameForms.Add(packet.GameID, tankGameForm);
+                    tankGameForm.FormClosed += (s, e) => { openTankGameForms.Remove(packet.GameID); };
+                    tankGameForm.Show();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Lỗi khi tạo form game: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
         }
 
         public void HandleTankAction(TankActionPacket packet)
         {
             if (this.InvokeRequired) { this.Invoke(new Action(() => HandleTankAction(packet))); return; }
+            if (string.IsNullOrEmpty(packet.GameID)) return;
             if (openTankGameForms.TryGetValue(packet.GameID, out var gameForm))
             {
                 gameForm.ReceiveOpponentAction(packet);
@@ -439,6 +557,7 @@ namespace ChatAppClient.Forms
         public void HandleTankHit(TankHitPacket packet)
         {
             if (this.InvokeRequired) { this.Invoke(new Action(() => HandleTankHit(packet))); return; }
+            if (string.IsNullOrEmpty(packet.GameID)) return;
             if (openTankGameForms.TryGetValue(packet.GameID, out var gameForm))
             {
                 gameForm.ReceiveHit(packet);

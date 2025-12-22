@@ -27,7 +27,7 @@ namespace ChatAppClient.Forms
             InitializeComponent();
             _gameId = gameId;
             _opponentId = opponentId;
-            _myId = NetworkManager.Instance.UserID; 
+            _myId = NetworkManager.Instance.UserID ?? ""; 
             int boardPixelSize = BOARD_SIZE * CELL_SIZE + 1;
             pnlBoard.Size = new Size(boardPixelSize, boardPixelSize);
             this.ClientSize = new Size(boardPixelSize, boardPixelSize + pnlHeader.Height + pnlControls.Height);

@@ -11,13 +11,13 @@ namespace ChatAppServer
 {
     public class ClientHandler
     {
-        private TcpClient _client;
+        private TcpClient? _client;
         private Server _server;
-        private NetworkStream _stream;
+        private NetworkStream? _stream;
         private BinaryFormatter _formatter;
 
-        public string UserID { get; private set; }
-        public string UserName { get; private set; }
+        public string? UserID { get; private set; }
+        public string? UserName { get; private set; }
 
         public string ClientIP
         {
@@ -30,8 +30,8 @@ namespace ChatAppServer
         public DateTime LoginTime { get; private set; } = DateTime.Now;
 
         // --- Biến cho chức năng Quên mật khẩu ---
-        private string _currentOtp = null;
-        private string _currentResetEmail = null;
+        private string? _currentOtp = null;
+        private string? _currentResetEmail = null;
 
         public ClientHandler(TcpClient client, Server server)
         {
@@ -54,10 +54,13 @@ namespace ChatAppServer
             if (_stream == null) return;
             try
             {
-                while (_client.Connected && _stream != null)
+                while (_client != null && _client.Connected && _stream != null)
                 {
-                    object receivedPacket = await Task.Run(() => _formatter.Deserialize(_stream));
-                    HandlePacket(receivedPacket);
+                    object? receivedPacket = await Task.Run(() => _formatter.Deserialize(_stream));
+                    if (receivedPacket != null)
+                    {
+                        HandlePacket(receivedPacket);
+                    }
                 }
             }
             catch (Exception ex)
@@ -243,7 +246,7 @@ namespace ChatAppServer
 
         public void SendPacket(object packet)
         {
-            if (_client.Connected && _stream != null)
+            if (_client != null && _client.Connected && _stream != null)
             {
                 try 
                 { 

@@ -10,13 +10,13 @@ namespace ChatAppServer
         // Server=Tên_Máy_Của_Bạn; Database=ChatAppDB; Trusted_Connection=True; (Nếu dùng Windows Auth)
         // Hoặc: Server=...; User Id=sa; Password=...; (Nếu dùng SQL Auth)
         private readonly string _connectionString = @"Data Source=localhost;Initial Catalog=ChatAppDB;Integrated Security=True";
-        private static DatabaseManager _instance;
+        private static DatabaseManager? _instance;
         public static DatabaseManager Instance => _instance ??= new DatabaseManager();
 
         private DatabaseManager() { }
 
         // Hàm kiểm tra đăng nhập
-        public UserData Login(string username, string password)
+        public UserData? Login(string username, string password)
         {
             using (SqlConnection conn = new SqlConnection(_connectionString))
             {
@@ -150,7 +150,7 @@ namespace ChatAppServer
     // Class nhỏ để chứa dữ liệu trả về
     public class UserData
     {
-        public string Username { get; set; }
-        public string DisplayName { get; set; }
+        public string? Username { get; set; }
+        public string? DisplayName { get; set; }
     }
 }

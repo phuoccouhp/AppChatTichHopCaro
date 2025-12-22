@@ -55,32 +55,35 @@
             pnlHeader.Dock = DockStyle.Top;
             pnlHeader.Location = new Point(0, 0);
             pnlHeader.Name = "pnlHeader";
-            pnlHeader.Size = new Size(520, 55);
+            pnlHeader.Size = new Size(520, 65);
             pnlHeader.TabIndex = 1;
+            pnlHeader.Paint += PnlHeader_Paint;
             // 
             // btnStartGame
             // 
             btnStartGame.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnStartGame.BackColor = Color.FromArgb(0, 145, 255);
+            btnStartGame.BackColor = Color.Transparent;
             btnStartGame.FlatAppearance.BorderSize = 0;
+            btnStartGame.FlatAppearance.MouseOverBackColor = Color.FromArgb(0, 120, 220);
             btnStartGame.FlatStyle = FlatStyle.Flat;
-            btnStartGame.Font = new Font("Segoe UI Emoji", 13.8F);
+            btnStartGame.Font = new Font("Segoe UI Emoji", 14F);
             btnStartGame.ForeColor = Color.White;
-            btnStartGame.Location = new Point(468, 7);
+            btnStartGame.Location = new Point(465, 12);
             btnStartGame.Name = "btnStartGame";
-            btnStartGame.Size = new Size(40, 40);
+            btnStartGame.Size = new Size(45, 45);
             btnStartGame.TabIndex = 1;
             btnStartGame.Text = "🎲";
             btnStartGame.UseVisualStyleBackColor = false;
+            btnStartGame.Cursor = Cursors.Hand;
             // 
             // lblFriendName
             // 
             lblFriendName.AutoSize = true;
-            lblFriendName.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            lblFriendName.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
             lblFriendName.ForeColor = Color.White;
-            lblFriendName.Location = new Point(12, 13);
+            lblFriendName.Location = new Point(15, 20);
             lblFriendName.Name = "lblFriendName";
-            lblFriendName.Size = new Size(98, 28);
+            lblFriendName.Size = new Size(98, 30);
             lblFriendName.TabIndex = 0;
             lblFriendName.Text = "Bạn Bè A";
             // 
@@ -94,38 +97,41 @@
             pnlInput.Dock = DockStyle.Bottom;
             pnlInput.Location = new Point(0, 480);
             pnlInput.Name = "pnlInput";
-            pnlInput.Padding = new Padding(10);
-            pnlInput.Size = new Size(520, 60);
+            pnlInput.Padding = new Padding(12, 12, 12, 12);
+            pnlInput.Size = new Size(520, 70);
             pnlInput.TabIndex = 2;
+            pnlInput.Paint += PnlInput_Paint;
             // 
             // btnEmoji
             // 
             btnEmoji.BackColor = Color.Transparent;
-            btnEmoji.Dock = DockStyle.Left;
             btnEmoji.FlatAppearance.BorderSize = 0;
+            btnEmoji.FlatAppearance.MouseOverBackColor = Color.FromArgb(245, 245, 245);
             btnEmoji.FlatStyle = FlatStyle.Flat;
-            btnEmoji.Font = new Font("Segoe UI Emoji", 12F);
-            btnEmoji.Location = new Point(50, 10);
+            btnEmoji.Font = new Font("Segoe UI Emoji", 14F);
+            btnEmoji.Location = new Point(55, 18);
             btnEmoji.Name = "btnEmoji";
-            btnEmoji.Size = new Size(40, 40);
+            btnEmoji.Size = new Size(42, 42);
             btnEmoji.TabIndex = 3;
             btnEmoji.Text = "😊";
             btnEmoji.UseVisualStyleBackColor = false;
+            btnEmoji.Cursor = Cursors.Hand;
             // 
             // btnAttach
             // 
             btnAttach.BackColor = Color.Transparent;
             btnAttach.ContextMenuStrip = ctxAttachMenu;
-            btnAttach.Dock = DockStyle.Left;
             btnAttach.FlatAppearance.BorderSize = 0;
+            btnAttach.FlatAppearance.MouseOverBackColor = Color.FromArgb(245, 245, 245);
             btnAttach.FlatStyle = FlatStyle.Flat;
-            btnAttach.Font = new Font("Segoe UI Emoji", 12F);
-            btnAttach.Location = new Point(10, 10);
+            btnAttach.Font = new Font("Segoe UI Emoji", 14F);
+            btnAttach.Location = new Point(12, 18);
             btnAttach.Name = "btnAttach";
-            btnAttach.Size = new Size(40, 40);
+            btnAttach.Size = new Size(42, 42);
             btnAttach.TabIndex = 2;
             btnAttach.Text = "📎";
             btnAttach.UseVisualStyleBackColor = false;
+            btnAttach.Cursor = Cursors.Hand;
             // 
             // ctxAttachMenu
             // 
@@ -148,41 +154,44 @@
             // 
             // btnSend
             // 
+            btnSend.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnSend.BackColor = Color.Transparent;
-            btnSend.BorderRadius = 20;
+            btnSend.BorderRadius = 22;
             btnSend.ButtonColor = Color.FromArgb(0, 145, 255);
-            btnSend.Dock = DockStyle.Right;
             btnSend.FlatStyle = FlatStyle.Flat;
-            btnSend.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnSend.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             btnSend.ForeColor = Color.Transparent;
-            btnSend.Location = new Point(435, 10);
+            btnSend.Location = new Point(430, 18);
             btnSend.Name = "btnSend";
-            btnSend.Size = new Size(75, 40);
+            btnSend.Size = new Size(78, 42);
             btnSend.TabIndex = 1;
             btnSend.Text = "Gửi";
             btnSend.TextColor = Color.White;
             btnSend.UseVisualStyleBackColor = false;
+            btnSend.Cursor = Cursors.Hand;
             // 
             // txtMessage
             // 
             txtMessage.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            txtMessage.Font = new Font("Segoe UI", 10.8F);
-            txtMessage.Location = new Point(96, 14);
+            txtMessage.BorderStyle = BorderStyle.None;
+            txtMessage.Font = new Font("Segoe UI", 11F);
+            txtMessage.Location = new Point(107, 20);
             txtMessage.Multiline = true;
             txtMessage.Name = "txtMessage";
-            txtMessage.Size = new Size(333, 32);
+            txtMessage.Size = new Size(315, 38);
             txtMessage.TabIndex = 0;
+            txtMessage.BackColor = Color.FromArgb(245, 247, 250);
             // 
             // flpMessages
             // 
             flpMessages.AutoScroll = true;
-            flpMessages.BackColor = Color.FromArgb(229, 221, 213);
+            flpMessages.BackColor = Color.FromArgb(240, 242, 245);
             flpMessages.Dock = DockStyle.Fill;
             flpMessages.FlowDirection = FlowDirection.TopDown;
-            flpMessages.Location = new Point(0, 55);
+            flpMessages.Location = new Point(0, 65);
             flpMessages.Name = "flpMessages";
-            flpMessages.Padding = new Padding(5);
-            flpMessages.Size = new Size(520, 425);
+            flpMessages.Padding = new Padding(8, 10, 8, 10);
+            flpMessages.Size = new Size(520, 415);
             flpMessages.TabIndex = 3;
             flpMessages.WrapContents = false;
             // 
@@ -190,12 +199,14 @@
             // 
             pnlEmojiPicker.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             pnlEmojiPicker.BackColor = Color.White;
-            pnlEmojiPicker.BorderStyle = BorderStyle.FixedSingle;
-            pnlEmojiPicker.Location = new Point(96, 324);
+            pnlEmojiPicker.BorderStyle = BorderStyle.None;
+            pnlEmojiPicker.Location = new Point(102, 330);
             pnlEmojiPicker.Name = "pnlEmojiPicker";
-            pnlEmojiPicker.Size = new Size(250, 150);
+            pnlEmojiPicker.Padding = new Padding(8);
+            pnlEmojiPicker.Size = new Size(260, 160);
             pnlEmojiPicker.TabIndex = 4;
             pnlEmojiPicker.Visible = false;
+            pnlEmojiPicker.Paint += PnlEmojiPicker_Paint;
             // 
             // ChatViewControl
             // 

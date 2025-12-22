@@ -19,6 +19,7 @@
             this.pbIcon = new System.Windows.Forms.PictureBox();
             this.lblFileName = new System.Windows.Forms.Label();
             this.btnDownload = new System.Windows.Forms.Button();
+            this.btnForward = new System.Windows.Forms.Button();
             this.pnlContainer.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pbIcon)).BeginInit();
             this.SuspendLayout();
@@ -26,6 +27,7 @@
             // pnlContainer
             // 
             this.pnlContainer.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(240)))), ((int)(((byte)(240)))));
+            this.pnlContainer.Controls.Add(this.btnForward);
             this.pnlContainer.Controls.Add(this.btnDownload);
             this.pnlContainer.Controls.Add(this.lblFileName);
             this.pnlContainer.Controls.Add(this.pbIcon);
@@ -59,10 +61,28 @@
             this.btnDownload.Font = new System.Drawing.Font("Segoe UI Emoji", 10.2F);
             this.btnDownload.Location = new System.Drawing.Point(190, 15);
             this.btnDownload.Name = "btnDownload";
-            this.btnDownload.Size = new System.Drawing.Size(45, 30);
+            this.btnDownload.Size = new System.Drawing.Size(28, 30);
             this.btnDownload.TabIndex = 2;
             this.btnDownload.Text = "💾"; // Save icon
             this.btnDownload.UseVisualStyleBackColor = true;
+            this.btnDownload.Visible = false;
+            this.btnDownload.Cursor = System.Windows.Forms.Cursors.Hand;
+            // 
+            // btnForward
+            // 
+            this.btnForward.BackColor = System.Drawing.Color.FromArgb(100, 100, 100);
+            this.btnForward.FlatAppearance.BorderSize = 0;
+            this.btnForward.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnForward.Font = new System.Drawing.Font("Segoe UI Emoji", 10F);
+            this.btnForward.ForeColor = System.Drawing.Color.White;
+            this.btnForward.Location = new System.Drawing.Point(145, 15);
+            this.btnForward.Name = "btnForward";
+            this.btnForward.Size = new System.Drawing.Size(28, 30);
+            this.btnForward.TabIndex = 3;
+            this.btnForward.Text = "➡️";
+            this.btnForward.UseVisualStyleBackColor = false;
+            this.btnForward.Visible = false;
+            this.btnForward.Cursor = System.Windows.Forms.Cursors.Hand;
             // 
             // FileBubble
             // 
@@ -84,5 +104,6 @@
         private System.Windows.Forms.PictureBox pbIcon;
         private System.Windows.Forms.Label lblFileName;
         private System.Windows.Forms.Button btnDownload;
+        private System.Windows.Forms.Button btnForward;
     }
 }

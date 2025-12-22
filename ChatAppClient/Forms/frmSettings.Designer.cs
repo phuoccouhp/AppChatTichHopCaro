@@ -26,7 +26,7 @@
             // lblUserID
             // 
             this.lblUserID.AutoSize = true;
-            this.lblUserID.Font = new System.Drawing.Font("Segoe UI", 10.2F, System.Drawing.FontStyle.Bold);
+            this.lblUserID.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
             this.lblUserID.Location = new System.Drawing.Point(30, 20);
             this.lblUserID.Name = "lblUserID";
             this.lblUserID.Size = new System.Drawing.Size(120, 23);
@@ -36,15 +36,16 @@
             // label2
             // 
             this.label2.AutoSize = true;
+            this.label2.Font = new System.Drawing.Font("Segoe UI", 10.5F);
             this.label2.Location = new System.Drawing.Point(30, 220);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(90, 16);
+            this.label2.Size = new System.Drawing.Size(90, 23);
             this.label2.TabIndex = 1;
             this.label2.Text = "Tên hiển thị:";
             // 
             // txtDisplayName
             // 
-            this.txtDisplayName.Font = new System.Drawing.Font("Segoe UI", 10.2F);
+            this.txtDisplayName.Font = new System.Drawing.Font("Segoe UI", 11F);
             this.txtDisplayName.Location = new System.Drawing.Point(33, 240);
             this.txtDisplayName.Name = "txtDisplayName";
             this.txtDisplayName.Size = new System.Drawing.Size(250, 30);
@@ -62,6 +63,7 @@
             // 
             // btnChangeAvatar
             // 
+            this.btnChangeAvatar.Font = new System.Drawing.Font("Segoe UI", 10F);
             this.btnChangeAvatar.Location = new System.Drawing.Point(240, 120);
             this.btnChangeAvatar.Name = "btnChangeAvatar";
             this.btnChangeAvatar.Size = new System.Drawing.Size(90, 30);
@@ -73,7 +75,7 @@
             // btnSave
             // 
             this.btnSave.BackColor = System.Drawing.SystemColors.Highlight;
-            this.btnSave.Font = new System.Drawing.Font("Segoe UI", 10.2F, System.Drawing.FontStyle.Bold);
+            this.btnSave.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
             this.btnSave.ForeColor = System.Drawing.Color.White;
             this.btnSave.Location = new System.Drawing.Point(33, 300);
             this.btnSave.Name = "btnSave";

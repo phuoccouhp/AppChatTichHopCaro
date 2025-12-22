@@ -66,7 +66,7 @@
             // lblFriendName
             // 
             this.lblFriendName.AutoSize = true;
-            this.lblFriendName.Font = new System.Drawing.Font("Montserrat", 11F, System.Drawing.FontStyle.Bold);
+            this.lblFriendName.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
             this.lblFriendName.ForeColor = System.Drawing.Color.White; // Chữ trắng
             this.lblFriendName.Location = new System.Drawing.Point(70, 12);
             this.lblFriendName.Name = "lblFriendName";

@@ -80,7 +80,7 @@ namespace ChatAppClient.Forms
             }
 
             // Hỏi mật khẩu mới (Vì giao diện chưa có ô nhập Pass mới)
-            string newPass = Microsoft.VisualBasic.Interaction.InputBox("Nhập mật khẩu mới:", "Đặt lại mật khẩu", "");
+            string? newPass = ShowPasswordInputDialog("Nhập mật khẩu mới:", "Đặt lại mật khẩu");
             if (string.IsNullOrEmpty(newPass)) return;
 
             var packet = new ResetPasswordPacket
@@ -147,6 +147,42 @@ namespace ChatAppClient.Forms
         {
             // Hủy đăng ký sự kiện để tránh lỗi bộ nhớ
             NetworkManager.Instance.OnForgotPasswordResult -= HandleResult;
+        }
+
+        // Hàm thay thế InputBox
+        private string? ShowPasswordInputDialog(string prompt, string title)
+        {
+            Form inputForm = new Form()
+            {
+                Width = 400,
+                Height = 150,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                Text = title,
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+
+            Label promptLabel = new Label() { Left = 20, Top = 20, Text = prompt, Width = 350 };
+            TextBox textBox = new TextBox() { Left = 20, Top = 50, Width = 350, UseSystemPasswordChar = true };
+            Button okButton = new Button() { Text = "OK", Left = 200, Width = 80, Top = 80, DialogResult = DialogResult.OK };
+            Button cancelButton = new Button() { Text = "Cancel", Left = 290, Width = 80, Top = 80, DialogResult = DialogResult.Cancel };
+
+            okButton.Click += (sender, e) => { inputForm.Close(); };
+            cancelButton.Click += (sender, e) => { inputForm.Close(); };
+
+            inputForm.Controls.Add(promptLabel);
+            inputForm.Controls.Add(textBox);
+            inputForm.Controls.Add(okButton);
+            inputForm.Controls.Add(cancelButton);
+            inputForm.AcceptButton = okButton;
+            inputForm.CancelButton = cancelButton;
+
+            if (inputForm.ShowDialog() == DialogResult.OK)
+            {
+                return textBox.Text;
+            }
+            return null;
         }
     }
 }

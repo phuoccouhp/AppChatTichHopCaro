@@ -42,7 +42,7 @@
             // 
             lblTitle.AutoSize = true;
             lblTitle.BackColor = Color.Transparent;
-            lblTitle.Font = new Font("Microsoft Sans Serif", 20F, FontStyle.Bold);
+            lblTitle.Font = new Font("Segoe UI", 22F, FontStyle.Bold);
             lblTitle.ForeColor = Color.FromArgb(0, 240, 255);
             lblTitle.Location = new Point(120, 67);
             lblTitle.Name = "lblTitle";
@@ -54,7 +54,7 @@
             // 
             lblInstruction.AutoSize = true;
             lblInstruction.BackColor = Color.Transparent;
-            lblInstruction.Font = new Font("Microsoft Sans Serif", 11F);
+            lblInstruction.Font = new Font("Segoe UI", 11F);
             lblInstruction.ForeColor = Color.White;
             lblInstruction.Location = new Point(119, 134);
             lblInstruction.Name = "lblInstruction";
@@ -83,7 +83,7 @@
             btnSend.BackColor = Color.FromArgb(12, 42, 82);
             btnSend.FlatAppearance.BorderSize = 0;
             btnSend.FlatStyle = FlatStyle.Flat;
-            btnSend.Font = new Font("Microsoft Sans Serif", 14F, FontStyle.Bold);
+            btnSend.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
             btnSend.ForeColor = Color.White;
             btnSend.Location = new Point(120, 364);
             btnSend.Margin = new Padding(3, 4, 3, 4);
@@ -98,7 +98,7 @@
             // 
             lnkBack.AutoSize = true;
             lnkBack.BackColor = Color.Transparent;
-            lnkBack.Font = new Font("Microsoft Sans Serif", 10F, FontStyle.Bold);
+            lnkBack.Font = new Font("Segoe UI", 10.5F, FontStyle.Bold);
             lnkBack.LinkColor = Color.FromArgb(0, 132, 255);
             lnkBack.Location = new Point(223, 462);
             lnkBack.Name = "lnkBack";
@@ -113,7 +113,7 @@
             roundedButton1.BackColor = Color.FromArgb(153, 0, 17);
             roundedButton1.FlatAppearance.BorderSize = 0;
             roundedButton1.FlatStyle = FlatStyle.Flat;
-            roundedButton1.Font = new Font("Microsoft Sans Serif", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            roundedButton1.Font = new Font("Segoe UI", 11F, FontStyle.Bold, GraphicsUnit.Point, 0);
             roundedButton1.ForeColor = Color.FromArgb(247, 197, 204);
             roundedButton1.Location = new Point(337, 279);
             roundedButton1.Margin = new Padding(3, 4, 3, 4);

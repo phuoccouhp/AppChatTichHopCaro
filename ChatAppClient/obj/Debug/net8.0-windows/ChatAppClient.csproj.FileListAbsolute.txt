@@ -1,6 +1,4 @@
-C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Form1.resources
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmCaroGame.resources
-C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmChat.resources
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmHome.resources
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmLogin.resources
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.UserControls.ChatMessageBubble.resources
@@ -24,9 +22,6 @@ C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-wi
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.UserControls.ChatViewControl.resources
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.UserControls.FileBubble.resources
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.UserControls.ImageBubble.resources
-C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\ChatApp.Shared.deps.json
-C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\ChatApp.Shared.runtimeconfig.json
-C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\ChatApp.Shared.exe
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\ChatApp.Shared.dll
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\ChatApp.Shared.pdb
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.csproj.AssemblyReference.cache
@@ -37,3 +32,4 @@ C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-wi
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmSignup.resources
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\Images\Background1.jpg
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Properties.Resources.resources
+C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmTankGame.resources

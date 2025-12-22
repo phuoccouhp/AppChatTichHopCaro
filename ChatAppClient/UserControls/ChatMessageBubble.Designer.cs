@@ -29,21 +29,39 @@
         private void InitializeComponent()
         {
             lblMessage = new Label();
+            btnForward = new Button();
             SuspendLayout();
             // 
             // lblMessage
             // 
             lblMessage.AutoSize = true;
             lblMessage.BackColor = Color.Transparent;
-            lblMessage.Font = new Font("Microsoft Sans Serif", 12F);
-            lblMessage.Location = new Point(0, 7);
+            lblMessage.Font = new Font("Segoe UI", 11F);
+            lblMessage.Location = new Point(12, 8);
             lblMessage.Margin = new Padding(0);
             lblMessage.MaximumSize = new Size(400, 0);
             lblMessage.Name = "lblMessage";
             lblMessage.Size = new Size(93, 25);
             lblMessage.TabIndex = 0;
             lblMessage.Text = "Message";
-            lblMessage.TextAlign = ContentAlignment.MiddleCenter;
+            lblMessage.TextAlign = ContentAlignment.TopLeft;
+            lblMessage.Padding = new Padding(0);
+            // 
+            // btnForward
+            // 
+            btnForward.BackColor = Color.FromArgb(100, 100, 100);
+            btnForward.FlatAppearance.BorderSize = 0;
+            btnForward.FlatStyle = FlatStyle.Flat;
+            btnForward.Font = new Font("Segoe UI Emoji", 10F);
+            btnForward.ForeColor = Color.White;
+            btnForward.Location = new Point(0, 0);
+            btnForward.Name = "btnForward";
+            btnForward.Size = new Size(28, 28);
+            btnForward.TabIndex = 1;
+            btnForward.Text = "➡️";
+            btnForward.UseVisualStyleBackColor = false;
+            btnForward.Visible = false;
+            btnForward.Cursor = Cursors.Hand;
             // 
             // ChatMessageBubble
             // 
@@ -51,6 +69,7 @@
             AutoSize = true;
             AutoSizeMode = AutoSizeMode.GrowAndShrink;
             BackColor = Color.Transparent;
+            Controls.Add(btnForward);
             Controls.Add(lblMessage);
             Margin = new Padding(5, 5, 100, 5);
             MinimumSize = new Size(50, 30);
@@ -64,5 +83,6 @@
         #endregion
 
         private System.Windows.Forms.Label lblMessage;
+        private System.Windows.Forms.Button btnForward;
     }
 }

@@ -19,8 +19,8 @@ namespace ChatAppClient.Forms
 
         private void frmSettings_Load(object sender, EventArgs e)
         {
-            string myId = NetworkManager.Instance.UserID;
-            string myName = NetworkManager.Instance.UserName;
+            string? myId = NetworkManager.Instance.UserID ?? "";
+            string? myName = NetworkManager.Instance.UserName ?? "";
 
             lblUserID.Text = $"ID: {myId}";
             txtDisplayName.Text = myName;
@@ -73,9 +73,16 @@ namespace ChatAppClient.Forms
                 return;
             }
 
+            string? myId = NetworkManager.Instance.UserID;
+            if (myId == null)
+            {
+                MessageBox.Show("Không thể xác định UserID. Vui lòng đăng nhập lại.");
+                return;
+            }
+
             var packet = new UpdateProfilePacket
             {
-                UserID = NetworkManager.Instance.UserID,
+                UserID = myId,
                 NewDisplayName = newName,
                 HasNewAvatar = (_newAvatarBytes != null),
                 NewAvatarData = _newAvatarBytes

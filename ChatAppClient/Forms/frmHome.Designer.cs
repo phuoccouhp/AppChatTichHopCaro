@@ -66,7 +66,7 @@
             pnlSidebar.Dock = DockStyle.Left;
             pnlSidebar.Location = new Point(0, 75);
             pnlSidebar.Name = "pnlSidebar";
-            pnlSidebar.Size = new Size(280, 747);
+            pnlSidebar.Size = new Size(280, 525);
             pnlSidebar.TabIndex = 1;
             // 
             // flpFriendsList
@@ -77,7 +77,7 @@
             flpFriendsList.FlowDirection = FlowDirection.TopDown;
             flpFriendsList.Location = new Point(0, 92);
             flpFriendsList.Name = "flpFriendsList";
-            flpFriendsList.Size = new Size(280, 655);
+            flpFriendsList.Size = new Size(280, 433);
             flpFriendsList.TabIndex = 1;
             flpFriendsList.WrapContents = false;
             // 
@@ -85,7 +85,7 @@
             // 
             lblFriendsTitle.AutoSize = true;
             lblFriendsTitle.Dock = DockStyle.Top;
-            lblFriendsTitle.Font = new Font("Montserrat Medium", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblFriendsTitle.Font = new Font("Segoe UI", 11F, FontStyle.Bold, GraphicsUnit.Point, 0);
             lblFriendsTitle.ForeColor = Color.Gainsboro;
             lblFriendsTitle.Location = new Point(0, 40);
             lblFriendsTitle.Name = "lblFriendsTitle";
@@ -121,7 +121,7 @@
             // 
             txtSearch.BackColor = Color.FromArgb(40, 43, 55);
             txtSearch.BorderStyle = BorderStyle.None;
-            txtSearch.Font = new Font("Montserrat", 11F);
+            txtSearch.Font = new Font("Segoe UI", 11F);
             txtSearch.ForeColor = Color.White;
             txtSearch.Location = new Point(47, 8);
             txtSearch.Name = "txtSearch";
@@ -139,18 +139,18 @@
             pnlMain.Dock = DockStyle.Fill;
             pnlMain.Location = new Point(280, 75);
             pnlMain.Name = "pnlMain";
-            pnlMain.Size = new Size(673, 747);
+            pnlMain.Size = new Size(520, 525);
             pnlMain.TabIndex = 2;
             // 
             // lblMainWelcome
             // 
             lblMainWelcome.Anchor = AnchorStyles.None;
             lblMainWelcome.AutoSize = true;
-            lblMainWelcome.Font = new Font("Montserrat", 16F, FontStyle.Italic);
+            lblMainWelcome.Font = new Font("Segoe UI", 16F, FontStyle.Italic);
             lblMainWelcome.ForeColor = Color.Gray;
-            lblMainWelcome.Location = new Point(94, 326);
+            lblMainWelcome.Location = new Point(48, 241);
             lblMainWelcome.Name = "lblMainWelcome";
-            lblMainWelcome.Size = new Size(524, 42);
+            lblMainWelcome.Size = new Size(424, 42);
             lblMainWelcome.TabIndex = 0;
             lblMainWelcome.Text = "Chọn một người bạn để bắt đầu chat";
             // 
@@ -161,9 +161,9 @@
             btnSettings.Cursor = Cursors.Hand;
             btnSettings.FlatAppearance.BorderSize = 0;
             btnSettings.FlatStyle = FlatStyle.Flat;
-            btnSettings.Font = new Font("Montserrat", 15F);
+            btnSettings.Font = new Font("Segoe UI", 15F);
             btnSettings.ForeColor = Color.White;
-            btnSettings.Location = new Point(891, 16);
+            btnSettings.Location = new Point(738, 16);
             btnSettings.Name = "btnSettings";
             btnSettings.Size = new Size(45, 45);
             btnSettings.TabIndex = 1;
@@ -174,7 +174,7 @@
             // lblWelcome
             // 
             lblWelcome.AutoSize = true;
-            lblWelcome.Font = new Font("Montserrat", 14F, FontStyle.Bold);
+            lblWelcome.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
             lblWelcome.ForeColor = Color.White;
             lblWelcome.Location = new Point(75, 22);
             lblWelcome.Name = "lblWelcome";
@@ -191,13 +191,13 @@
             pnlHeader.Dock = DockStyle.Top;
             pnlHeader.Location = new Point(0, 0);
             pnlHeader.Name = "pnlHeader";
-            pnlHeader.Size = new Size(953, 75);
+            pnlHeader.Size = new Size(800, 75);
             pnlHeader.TabIndex = 0;
             // 
             // frmHome
             // 
             AutoScaleMode = AutoScaleMode.None;
-            ClientSize = new Size(953, 822);
+            ClientSize = new Size(800, 600);
             Controls.Add(pnlMain);
             Controls.Add(pnlSidebar);
             Controls.Add(pnlHeader);

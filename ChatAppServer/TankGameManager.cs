@@ -10,9 +10,9 @@ namespace ChatAppServer
 
         public class TankGameState
         {
-            public string GameID { get; set; }
-            public string Player1ID { get; set; }
-            public string Player2ID { get; set; }
+            public string? GameID { get; set; }
+            public string? Player1ID { get; set; }
+            public string? Player2ID { get; set; }
             public int Player1Health { get; set; } = 100;
             public int Player2Health { get; set; } = 100;
             public List<BulletInfo> Bullets { get; set; } = new List<BulletInfo>();
@@ -23,7 +23,7 @@ namespace ChatAppServer
             public float X { get; set; }
             public float Y { get; set; }
             public float Angle { get; set; }
-            public string OwnerID { get; set; }
+            public string? OwnerID { get; set; }
             public DateTime CreatedAt { get; set; }
         }
 
@@ -98,7 +98,7 @@ namespace ChatAppServer
             }
 
             bool isGameOver = (game.Player1Health <= 0 || game.Player2Health <= 0);
-            string winnerID = null;
+            string? winnerID = null;
             if (isGameOver)
             {
                 winnerID = game.Player1Health > 0 ? game.Player1ID : game.Player2ID;
@@ -127,6 +127,11 @@ namespace ChatAppServer
         public void EndGame(string gameID)
         {
             _games.Remove(gameID);
+        }
+        
+        public bool HasGame(string gameID)
+        {
+            return _games.ContainsKey(gameID);
         }
     }
 }

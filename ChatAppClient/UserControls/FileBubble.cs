@@ -14,10 +14,45 @@ namespace ChatAppClient.UserControls
         private byte[] _fileData;
         private string _fileName;
 
+        public event EventHandler<(string fileName, byte[] fileData)>? OnForwardRequested;
+
         public FileBubble()
         {
             InitializeComponent();
             btnDownload.Click += BtnDownload_Click;
+            btnForward.Click += BtnForward_Click;
+            
+            // Hover events
+            this.MouseEnter += FileBubble_MouseEnter;
+            this.MouseLeave += FileBubble_MouseLeave;
+            pnlContainer.MouseEnter += FileBubble_MouseEnter;
+            pnlContainer.MouseLeave += FileBubble_MouseLeave;
+        }
+
+        private void FileBubble_MouseEnter(object? sender, EventArgs e)
+        {
+            btnDownload.Visible = true;
+            btnForward.Visible = true;
+            btnDownload.BringToFront();
+            btnForward.BringToFront();
+        }
+
+        private void FileBubble_MouseLeave(object? sender, EventArgs e)
+        {
+            if (!btnDownload.ClientRectangle.Contains(btnDownload.PointToClient(Control.MousePosition)) &&
+                !btnForward.ClientRectangle.Contains(btnForward.PointToClient(Control.MousePosition)))
+            {
+                btnDownload.Visible = false;
+                btnForward.Visible = false;
+            }
+        }
+
+        private void BtnForward_Click(object? sender, EventArgs e)
+        {
+            if (_fileData != null && !string.IsNullOrEmpty(_fileName))
+            {
+                OnForwardRequested?.Invoke(this, (_fileName, _fileData));
+            }
         }
 
         public void SetMessage(string fileName, byte[] fileData, MessageType type, int parentUsableWidth)

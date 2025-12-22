@@ -1,8 +1,5 @@
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatAppServer.exe
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatAppServer.dll
-C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatApp.Shared.deps.json
-C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatApp.Shared.runtimeconfig.json
-C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatApp.Shared.exe
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatApp.Shared.dll
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatApp.Shared.pdb
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ChatAppServer.csproj.AssemblyReference.cache

@@ -43,7 +43,7 @@
             // 
             lblTitle.AutoSize = true;
             lblTitle.BackColor = Color.Transparent;
-            lblTitle.Font = new Font("Montserrat", 24F, FontStyle.Bold);
+            lblTitle.Font = new Font("Segoe UI", 26F, FontStyle.Bold);
             lblTitle.ForeColor = Color.FromArgb(0, 240, 255);
             lblTitle.Location = new Point(191, 53);
             lblTitle.Name = "lblTitle";
@@ -98,7 +98,7 @@
             btnRegister.BackColor = Color.FromArgb(12, 42, 82);
             btnRegister.FlatAppearance.BorderSize = 0;
             btnRegister.FlatStyle = FlatStyle.Flat;
-            btnRegister.Font = new Font("Montserrat", 14F, FontStyle.Bold);
+            btnRegister.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
             btnRegister.ForeColor = Color.White;
             btnRegister.Location = new Point(114, 551);
             btnRegister.Margin = new Padding(3, 4, 3, 4);
@@ -112,7 +112,7 @@
             // 
             lnkLogin.AutoSize = true;
             lnkLogin.BackColor = Color.Transparent;
-            lnkLogin.Font = new Font("Montserrat", 9F, FontStyle.Bold);
+            lnkLogin.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             lnkLogin.LinkColor = Color.FromArgb(0, 132, 255);
             lnkLogin.Location = new Point(345, 646);
             lnkLogin.Name = "lnkLogin";
@@ -126,7 +126,7 @@
             // 
             lblNoAccount.AutoSize = true;
             lblNoAccount.BackColor = Color.Transparent;
-            lblNoAccount.Font = new Font("Montserrat", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            lblNoAccount.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
             lblNoAccount.ForeColor = Color.White;
             lblNoAccount.Location = new Point(135, 646);
             lblNoAccount.Margin = new Padding(4, 0, 4, 0);

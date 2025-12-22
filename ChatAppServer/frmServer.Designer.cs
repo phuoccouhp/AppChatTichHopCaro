@@ -33,6 +33,7 @@
             this.rtbLog = new System.Windows.Forms.RichTextBox();
             this.lstUsers = new System.Windows.Forms.ListBox();
             this.lblStatus = new System.Windows.Forms.Label();
+            this.lblServerIP = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // btnStart
@@ -58,14 +59,15 @@
             // 
             // rtbLog
             // 
-            this.rtbLog.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.rtbLog.Location = new System.Drawing.Point(12, 82);
+            this.rtbLog.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)));
+            this.rtbLog.Location = new System.Drawing.Point(12, 100);
             this.rtbLog.Name = "rtbLog";
-            this.rtbLog.Size = new System.Drawing.Size(554, 347);
+            this.rtbLog.Size = new System.Drawing.Size(584, 329);
             this.rtbLog.TabIndex = 2;
             this.rtbLog.Text = "";
+            this.rtbLog.WordWrap = true;
+            this.rtbLog.DetectUrls = false;
             // 
             // lstUsers
             // 
@@ -86,16 +88,27 @@
             this.lblStatus.TabIndex = 4;
             this.lblStatus.Text = "Status: Stopped";
             // 
+            // lblServerIP
+            // 
+            this.lblServerIP.AutoSize = false;
+            this.lblServerIP.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
+            this.lblServerIP.ForeColor = System.Drawing.Color.DarkBlue;
+            this.lblServerIP.Location = new System.Drawing.Point(12, 70);
+            this.lblServerIP.Name = "lblServerIP";
+            this.lblServerIP.Size = new System.Drawing.Size(580, 25);
+            this.lblServerIP.TabIndex = 5;
+            // 
             // frmServer
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
-            this.Controls.Add(this.lblStatus);
-            this.Controls.Add(this.lstUsers); // Add ListBox first (Dock Right)
-            this.Controls.Add(this.rtbLog);
-            this.Controls.Add(this.btnStop);
             this.Controls.Add(this.btnStart);
+            this.Controls.Add(this.btnStop);
+            this.Controls.Add(this.lblStatus);
+            this.Controls.Add(this.lblServerIP);
+            this.Controls.Add(this.rtbLog);
+            this.Controls.Add(this.lstUsers); // Add ListBox after rtbLog (Dock Right)
             this.Name = "frmServer";
             this.Text = "Chat App Server Monitor";
             this.Load += new System.EventHandler(this.frmServer_Load);
@@ -111,5 +124,6 @@
         private System.Windows.Forms.RichTextBox rtbLog;
         private System.Windows.Forms.ListBox lstUsers;
         private System.Windows.Forms.Label lblStatus;
+        private System.Windows.Forms.Label lblServerIP;
     }
 }

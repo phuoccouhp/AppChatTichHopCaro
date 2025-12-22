@@ -9,7 +9,7 @@ namespace ChatAppClient
         public static void Info(string message) => Log(message, ConsoleColor.Gray);
         public static void Success(string message) => Log(message, ConsoleColor.Green);
         public static void Warning(string message) => Log(message, ConsoleColor.Yellow);
-        public static void Error(string message, Exception ex = null) =>
+        public static void Error(string message, Exception? ex = null) =>
             Log($"LỖI: {message}" + (ex != null ? $"\n{ex.ToString()}" : ""), ConsoleColor.Red); 
 
         private static void Log(string message, ConsoleColor color)

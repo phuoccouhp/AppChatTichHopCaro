@@ -10,20 +10,23 @@ namespace ChatAppServer
 {
     public class Server
     {
-        private TcpListener _listener;
+        private TcpListener? _listener;
         private readonly int _port;
         // Dùng Dictionary để quản lý client (Key = UserID, Value = ClientHandler)
         private readonly Dictionary<string, ClientHandler> _clients = new Dictionary<string, ClientHandler>();
         // Quản lý các ván game đang diễn ra (Key = GameID)
         private readonly Dictionary<string, GameSession> _gameSessions = new Dictionary<string, GameSession>();
+        // Quản lý Tank Game
+        public TankGameManager TankGameManager { get; private set; }
 
         // Sự kiện để báo cho Giao diện (Form) biết khi danh sách user thay đổi
-        public event Action<List<string>> OnUserListChanged;
+        public event Action<List<string>>? OnUserListChanged;
 
         public Server(int port)
         {
             _port = port;
             _listener = new TcpListener(IPAddress.Any, _port);
+            TankGameManager = new TankGameManager();
         }
 
         public async Task StartAsync()
@@ -199,7 +202,7 @@ namespace ChatAppServer
 
             string gameID = Guid.NewGuid().ToString("N").Substring(0, 10);
 
-            GameSession newGame = new GameSession(gameID, player1_ID, player2_ID);
+            GameSession newGame = new GameSession(gameID, player1_ID, player2_ID, GameType.Caro);
             lock (_gameSessions)
             {
                 _gameSessions.Add(gameID, newGame);
@@ -242,7 +245,7 @@ namespace ChatAppServer
 
         public void ProcessGameMove(GameMovePacket move)
         {
-            GameSession session;
+            GameSession? session;
             lock (_gameSessions)
             {
                 _gameSessions.TryGetValue(move.GameID, out session);
@@ -250,7 +253,7 @@ namespace ChatAppServer
 
             if (session != null)
             {
-                string opponentID = session.GetOpponent(move.SenderID);
+                string? opponentID = session.GetOpponent(move.SenderID);
                 if (opponentID != null)
                 {
                     RelayPrivatePacket(opponentID, move);
@@ -270,12 +273,12 @@ namespace ChatAppServer
 
         public void ProcessRematchRequest(RematchRequestPacket request)
         {
-            GameSession session;
+            GameSession? session;
             lock (_gameSessions) _gameSessions.TryGetValue(request.GameID, out session);
 
             if (session != null)
             {
-                string opponentID = session.GetOpponent(request.SenderID);
+                string? opponentID = session.GetOpponent(request.SenderID);
                 if (opponentID != null)
                 {
                     RelayPrivatePacket(opponentID, request);
@@ -295,12 +298,12 @@ namespace ChatAppServer
             }
 
             Logger.Success($"[Rematch] {response.SenderID} đồng ý chơi lại game {response.GameID}. Reset game!");
-            GameSession session;
+            GameSession? session;
             lock (_gameSessions) _gameSessions.TryGetValue(response.GameID, out session);
 
             if (session != null)
             {
-                ClientHandler player1_Handler, player2_Handler;
+                ClientHandler? player1_Handler, player2_Handler;
                 lock (_clients)
                 {
                     _clients.TryGetValue(session.Player1_ID, out player1_Handler);
@@ -309,14 +312,47 @@ namespace ChatAppServer
 
                 if (player1_Handler != null && player2_Handler != null)
                 {
-                    // Người đồng ý (response.SenderID) sẽ đi trước trong ván mới
-                    bool player1Starts = (session.Player1_ID == response.SenderID);
+                    // Kiểm tra xem là Tank Game hay Caro Game dựa trên GameSession.Type
+                    bool isTankGame = (session.Type == GameType.Tank);
+                    
+                    if (isTankGame)
+                    {
+                        // Reset Tank Game
+                        this.TankGameManager.EndGame(response.GameID);
+                        this.TankGameManager.StartGame(response.GameID, session.Player1_ID, session.Player2_ID);
+                        
+                        // Người đồng ý (response.SenderID) sẽ đi trước trong ván mới
+                        bool player1Starts = (session.Player1_ID == response.SenderID);
 
-                    var resetPacket1 = new GameResetPacket { GameID = response.GameID, StartsFirst = player1Starts };
-                    player1_Handler.SendPacket(resetPacket1);
+                        var startPacket1 = new TankStartPacket
+                        {
+                            GameID = response.GameID,
+                            OpponentID = player2_Handler.UserID,
+                            OpponentName = player2_Handler.UserName,
+                            StartsFirst = player1Starts
+                        };
+                        player1_Handler.SendPacket(startPacket1);
 
-                    var resetPacket2 = new GameResetPacket { GameID = response.GameID, StartsFirst = !player1Starts };
-                    player2_Handler.SendPacket(resetPacket2);
+                        var startPacket2 = new TankStartPacket
+                        {
+                            GameID = response.GameID,
+                            OpponentID = player1_Handler.UserID,
+                            OpponentName = player1_Handler.UserName,
+                            StartsFirst = !player1Starts
+                        };
+                        player2_Handler.SendPacket(startPacket2);
+                    }
+                    else
+                    {
+                        // Caro Game - dùng GameResetPacket
+                        bool player1Starts = (session.Player1_ID == response.SenderID);
+
+                        var resetPacket1 = new GameResetPacket { GameID = response.GameID, StartsFirst = player1Starts };
+                        player1_Handler.SendPacket(resetPacket1);
+
+                        var resetPacket2 = new GameResetPacket { GameID = response.GameID, StartsFirst = !player1Starts };
+                        player2_Handler.SendPacket(resetPacket2);
+                    }
                 }
                 else Logger.Error($"[Rematch] Không tìm thấy client handler khi reset game {response.GameID}");
             }
@@ -339,7 +375,7 @@ namespace ChatAppServer
 
             string gameID = Guid.NewGuid().ToString("N").Substring(0, 10);
 
-            GameSession newGame = new GameSession(gameID, player1_ID, player2_ID);
+            GameSession newGame = new GameSession(gameID, player1_ID, player2_ID, GameType.Tank);
             lock (_gameSessions)
             {
                 _gameSessions.Add(gameID, newGame);
@@ -361,7 +397,7 @@ namespace ChatAppServer
             }
 
             // Khởi tạo game trong TankGameManager
-            TankGameManager.StartGame(gameID, player1_ID, player2_ID);
+            this.TankGameManager.StartGame(gameID, player1_ID, player2_ID);
 
             // Gửi gói tin bắt đầu
             var startPacket1 = new TankStartPacket
@@ -385,7 +421,7 @@ namespace ChatAppServer
 
         public void ProcessTankAction(TankActionPacket action)
         {
-            GameSession session;
+            GameSession? session;
             lock (_gameSessions)
             {
                 _gameSessions.TryGetValue(action.GameID, out session);
@@ -393,8 +429,11 @@ namespace ChatAppServer
 
             if (session != null)
             {
-                string opponentID = (session.Player1_ID == action.SenderID) ? session.Player2_ID : session.Player1_ID;
-                RelayPrivatePacket(opponentID, action);
+                string? opponentID = (session.Player1_ID == action.SenderID) ? session.Player2_ID : session.Player1_ID;
+                if (opponentID != null)
+                {
+                    RelayPrivatePacket(opponentID, action);
+                }
             }
             else
             {

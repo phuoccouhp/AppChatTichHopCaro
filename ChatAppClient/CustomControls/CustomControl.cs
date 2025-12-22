@@ -40,7 +40,7 @@ namespace ChatAppClient
 
             // 2. Cấu hình TextBox
             InnerTextBox.BorderStyle = BorderStyle.None;
-            InnerTextBox.Font = new Font("Montserrat", 11F);
+            InnerTextBox.Font = new Font("Segoe UI", 11F);
             InnerTextBox.BackColor = _boxColor;
             InnerTextBox.ForeColor = _textColor;
             InnerTextBox.Multiline = true; // Mặc định bật để chữ đẹp
@@ -125,12 +125,12 @@ namespace ChatAppClient
         [EditorBrowsable(EditorBrowsableState.Always)]
         [Browsable(true)]
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
-        public override string Text
+        public override string? Text
         {
             get { return InnerTextBox.Text; }
             set
             {
-                InnerTextBox.Text = value;
+                InnerTextBox.Text = value ?? "";
                 // Khi gán text bằng code, cần kiểm tra placeholder
                 SetPlaceholder(null, null);
             }

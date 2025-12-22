@@ -37,7 +37,12 @@ namespace ChatAppClient.Forms
             // 1. Kiểm tra đầu vào
             if (string.IsNullOrEmpty(serverIp))
             {
-                MessageBox.Show("Please enter Server IP.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui lòng nhập địa chỉ IP của máy chủ.\n\n" +
+                    "Lấy IP từ máy chủ:\n" +
+                    "- Mở form Server\n" +
+                    "- Nhấn Start Server\n" +
+                    "- Xem IP hiển thị trên form", 
+                    "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
@@ -57,7 +62,12 @@ namespace ChatAppClient.Forms
 
                 if (!connected)
                 {
-                    throw new Exception("Could not connect to server. Please check IP and Firewall!");
+                    throw new Exception($"Không thể kết nối đến server tại {serverIp}:9000.\n\n" +
+                        "Vui lòng kiểm tra:\n" +
+                        "1. Địa chỉ IP có đúng không?\n" +
+                        "2. Server đã khởi động chưa?\n" +
+                        "3. Cả hai máy có cùng mạng không?\n" +
+                        "4. Firewall có chặn port 9000 không?");
                 }
 
                 // 4. Gửi gói tin Login
@@ -67,22 +77,41 @@ namespace ChatAppClient.Forms
                 // Gọi hàm async trong NetworkManager
                 LoginResultPacket result = await NetworkManager.Instance.LoginAsync(loginPacket);
 
-                // 5. Xử lý kết quả
-                ProcessLoginResult(result);
+                // 5. Xử lý kết quả (chỉ xử lý nếu form vẫn còn visible và chưa đóng)
+                if (!this.IsDisposed && this.Visible)
+                {
+                    ProcessLoginResult(result);
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Login Failed: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // Chỉ hiển thị message box nếu form vẫn còn visible và chưa đóng
+                // (tránh hiển thị sau khi đã login thành công và chuyển sang form khác)
+                if (!this.IsDisposed && this.Visible)
+                {
+                    // Kiểm tra xem đã login thành công chưa (UserID đã được set)
+                    if (string.IsNullOrEmpty(NetworkManager.Instance.UserID))
+                    {
+                        MessageBox.Show($"Login Failed: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    // Nếu đã có UserID thì không hiển thị error (có thể đã login thành công)
+                }
 
-                // Reset trạng thái nút
-                btnLogin.Enabled = true;
-                btnLogin.Text = "Log in";
+                // Reset trạng thái nút (chỉ nếu form vẫn còn visible)
+                if (!this.IsDisposed && this.Visible)
+                {
+                    btnLogin.Enabled = true;
+                    btnLogin.Text = "Log in";
+                }
             }
         }
 
         // Xử lý kết quả trả về từ Server
         private void ProcessLoginResult(LoginResultPacket result)
         {
+            // Kiểm tra form vẫn còn tồn tại và visible
+            if (this.IsDisposed || !this.Visible) return;
+            
             if (result.Success)
             {
                 // Đăng nhập thành công!
@@ -97,10 +126,13 @@ namespace ChatAppClient.Forms
             }
             else
             {
-                // Đăng nhập thất bại
-                MessageBox.Show($"Login Failed: {result.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                btnLogin.Enabled = true;
-                btnLogin.Text = "Log in";
+                // Đăng nhập thất bại - chỉ hiển thị nếu form vẫn còn visible
+                if (!this.IsDisposed && this.Visible)
+                {
+                    MessageBox.Show($"Login Failed: {result.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    btnLogin.Enabled = true;
+                    btnLogin.Text = "Log in";
+                }
             }
         }
 
