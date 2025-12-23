@@ -1,5 +1,9 @@
 # GIẢI THÍCH: IP MÀ FORM SERVER LẤY LÀ IP GÌ?
 
+> **Xem thêm:** `TAI_SAO_IP_WIFI_KHONG_PHAI_GATEWAY.md` - Giải thích tại sao không dùng Default Gateway
+
+# GIẢI THÍCH: IP MÀ FORM SERVER LẤY LÀ IP GÌ?
+
 ## 📍 IP được hiển thị là gì?
 
 Khi bạn mở form Server, code lấy IP bằng **2 cách** (theo thứ tự ưu tiên):

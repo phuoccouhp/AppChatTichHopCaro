@@ -8,7 +8,9 @@ if %errorLevel% neq 0 (
     echo =========================================
     echo.
     echo Vui long chay file nay voi quyen Administrator:
-    echo Right-click vao file -> "Run as administrator"
+    echo Right-click vao file -^> "Run as administrator"
+    echo.
+    echo HOAC chay file OpenFirewall.ps1 thay vi file .bat
     echo.
     pause
     exit /b 1
@@ -25,32 +27,55 @@ echo.
 echo [1/3] Xoa rule cu...
 netsh advfirewall firewall delete rule name="ChatAppServer" >nul 2>&1
 netsh advfirewall firewall delete rule name="ChatAppServer (Out)" >nul 2>&1
-echo    ✓ Done
+if %errorLevel% equ 0 (
+    echo    Done
+) else (
+    echo    Khong co rule cu de xoa
+)
 
 :: Them rule moi - Inbound (cho phep ket noi DEN tu BAT KY dau trong mang local)
 echo [2/3] Them rule Inbound (cho phep ket noi den)...
 netsh advfirewall firewall add rule name="ChatAppServer" dir=in action=allow protocol=TCP localport=9000 profile=private,domain enable=yes
 if %errorLevel% equ 0 (
-    echo    ✓ Da them rule Inbound
+    echo    Da them rule Inbound
 ) else (
-    echo    ✗ Loi khi them rule Inbound
+    echo    LOI: Khong the them rule Inbound!
+    echo    Kiem tra quyen Admin hoac thu chay file OpenFirewall.ps1
 )
 
 :: Them rule moi - Outbound (cho phep ket noi di)  
 echo [3/3] Them rule Outbound (cho phep ket noi di)...
 netsh advfirewall firewall add rule name="ChatAppServer (Out)" dir=out action=allow protocol=TCP localport=9000 profile=private,domain enable=yes
 if %errorLevel% equ 0 (
-    echo    ✓ Da them rule Outbound
+    echo    Da them rule Outbound
 ) else (
-    echo    ✗ Loi khi them rule Outbound
+    echo    LOI: Khong the them rule Outbound!
+    echo    Kiem tra quyen Admin hoac thu chay file OpenFirewall.ps1
 )
 
 echo.
 echo =========================================
-echo    DA MO PORT 9000 THANH CONG!
+echo    KIEM TRA KET QUA
 echo =========================================
 echo.
-echo Bay gio cac may khac trong CUNG MANG WiFi co the ket noi den Server.
+
+:: Kiem tra rule da tao chua
+netsh advfirewall firewall show rule name="ChatAppServer" | findstr /C:"Rule Name" >nul 2>&1
+if %errorLevel% equ 0 (
+    echo DA MO PORT 9000 THANH CONG!
+    echo.
+    echo Bay gio cac may khac trong CUNG MANG WiFi co the ket noi den Server.
+) else (
+    echo CANH BAO: Co the co loi!
+    echo.
+    echo Kiem tra thu cong trong Windows Firewall:
+    echo 1. Windows Security -^> Firewall ^& network protection
+    echo 2. Advanced settings -^> Inbound Rules
+    echo 3. Tim rule "ChatAppServer" -^> Kiem tra Status = Enabled
+    echo.
+    echo HOAC thu chay file OpenFirewall.ps1 voi quyen Admin
+)
+
 echo.
 echo LUA Y:
 echo - Rule chi ap dung cho Private network (WiFi)

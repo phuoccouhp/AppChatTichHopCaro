@@ -55,8 +55,8 @@ namespace ChatAppServer
             
             // Hiển thị IP ngay khi form load (trước khi start server)
             string localIPs = GetLocalIPAddresses();
-            lblServerIP.Text = $"IP của máy này: {localIPs}";
-            lblServerIP.ForeColor = Color.Gray;
+            lblServerIP.Text = $"Default Gateway (Router IP): {localIPs}";
+            lblServerIP.ForeColor = Color.Orange;
         }
 
         private void btnStart_Click(object sender, EventArgs e)
@@ -66,15 +66,17 @@ namespace ChatAppServer
             lblStatus.Text = "Server: Running...";
             lblStatus.ForeColor = Color.Green;
 
-            // Lấy và hiển thị địa chỉ IP local
+            // Lấy và hiển thị địa chỉ IP local (Bây giờ là Default Gateway)
             string serverIPs = GetLocalIPAddresses();
-            lblServerIP.Text = $"Server IP: {serverIPs} (Port: {PORT})";
-            lblServerIP.ForeColor = Color.DarkBlue;
+            lblServerIP.Text = $"Default Gateway: {serverIPs} (Port: {PORT}) - CẦN PORT FORWARDING!";
+            lblServerIP.ForeColor = Color.Orange;
             
             Logger.Info($"Địa chỉ IP của máy chủ: {serverIPs}");
+            Logger.Warning("⚠ THAY ĐỔI: Đang sử dụng Default Gateway (Router IP) thay vì IP WiFi!");
+            Logger.Warning("⚠ LƯU Ý: Router KHÔNG chạy Server! Cần cấu hình Port Forwarding trên router!");
             Logger.Info($"Clients có thể kết nối đến:");
             Logger.Info($"  - 127.0.0.1:{PORT} (nếu chạy trên cùng máy - localhost)");
-            // Tách IP mạng từ chuỗi (format: "127.0.0.1, 192.168.x.x")
+            // Tách IP mạng từ chuỗi (format: "127.0.0.1, 10.45.0.1")
             string networkIP = null;
             if (serverIPs.Contains(","))
             {
@@ -86,9 +88,9 @@ namespace ChatAppServer
             }
             if (!string.IsNullOrEmpty(networkIP) && networkIP != "127.0.0.1")
             {
-                Logger.Info($"  - {networkIP}:{PORT} (nếu kết nối từ máy khác trên cùng WiFi)");
+                Logger.Info($"  - {networkIP}:{PORT} (Default Gateway - CẦN PORT FORWARDING trên router!)");
             }
-            Logger.Info("Lưu ý: Chỉ nhập MỘT IP vào form Login (127.0.0.1 hoặc IP mạng)");
+            Logger.Info("Lưu ý: Đảm bảo router đã cấu hình Port Forwarding port 9000 đến máy Server!");
             Logger.Info("Đảm bảo cả hai máy đều cùng mạng WiFi và firewall cho phép port 9000");
 
             _server = new Server(PORT);
@@ -126,7 +128,11 @@ namespace ChatAppServer
 
                     bool success = FirewallHelper.OpenPortAsAdmin(PORT, "ChatAppServer");
 
-                    if (success)
+                    // Kiểm tra lại xem rule đã được tạo chưa
+                    System.Threading.Thread.Sleep(1000); // Đợi 1 giây để rule được tạo
+                    bool ruleExists = FirewallHelper.IsPortOpen(PORT, "ChatAppServer");
+                    
+                    if (success && ruleExists)
                     {
                         Logger.Success($"✓ Đã mở port {PORT} trên Windows Firewall thành công!");
                         btnOpenFirewall.Text = "✓ Đã mở";
@@ -142,7 +148,10 @@ namespace ChatAppServer
                     }
                     else
                     {
-                        throw new Exception("Không thể mở port. Có thể bạn đã từ chối UAC.");
+                        throw new Exception("Không thể mở port. Có thể bạn đã từ chối UAC hoặc có lỗi.\n\n" +
+                            "Hãy thử:\n" +
+                            "1. Chạy file OpenFirewall.bat với quyền Admin\n" +
+                            "2. Hoặc mở Firewall thủ công (xem file MO_FIREWALL_THU_CONG.md)");
                     }
                 }
                 catch (Exception ex)
@@ -151,16 +160,29 @@ namespace ChatAppServer
                     btnOpenFirewall.Text = "🔓 Mở Firewall";
                     btnOpenFirewall.Enabled = true;
                     
-                    MessageBox.Show(
-                        $"Lỗi: {ex.Message}\n\n" +
-                        "Bạn có thể mở Firewall thủ công:\n" +
-                        "1. Mở Windows Defender Firewall\n" +
-                        "2. Chọn 'Inbound Rules' → 'New Rule'\n" +
-                        "3. Chọn 'Port' → TCP → Port 9000\n" +
-                        "4. Cho phép kết nối (Allow)",
-                        "Lỗi mở Firewall",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
+                    string errorMsg = $"Lỗi: {ex.Message}\n\n" +
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                        "CÁCH 1: CHẠY SCRIPT THỦ CÔNG\n" +
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                        "1. Tìm file 'OpenFirewall.bat' trong thư mục project\n" +
+                        "2. Right-click → 'Run as administrator'\n" +
+                        "3. Hoặc chạy file 'OpenFirewall.ps1' với PowerShell (Admin)\n\n" +
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                        "CÁCH 2: MỞ FIREWALL THỦ CÔNG\n" +
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                        "1. Mở Windows Security → Firewall & network protection\n" +
+                        "2. Advanced settings → Inbound Rules → New Rule\n" +
+                        "3. Port → TCP → Port 9000 → Allow → Private/Domain\n" +
+                        "4. Lặp lại với Outbound Rules\n\n" +
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                        "CÁCH 3: DÙNG COMMAND LINE\n" +
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                        "Mở CMD với quyền Admin, chạy:\n" +
+                        $"netsh advfirewall firewall add rule name=\"ChatAppServer\" dir=in action=allow protocol=TCP localport={PORT} profile=private,domain enable=yes\n" +
+                        $"netsh advfirewall firewall add rule name=\"ChatAppServer (Out)\" dir=out action=allow protocol=TCP localport={PORT} profile=private,domain enable=yes\n\n" +
+                        "Xem file MO_FIREWALL_THU_CONG.md để biết chi tiết!";
+                    
+                    MessageBox.Show(errorMsg, "Lỗi mở Firewall", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -366,56 +388,84 @@ LƯU Ý QUAN TRỌNG:
         #region Lấy địa chỉ IP Local
 
         /// <summary>
-        /// Lấy địa chỉ IP: trả về cả 127.0.0.1 (localhost) và IP mạng (để kết nối từ máy khác)
+        /// Lấy Default Gateway IP (Router IP) - THAY ĐỔI: Bây giờ lấy Gateway thay vì IP WiFi
         /// </summary>
         private string GetLocalIPAddresses()
         {
-            string networkIP = null;
+            string gatewayIP = null;
             
-            // Lấy IP từ interface đang active (interface đang kết nối internet/WiFi)
+            // Lấy Default Gateway từ network interface
             try
             {
-                using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+                var networkInterfaces = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
+                foreach (var ni in networkInterfaces)
                 {
-                    socket.Connect("8.8.8.8", 65530);
-                    var endPoint = socket.LocalEndPoint as IPEndPoint;
-                    if (endPoint != null)
+                    // Chỉ lấy interface đang hoạt động và có kết nối
+                    if (ni.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up &&
+                        ni.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback)
                     {
-                        networkIP = endPoint.Address.ToString();
+                        var properties = ni.GetIPProperties();
+                        foreach (var gateway in properties.GatewayAddresses)
+                        {
+                            if (gateway.Address.AddressFamily == AddressFamily.InterNetwork)
+                            {
+                                gatewayIP = gateway.Address.ToString();
+                                Logger.Info($"[Gateway] Tìm thấy Default Gateway: {gatewayIP} từ interface {ni.Name}");
+                                break;
+                            }
+                        }
+                        if (!string.IsNullOrEmpty(gatewayIP)) break;
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Nếu không kết nối được internet, bỏ qua và thử cách khác
+                Logger.Error($"Lỗi khi lấy Default Gateway: {ex.Message}");
             }
 
-            // Fallback: Nếu không lấy được bằng cách trên, thử lấy từ host entry
-            if (string.IsNullOrEmpty(networkIP))
+            // Fallback: Nếu không lấy được Gateway, lấy IP WiFi như cũ
+            if (string.IsNullOrEmpty(gatewayIP))
             {
+                Logger.Warning("[Gateway] Không tìm thấy Default Gateway, dùng IP WiFi thay thế");
+                
                 try
                 {
-                    var host = Dns.GetHostEntry(Dns.GetHostName());
-                    foreach (var ip in host.AddressList)
+                    using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
                     {
-                        // Chỉ lấy IPv4 và không phải loopback (127.0.0.1)
-                        if (ip.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(ip))
+                        socket.Connect("8.8.8.8", 65530);
+                        var endPoint = socket.LocalEndPoint as IPEndPoint;
+                        if (endPoint != null)
                         {
-                            networkIP = ip.ToString();
-                            break;
+                            gatewayIP = endPoint.Address.ToString();
                         }
                     }
                 }
-                catch (Exception ex)
+                catch
                 {
-                    Logger.Error($"Lỗi khi lấy địa chỉ IP từ host entry: {ex.Message}");
+                    // Nếu không lấy được, thử từ host entry
+                    try
+                    {
+                        var host = Dns.GetHostEntry(Dns.GetHostName());
+                        foreach (var ip in host.AddressList)
+                        {
+                            if (ip.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(ip))
+                            {
+                                gatewayIP = ip.ToString();
+                                break;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error($"Lỗi khi lấy địa chỉ IP từ host entry: {ex.Message}");
+                    }
                 }
             }
 
-            // Trả về cả 127.0.0.1 và IP mạng (dùng dấu phẩy để dễ copy)
-            if (!string.IsNullOrEmpty(networkIP))
+            // Trả về cả 127.0.0.1 và Gateway IP
+            if (!string.IsNullOrEmpty(gatewayIP))
             {
-                return $"127.0.0.1, {networkIP}";
+                return $"127.0.0.1, {gatewayIP}";
             }
             else
             {
