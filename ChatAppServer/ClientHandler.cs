@@ -68,61 +68,28 @@ namespace ChatAppServer
                         }
 
                         // Deserialize packet với error handling toàn diện
+                        // KHÔNG dùng Task.Run vì NetworkStream không thread-safe
                         object? receivedPacket = null;
                         try
                         {
-                            receivedPacket = await Task.Run(() =>
-                            {
-                                try
-                                {
-                                    return _formatter.Deserialize(_stream);
-                                }
-                                catch (System.Runtime.Serialization.SerializationException ex)
-                                {
-                                    // Wrap lại exception để có thể nhận biết ở ngoài
-                                    throw new AggregateException("Deserialize failed", ex);
-                                }
-                                catch (Exception ex)
-                                {
-                                    // Wrap tất cả exception khác
-                                    throw new AggregateException("Unexpected error in Deserialize", ex);
-                                }
-                            });
-                        }
-                        catch (AggregateException aggEx)
-                        {
-                            // Unwrap AggregateException
-                            var innerEx = aggEx.GetBaseException();
-                            if (innerEx is System.Runtime.Serialization.SerializationException serEx)
-                            {
-                                // Xử lý SerializationException - KHÔNG throw lại
-                                if (serEx.Message.Contains("End of Stream") || 
-                                    serEx.Message.Contains("parsing was completed"))
-                                {
-                                    Logger.Info($"[Client {UserID ?? "???"}] Client đã đóng kết nối (End of Stream - from Task.Run)");
-                                }
-                                else
-                                {
-                                    Logger.Warning($"[Client {UserID ?? "???"}] Serialization error (from Task.Run): {serEx.Message}");
-                                }
-                                break; // Break để đóng connection
-                            }
-                            // Nếu không phải SerializationException, re-throw để được catch ở catch block bên ngoài
-                            throw innerEx ?? aggEx;
+                            // Gọi Deserialize trực tiếp trên thread hiện tại
+                            // NetworkStream sẽ block cho đến khi có dữ liệu hoặc connection đóng
+                            receivedPacket = _formatter.Deserialize(_stream);
                         }
                         catch (System.Runtime.Serialization.SerializationException serEx)
                         {
-                            // Catch trực tiếp nếu không qua AggregateException
+                            // SerializationException xảy ra khi stream bị đóng hoặc dữ liệu không đầy đủ
+                            // Đây là tình huống bình thường khi client đóng kết nối
                             if (serEx.Message.Contains("End of Stream") || 
                                 serEx.Message.Contains("parsing was completed"))
                             {
-                                Logger.Info($"[Client {UserID ?? "???"}] Client đã đóng kết nối (End of Stream - direct catch)");
+                                Logger.Info($"[Client {UserID ?? "???"}] Client đã đóng kết nối (End of Stream)");
                             }
                             else
                             {
-                                Logger.Warning($"[Client {UserID ?? "???"}] Serialization error (direct catch): {serEx.Message}");
+                                Logger.Warning($"[Client {UserID ?? "???"}] Serialization error: {serEx.Message}");
                             }
-                            break; // Break để đóng connection
+                            break; // Break để đóng connection gracefully
                         }
                         
                         if (receivedPacket != null)

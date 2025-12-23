@@ -27,8 +27,7 @@ namespace ChatAppServer
         public Server(int port)
         {
             _port = port;
-            // Sử dụng IPAddress.Any để lắng nghe trên tất cả interfaces
-            // Điều này cho phép kết nối từ cả 127.0.0.1 và IP mạng
+            // QUAN TRỌNG: Sử dụng IPAddress.Any để lắng nghe trên tất cả interfaces (Wifi, LAN, Localhost)
             _listener = new TcpListener(IPAddress.Any, _port);
             TankGameManager = new TankGameManager();
         }
@@ -37,12 +36,38 @@ namespace ChatAppServer
         {
             try
             {
-                // Đảm bảo server có thể nhận kết nối từ cả localhost và IP mạng
-                // Set các socket options để tối ưu kết nối
+                // --- BƯỚC 1: TỰ ĐỘNG CẤU HÌNH FIREWALL ---
+                Logger.Info("Đang kiểm tra cấu hình Firewall...");
+                bool isPortOpen = FirewallHelper.IsPortOpen(_port);
+
+                if (!isPortOpen)
+                {
+                    Logger.Warning($"Port {_port} chưa được mở trong Windows Firewall.");
+                    Logger.Info("Đang cố gắng mở port tự động với quyền Administrator...");
+
+                    // Thử mở port tự động
+                    bool opened = FirewallHelper.OpenPortAsAdmin(_port);
+
+                    if (opened)
+                    {
+                        Logger.Success($"Đã mở port {_port} thành công! Client có thể kết nối.");
+                    }
+                    else
+                    {
+                        Logger.Error("Không thể tự động mở Firewall. Vui lòng chạy phần mềm bằng 'Run as Administrator' hoặc mở port thủ công.");
+                    }
+                }
+                else
+                {
+                    Logger.Success($"Check Firewall: Port {_port} đã mở sẵn sàng.");
+                }
+
+                // --- BƯỚC 2: CẤU HÌNH SOCKET ---
                 try
                 {
                     _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                     _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                    // KeepAliveTime: thời gian (ms) không có hoạt động trước khi gửi packet thăm dò (30s)
                     _listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, 30000);
                     _listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, 1000);
                 }
@@ -50,61 +75,50 @@ namespace ChatAppServer
                 {
                     Logger.Warning($"Không thể set socket options: {optEx.Message}");
                 }
-                
-                // Bắt đầu lắng nghe
+
+                // --- BƯỚC 3: BẮT ĐẦU LẮNG NGHE ---
                 try
                 {
-                    _listener.Start(10); // Backlog = 10 clients có thể đợi
+                    _listener.Start(100); // Backlog = 100 clients
                 }
                 catch (Exception startEx)
                 {
-                    Logger.Error($"Không thể khởi động listener trên port {_port}", startEx);
-                    throw; // Re-throw để được catch ở ngoài
+                    Logger.Error($"Không thể khởi động listener trên port {_port}. Port có thể đang bị dùng bởi ứng dụng khác.", startEx);
+                    throw;
                 }
-                
-                // Log thông tin chi tiết về địa chỉ server đang lắng nghe
-                try
+
+                // --- BƯỚC 4: HIỂN THỊ THÔNG TIN KẾT NỐI CHO NGƯỜI DÙNG ---
+                var localEndpoint = _listener.LocalEndpoint as IPEndPoint;
+                if (localEndpoint != null)
                 {
-                    var localEndpoint = _listener.LocalEndpoint as IPEndPoint;
-                    if (localEndpoint != null)
+                    Logger.Success($"Server đã khởi động tại Port: {localEndpoint.Port}");
+
+                    // Lấy IP thực tế của WiFi/LAN adapter
+                    string? wifiIP = GetWiFiIPAddress();
+
+                    Logger.Info("=========================================================");
+                    Logger.Info(" THÔNG TIN KẾT NỐI:");
+                    Logger.Info(" 1. Nếu Client chạy cùng máy tính này: dùng IP [127.0.0.1]");
+
+                    if (!string.IsNullOrEmpty(wifiIP))
                     {
-                        Logger.Success($"Server đang lắng nghe tại {localEndpoint.Address}:{localEndpoint.Port}");
-                        if (localEndpoint.Address.Equals(IPAddress.Any) || localEndpoint.Address.Equals(IPAddress.IPv6Any))
-                        {
-                            Logger.Info("✓ Server lắng nghe trên TẤT CẢ network interfaces");
-                            Logger.Info($"✓ Có thể kết nối qua 127.0.0.1:{_port} (localhost)");
-                            
-                            // Lấy IP thực tế của WiFi adapter
-                            try
-                            {
-                                string? wifiIP = GetWiFiIPAddress();
-                                if (!string.IsNullOrEmpty(wifiIP))
-                                {
-                                    Logger.Info($"✓ Clients có thể kết nối qua {wifiIP}:{_port}");
-                                }
-                            }
-                            catch (Exception wifiEx)
-                            {
-                                Logger.Warning($"Không thể lấy WiFi IP: {wifiEx.Message}");
-                            }
-                        }
+                        Logger.Info($" 2. Nếu Client ở máy khác (cùng Wifi): dùng IP [{wifiIP}]");
+                        Logger.Success($" -> HÃY GỬI IP [{wifiIP}] CHO MÁY CLIENT.");
                     }
+                    else
+                    {
+                        Logger.Warning(" -> Không tìm thấy IP mạng Wifi/LAN. Hãy kiểm tra lại kết nối mạng.");
+                    }
+                    Logger.Info("=========================================================");
                 }
-                catch (Exception logEx)
-                {
-                    Logger.Warning($"Lỗi khi log thông tin server: {logEx.Message}");
-                }
-                
-                // Kiểm tra firewall
-                Logger.Info("⚠ QUAN TRỌNG: Đảm bảo Firewall đã mở port 9000!");
-                Logger.Info("  → Click nút 'Mở Firewall' nếu chưa mở");
             }
             catch (Exception ex)
             {
-                Logger.Error($"Không thể khởi động listener trên port {_port}", ex);
-                throw; // Re-throw để được catch ở nơi gọi
+                Logger.Error($"Lỗi nghiêm trọng khi khởi động Server: {ex.Message}", ex);
+                throw;
             }
 
+            // Vòng lặp chấp nhận kết nối
             while (true)
             {
                 try
@@ -113,12 +127,9 @@ namespace ChatAppServer
                     try
                     {
                         var remoteEP = clientSocket.Client.RemoteEndPoint as IPEndPoint;
-                        Logger.Info($"[Connect] Client mới từ {remoteEP?.Address} đã kết nối.");
+                        Logger.Info($"[Connect] Client mới kết nối từ: {remoteEP?.Address}");
                     }
-                    catch (Exception logEx)
-                    {
-                        Logger.Warning($"Lỗi khi log client info: {logEx.Message}");
-                    }
+                    catch { }
 
                     ClientHandler? clientHandler = null;
                     try
@@ -127,49 +138,21 @@ namespace ChatAppServer
                     }
                     catch (Exception handlerEx)
                     {
-                        Logger.Error($"Lỗi khi tạo ClientHandler: {handlerEx.Message}", handlerEx);
+                        Logger.Error($"Lỗi tạo ClientHandler: {handlerEx.Message}", handlerEx);
                         try { clientSocket.Close(); } catch { }
-                        continue; // Bỏ qua client này và tiếp tục
+                        continue;
                     }
 
-                    // Chạy handler này trên một luồng riêng để không chặn vòng lặp chính
-                    // Thêm ContinueWith để handle exception và tránh unhandled exception
                     if (clientHandler != null)
                     {
-                        // Sử dụng ConfigureAwait(false) để tránh deadlock và đảm bảo exception được handle
+                        // Chạy handler trên thread riêng, xử lý lỗi task
                         _ = clientHandler.StartHandlingAsync().ContinueWith(task =>
                         {
-                            if (task.IsFaulted && task.Exception != null)
+                            if (task.IsFaulted)
                             {
-                                // Unwrap AggregateException và xử lý từng exception
-                                task.Exception.Flatten().Handle(ex =>
-                                {
-                                    // SerializationException đã được handle trong StartHandlingAsync
-                                    if (ex is System.Runtime.Serialization.SerializationException serEx)
-                                    {
-                                        // Chỉ log nếu chưa được log trong StartHandlingAsync
-                                        if (!serEx.Message.Contains("End of Stream") && 
-                                            !serEx.Message.Contains("parsing was completed"))
-                                        {
-                                            Logger.Warning($"[Server] SerializationException trong ContinueWith: {serEx.Message}");
-                                        }
-                                        return true; // Đã handle
-                                    }
-                                    
-                                    // Các exception khác đã được handle
-                                    if (ex is IOException || 
-                                        ex is System.Net.Sockets.SocketException || 
-                                        ex is ObjectDisposedException)
-                                    {
-                                        return true; // Đã handle
-                                    }
-                                    
-                                    // Các exception không mong đợi
-                                    Logger.Warning($"[Server] Unhandled exception trong client handler: {ex.GetType().Name} - {ex.Message}");
-                                    return true; // Mark as handled để tránh unhandled exception
-                                });
+                                Logger.Warning($"[Server] Lỗi trong ClientHandler: {task.Exception?.GetBaseException().Message}");
                             }
-                        }, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
+                        });
                     }
                 }
                 catch (ObjectDisposedException)
@@ -177,27 +160,22 @@ namespace ChatAppServer
                     Logger.Warning("Listener đã dừng.");
                     break;
                 }
-                catch (System.Net.Sockets.SocketException sockEx)
-                {
-                    Logger.Warning($"Socket exception khi accept client: {sockEx.Message}");
-                    // Tiếp tục vòng lặp để thử lại
-                    await Task.Delay(1000);
-                }
                 catch (Exception ex)
                 {
-                    Logger.Error($"Lỗi khi chấp nhận client: {ex.GetType().Name} - {ex.Message}", ex);
-                    await Task.Delay(1000); // Đợi 1 chút trước khi thử lại
+                    Logger.Error($"Lỗi khi chấp nhận client: {ex.Message}", ex);
+                    await Task.Delay(1000);
                 }
             }
         }
 
         /// <summary>
-        /// Lấy IP thực tế của WiFi adapter (interface đang active)
+        /// Lấy IP thực tế của WiFi adapter (interface đang active ra internet)
         /// </summary>
         private string? GetWiFiIPAddress()
         {
             try
             {
+                // Mẹo: Tạo kết nối UDP giả đến Google DNS để hệ điều hành tự chọn Interface mạng chính
                 using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
                 {
                     socket.Connect("8.8.8.8", 65530);
@@ -207,6 +185,19 @@ namespace ChatAppServer
             }
             catch
             {
+                // Fallback: Lấy IP đầu tiên không phải Loopback
+                try
+                {
+                    var host = Dns.GetHostEntry(Dns.GetHostName());
+                    foreach (var ip in host.AddressList)
+                    {
+                        if (ip.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(ip))
+                        {
+                            return ip.ToString();
+                        }
+                    }
+                }
+                catch { }
                 return null;
             }
         }
@@ -219,7 +210,7 @@ namespace ChatAppServer
             {
                 _clients[userID] = handler;
             }
-            NotifyUserListChanged(); // Cập nhật giao diện Server
+            NotifyUserListChanged();
         }
 
         public void RemoveClient(string userID)
@@ -231,32 +222,29 @@ namespace ChatAppServer
                 _clients.Remove(userID);
             }
 
-            // Thông báo cho mọi người là user này đã offline
             var statusPacket = new UserStatusPacket
             {
                 UserID = userID,
                 IsOnline = false
             };
-            BroadcastPacket(statusPacket, null); // Gửi cho TẤT CẢ
+            BroadcastPacket(statusPacket, null);
 
             Logger.Warning($"[Disconnect] User '{userID}' đã ngắt kết nối.");
-            NotifyUserListChanged(); // Cập nhật giao diện Server
+            NotifyUserListChanged();
         }
 
-        // Hàm Kick User
         public void KickUser(string userID)
         {
             lock (_clients)
             {
                 if (_clients.TryGetValue(userID, out ClientHandler client))
                 {
-                    client.Close(); // Đóng kết nối -> Tự động gọi RemoveClient
+                    client.Close();
                     Logger.Warning($"[Admin] Đã KICK user '{userID}'.");
                 }
             }
         }
 
-        // Hàm Lấy thông tin User
         public string GetUserInfo(string userID)
         {
             lock (_clients)
@@ -276,15 +264,10 @@ namespace ChatAppServer
 
         public List<UserStatus> GetOnlineUsers(string excludeUserID)
         {
-            // Trả về danh sách các contact (người đã từng nhắn tin) cho user excludeUserID
-            // Kèm theo trạng thái online nếu họ đang kết nối
             var result = new List<UserStatus>();
             try
             {
-                // Lấy contacts từ database
                 var contacts = DatabaseManager.Instance.GetContacts(excludeUserID);
-
-                // Dùng dictionary để dễ tra cứu
                 var dict = new Dictionary<string, UserStatus>(StringComparer.OrdinalIgnoreCase);
                 foreach (var c in contacts)
                 {
@@ -292,7 +275,6 @@ namespace ChatAppServer
                         dict[c.UserID] = new UserStatus { UserID = c.UserID, UserName = c.UserName, IsOnline = false };
                 }
 
-                // Thêm/đánh dấu các user đang online
                 lock (_clients)
                 {
                     foreach (var client in _clients.Values)
@@ -301,16 +283,14 @@ namespace ChatAppServer
                         if (dict.ContainsKey(client.UserID))
                         {
                             dict[client.UserID].IsOnline = true;
-                            dict[client.UserID].UserName = client.UserName; // ưu tiên tên hiện tại
+                            dict[client.UserID].UserName = client.UserName;
                         }
                         else
                         {
-                            // Nếu họ online nhưng chưa là contact, vẫn thêm vào danh sách (tương tự behavior cũ)
                             dict[client.UserID] = new UserStatus { UserID = client.UserID, UserName = client.UserName, IsOnline = true };
                         }
                     }
                 }
-
                 result = new List<UserStatus>(dict.Values);
             }
             catch (Exception ex)
@@ -320,7 +300,6 @@ namespace ChatAppServer
             return result;
         }
 
-        // Hàm cập nhật danh sách user lên giao diện Server
         private void NotifyUserListChanged()
         {
             lock (_clients)
@@ -332,7 +311,7 @@ namespace ChatAppServer
 
         #endregion
 
-        #region Gửi Gói Tin
+        #region Gửi Gói Tin & Logic Game (Giữ nguyên)
 
         public void BroadcastPacket(object packet, string excludeUserID)
         {
@@ -354,9 +333,7 @@ namespace ChatAppServer
             {
                 if (_clients.TryGetValue(receiverID, out ClientHandler receiver))
                 {
-                    Logger.Info($"[RelayPrivatePacket] Sending packet {packet.GetType().Name} to {receiverID}");
                     receiver.SendPacket(packet);
-                    Logger.Info($"[RelayPrivatePacket] Sent packet {packet.GetType().Name} to {receiverID}");
                 }
                 else
                 {
@@ -365,11 +342,6 @@ namespace ChatAppServer
             }
         }
 
-        #endregion
-
-        #region Xử lý Logic Game
-
-        // Lưu MessageID của game invite
         public void StoreGameInviteMessageId(string senderID, string receiverID, int messageId)
         {
             if (messageId > 0)
@@ -382,7 +354,6 @@ namespace ChatAppServer
             }
         }
 
-        // Lấy và xóa MessageID của game invite
         private int GetAndRemoveGameInviteMessageId(string senderID, string receiverID)
         {
             string key = $"{senderID}:{receiverID}";
@@ -399,8 +370,6 @@ namespace ChatAppServer
 
         public void ProcessGameResponse(GameResponsePacket response)
         {
-            Logger.Info($"[ProcessGameResponse] Received response: Sender={response.SenderID}, Receiver={response.ReceiverID}, Accepted={response.Accepted}");
-            // Cập nhật tin nhắn trong database
             int messageId = GetAndRemoveGameInviteMessageId(response.SenderID, response.ReceiverID);
             if (messageId > 0)
             {
@@ -409,33 +378,24 @@ namespace ChatAppServer
                 var message = messages.FirstOrDefault(m => m.MessageID == messageId);
                 if (message != null)
                 {
-                    string updatedMessage = message.MessageContent + " - " + statusText;
-                    DatabaseManager.Instance.UpdateMessage(messageId, updatedMessage);
+                    DatabaseManager.Instance.UpdateMessage(messageId, message.MessageContent + " - " + statusText);
                 }
             }
 
             if (!response.Accepted)
             {
-                Logger.Warning($"[Game] {response.SenderID} từ chối {response.ReceiverID}");
-                Logger.Info($"[ProcessGameResponse] Relaying decline to inviter {response.ReceiverID}");
                 RelayPrivatePacket(response.ReceiverID, response);
                 return;
             }
 
-            Logger.Success($"[Game] {response.SenderID} đồng ý {response.ReceiverID}. Bắt đầu game!");
-            string player1_ID = response.ReceiverID; // Người mời
-            string player2_ID = response.SenderID;   // Người nhận
-
+            string player1_ID = response.ReceiverID;
+            string player2_ID = response.SenderID;
             string gameID = Guid.NewGuid().ToString("N").Substring(0, 10);
 
             GameSession newGame = new GameSession(gameID, player1_ID, player2_ID, GameType.Caro);
-            lock (_gameSessions)
-            {
-                _gameSessions.Add(gameID, newGame);
-            }
+            lock (_gameSessions) { _gameSessions.Add(gameID, newGame); }
 
-            ClientHandler player1_Handler;
-            ClientHandler player2_Handler;
+            ClientHandler player1_Handler, player2_Handler;
             lock (_clients)
             {
                 _clients.TryGetValue(player1_ID, out player1_Handler);
@@ -444,86 +404,45 @@ namespace ChatAppServer
 
             if (player1_Handler == null || player2_Handler == null)
             {
-                Logger.Error("[Error] Không thể bắt đầu game, 1 trong 2 người đã offline.");
                 lock (_gameSessions) _gameSessions.Remove(gameID);
                 return;
             }
 
-            // Gửi gói tin bắt đầu
-            var startPacket1 = new GameStartPacket
-            {
-                GameID = gameID,
-                OpponentID = player2_Handler.UserID,
-                OpponentName = player2_Handler.UserName,
-                StartsFirst = true
-            };
-            player1_Handler.SendPacket(startPacket1);
-
-            var startPacket2 = new GameStartPacket
-            {
-                GameID = gameID,
-                OpponentID = player1_Handler.UserID,
-                OpponentName = player1_Handler.UserName,
-                StartsFirst = false
-            };
-            player2_Handler.SendPacket(startPacket2);
+            player1_Handler.SendPacket(new GameStartPacket { GameID = gameID, OpponentID = player2_Handler.UserID, OpponentName = player2_Handler.UserName, StartsFirst = true });
+            player2_Handler.SendPacket(new GameStartPacket { GameID = gameID, OpponentID = player1_Handler.UserID, OpponentName = player1_Handler.UserName, StartsFirst = false });
         }
 
         public void ProcessGameMove(GameMovePacket move)
         {
             GameSession? session;
-            lock (_gameSessions)
-            {
-                _gameSessions.TryGetValue(move.GameID, out session);
-            }
+            lock (_gameSessions) { _gameSessions.TryGetValue(move.GameID, out session); }
 
             if (session != null)
             {
                 string? opponentID = session.GetOpponent(move.SenderID);
-                if (opponentID != null)
-                {
-                    RelayPrivatePacket(opponentID, move);
-                }
-                else
-                {
-                    Logger.Warning($"[GameMove] Không tìm thấy đối thủ cho {move.SenderID} trong game {move.GameID}");
-                }
-            }
-            else
-            {
-                Logger.Warning($"[GameMove] Nhận được nước đi cho GameID không tồn tại: {move.GameID}");
+                if (opponentID != null) RelayPrivatePacket(opponentID, move);
             }
         }
-
-        // --- LOGIC CHƠI LẠI (REMATCH) ---
 
         public void ProcessRematchRequest(RematchRequestPacket request)
         {
             GameSession? session;
             lock (_gameSessions) _gameSessions.TryGetValue(request.GameID, out session);
-
             if (session != null)
             {
                 string? opponentID = session.GetOpponent(request.SenderID);
-                if (opponentID != null)
-                {
-                    RelayPrivatePacket(opponentID, request);
-                }
-                else Logger.Warning($"[Rematch] Không tìm thấy đối thủ cho {request.SenderID} trong game {request.GameID}");
+                if (opponentID != null) RelayPrivatePacket(opponentID, request);
             }
-            else Logger.Warning($"[Rematch] Yêu cầu cho GameID không tồn tại: {request.GameID}");
         }
 
         public void ProcessRematchResponse(RematchResponsePacket response)
         {
             if (!response.Accepted)
             {
-                Logger.Warning($"[Rematch] {response.SenderID} từ chối chơi lại game {response.GameID}");
                 RelayPrivatePacket(response.ReceiverID, response);
                 return;
             }
 
-            Logger.Success($"[Rematch] {response.SenderID} đồng ý chơi lại game {response.GameID}. Reset game!");
             GameSession? session;
             lock (_gameSessions) _gameSessions.TryGetValue(response.GameID, out session);
 
@@ -538,91 +457,49 @@ namespace ChatAppServer
 
                 if (player1_Handler != null && player2_Handler != null)
                 {
-                    // Kiểm tra xem là Tank Game hay Caro Game dựa trên GameSession.Type
                     bool isTankGame = (session.Type == GameType.Tank);
-                    
                     if (isTankGame)
                     {
-                        // Reset Tank Game
                         this.TankGameManager.EndGame(response.GameID);
                         this.TankGameManager.StartGame(response.GameID, session.Player1_ID, session.Player2_ID);
-                        
-                        // Người đồng ý (response.SenderID) sẽ đi trước trong ván mới
                         bool player1Starts = (session.Player1_ID == response.SenderID);
-
-                        var startPacket1 = new TankStartPacket
-                        {
-                            GameID = response.GameID,
-                            OpponentID = player2_Handler.UserID,
-                            OpponentName = player2_Handler.UserName,
-                            StartsFirst = player1Starts
-                        };
-                        player1_Handler.SendPacket(startPacket1);
-
-                        var startPacket2 = new TankStartPacket
-                        {
-                            GameID = response.GameID,
-                            OpponentID = player1_Handler.UserID,
-                            OpponentName = player1_Handler.UserName,
-                            StartsFirst = !player1Starts
-                        };
-                        player2_Handler.SendPacket(startPacket2);
+                        player1_Handler.SendPacket(new TankStartPacket { GameID = response.GameID, OpponentID = player2_Handler.UserID, OpponentName = player2_Handler.UserName, StartsFirst = player1Starts });
+                        player2_Handler.SendPacket(new TankStartPacket { GameID = response.GameID, OpponentID = player1_Handler.UserID, OpponentName = player1_Handler.UserName, StartsFirst = !player1Starts });
                     }
                     else
                     {
-                        // Caro Game - dùng GameResetPacket
                         bool player1Starts = (session.Player1_ID == response.SenderID);
-
-                        var resetPacket1 = new GameResetPacket { GameID = response.GameID, StartsFirst = player1Starts };
-                        player1_Handler.SendPacket(resetPacket1);
-
-                        var resetPacket2 = new GameResetPacket { GameID = response.GameID, StartsFirst = !player1Starts };
-                        player2_Handler.SendPacket(resetPacket2);
+                        player1_Handler.SendPacket(new GameResetPacket { GameID = response.GameID, StartsFirst = player1Starts });
+                        player2_Handler.SendPacket(new GameResetPacket { GameID = response.GameID, StartsFirst = !player1Starts });
                     }
                 }
-                else Logger.Error($"[Rematch] Không tìm thấy client handler khi reset game {response.GameID}");
             }
-            else Logger.Warning($"[Rematch] Phản hồi cho GameID không tồn tại: {response.GameID}");
         }
 
-        // --- XỬ LÝ TANK GAME ---
         public void ProcessTankResponse(TankResponsePacket response)
         {
-            // Cập nhật tin nhắn trong database
             int messageId = GetAndRemoveGameInviteMessageId(response.ReceiverID, response.SenderID);
             if (messageId > 0)
             {
                 string statusText = response.Accepted ? "✓ Đã chấp nhận" : "✗ Đã từ chối";
                 var messages = DatabaseManager.Instance.GetChatHistory(response.ReceiverID, response.SenderID, 100);
                 var message = messages.FirstOrDefault(m => m.MessageID == messageId);
-                if (message != null)
-                {
-                    string updatedMessage = message.MessageContent + " - " + statusText;
-                    DatabaseManager.Instance.UpdateMessage(messageId, updatedMessage);
-                }
+                if (message != null) DatabaseManager.Instance.UpdateMessage(messageId, message.MessageContent + " - " + statusText);
             }
 
             if (!response.Accepted)
             {
-                Logger.Warning($"[Tank Game] {response.SenderID} từ chối {response.ReceiverID}");
                 RelayPrivatePacket(response.ReceiverID, response);
                 return;
             }
 
-            Logger.Success($"[Tank Game] {response.SenderID} đồng ý {response.ReceiverID}. Bắt đầu game!");
-            string player1_ID = response.ReceiverID; // Người mời
-            string player2_ID = response.SenderID;   // Người nhận
-
+            string player1_ID = response.ReceiverID;
+            string player2_ID = response.SenderID;
             string gameID = Guid.NewGuid().ToString("N").Substring(0, 10);
-
             GameSession newGame = new GameSession(gameID, player1_ID, player2_ID, GameType.Tank);
-            lock (_gameSessions)
-            {
-                _gameSessions.Add(gameID, newGame);
-            }
+            lock (_gameSessions) { _gameSessions.Add(gameID, newGame); }
 
-            ClientHandler player1_Handler;
-            ClientHandler player2_Handler;
+            ClientHandler player1_Handler, player2_Handler;
             lock (_clients)
             {
                 _clients.TryGetValue(player1_ID, out player1_Handler);
@@ -631,53 +508,23 @@ namespace ChatAppServer
 
             if (player1_Handler == null || player2_Handler == null)
             {
-                Logger.Error("[Error] Không thể bắt đầu tank game, 1 trong 2 người đã offline.");
                 lock (_gameSessions) _gameSessions.Remove(gameID);
                 return;
             }
 
-            // Khởi tạo game trong TankGameManager
             this.TankGameManager.StartGame(gameID, player1_ID, player2_ID);
-
-            // Gửi gói tin bắt đầu
-            var startPacket1 = new TankStartPacket
-            {
-                GameID = gameID,
-                OpponentID = player2_Handler.UserID,
-                OpponentName = player2_Handler.UserName,
-                StartsFirst = true
-            };
-            player1_Handler.SendPacket(startPacket1);
-
-            var startPacket2 = new TankStartPacket
-            {
-                GameID = gameID,
-                OpponentID = player1_Handler.UserID,
-                OpponentName = player1_Handler.UserName,
-                StartsFirst = false
-            };
-            player2_Handler.SendPacket(startPacket2);
+            player1_Handler.SendPacket(new TankStartPacket { GameID = gameID, OpponentID = player2_Handler.UserID, OpponentName = player2_Handler.UserName, StartsFirst = true });
+            player2_Handler.SendPacket(new TankStartPacket { GameID = gameID, OpponentID = player1_Handler.UserID, OpponentName = player1_Handler.UserName, StartsFirst = false });
         }
 
         public void ProcessTankAction(TankActionPacket action)
         {
             GameSession? session;
-            lock (_gameSessions)
-            {
-                _gameSessions.TryGetValue(action.GameID, out session);
-            }
-
+            lock (_gameSessions) { _gameSessions.TryGetValue(action.GameID, out session); }
             if (session != null)
             {
                 string? opponentID = (session.Player1_ID == action.SenderID) ? session.Player2_ID : session.Player1_ID;
-                if (opponentID != null)
-                {
-                    RelayPrivatePacket(opponentID, action);
-                }
-            }
-            else
-            {
-                Logger.Warning($"[Tank Action] GameID không tồn tại: {action.GameID}");
+                if (opponentID != null) RelayPrivatePacket(opponentID, action);
             }
         }
 

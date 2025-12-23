@@ -1,11 +1,9 @@
-﻿#pragma warning disable SYSLIB0011 // Tắt cảnh báo BinaryFormatter
-
+﻿#pragma warning disable SYSLIB0011 
 using ChatApp.Shared;
 using ChatAppClient.Helpers;
 using System;
 using System.IO;
 using System.Net.Sockets;
-using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,23 +23,21 @@ namespace ChatAppClient.Forms
         private BinaryFormatter _formatter;
         private frmHome? _homeForm;
 
-        // Các biến thông tin User
         public string? UserID { get; private set; }
         public string? UserName { get; private set; }
-        
-        // Lưu IP server đã kết nối để các form khác sử dụng
+
         public string? CurrentServerIP { get; private set; }
         public int CurrentServerPort { get; private set; } = 9000;
 
-        // Các biến Task/Event để xử lý phản hồi
         private TaskCompletionSource<LoginResultPacket>? _loginCompletionSource;
         private TaskCompletionSource<RegisterResultPacket>? _registerCompletionSource;
         private TaskCompletionSource<ChatHistoryResponsePacket>? _chatHistoryCompletionSource;
-        public event Action<ForgotPasswordResultPacket>? OnForgotPasswordResult; // Sự kiện quên mật khẩu
-        public event Action<ChatHistoryResponsePacket>? OnChatHistoryReceived; // Sự kiện nhận lịch sử chat
+
+        public event Action<ForgotPasswordResultPacket>? OnForgotPasswordResult;
+        public event Action<ChatHistoryResponsePacket>? OnChatHistoryReceived;
 
         private CancellationTokenSource? _listeningCts;
-        private readonly object _loginLock = new object(); // Lock cho thread safety
+        private readonly object _loginLock = new object();
 
         private NetworkManager()
         {
@@ -50,265 +46,160 @@ namespace ChatAppClient.Forms
 
         public void RegisterHomeForm(frmHome homeForm) => _homeForm = homeForm;
 
-        // --- KẾT NỐI ---
+        // --- HÀM KẾT NỐI ĐƯỢC SỬA ĐỔI ---
         public async Task<bool> ConnectAsync(string ipAddress, int port)
         {
-            if (_client != null && _client.Connected && _stream != null) return true;
-
+            // Ngắt kết nối cũ nếu có để tránh conflict
             DisconnectInternal(false);
 
             try
             {
                 _client = new TcpClient();
-                
-                // Set socket options để tối ưu kết nối
-                _client.NoDelay = true; // Tắt Nagle algorithm để gửi ngay lập tức
-                _client.ReceiveTimeout = 30000; // 30 giây
-                _client.SendTimeout = 30000; // 30 giây
-                
-                Logger.Info($"Đang kết nối đến {ipAddress}:{port}...");
+                // Tối ưu hóa cho truyền tải gói tin nhỏ (chat/game)
+                _client.NoDelay = true;
+                _client.ReceiveTimeout = 30000;
+                _client.SendTimeout = 30000;
 
-                // Tăng timeout lên 10 giây để đảm bảo đủ thời gian kết nối
-                var connectTask = _client.ConnectAsync(ipAddress, port);
+                Logger.Info($"Đang thử kết nối đến {ipAddress}:{port}...");
+
+                // Sử dụng timeout 10s cho mạng Wifi (mạng LAN có thể cần thời gian tìm host)
                 using var timeoutCts = new CancellationTokenSource(10000);
-
-                var completedTask = await Task.WhenAny(connectTask, Task.Delay(10000, timeoutCts.Token));
-
-                if (completedTask == connectTask)
+                try
                 {
-                    try
+                    // Hỗ trợ cả .NET Framework và .NET Core bằng cách dùng ConnectAsync với Task.WhenAny
+                    var connectTask = _client.ConnectAsync(ipAddress, port);
+                    var completedTask = await Task.WhenAny(connectTask, Task.Delay(10000, timeoutCts.Token));
+
+                    if (completedTask != connectTask)
                     {
-                        await connectTask;
-                    }
-                    catch (SocketException sockEx)
-                    {
-                        string errorDetail = GetSocketErrorDetail(sockEx);
-                        Logger.Error($"Lỗi kết nối Socket: {errorDetail}");
-                        DisconnectInternal(false);
-                        return false;
-                    }
-                    catch (Exception connectEx)
-                    {
-                        Logger.Error($"Lỗi khi kết nối: {connectEx.Message}", connectEx);
+                        Logger.Error($"Timeout: Không thể kết nối đến Server {ipAddress} sau 10 giây.");
                         DisconnectInternal(false);
                         return false;
                     }
 
-                    // Kiểm tra kết nối đã thành công chưa
-                    if (!_client.Connected)
-                    {
-                        Logger.Error("Kết nối không thành công (TcpClient.Connected = false)");
-                        DisconnectInternal(false);
-                        return false;
-                    }
+                    // Nếu task hoàn thành, kiểm tra xem có exception không
+                    await connectTask;
+                }
+                catch (Exception ex)
+                {
+                    // Lỗi xảy ra trong quá trình ConnectAsync
+                    throw ex;
+                }
 
-                    try
-                    {
-                        _stream = _client.GetStream();
-                        if (_stream == null) throw new IOException("NetworkStream trả về null.");
-                    }
-                    catch (Exception streamEx)
-                    {
-                        Logger.Error("Lỗi khi lấy NetworkStream", streamEx);
-                        DisconnectInternal(false);
-                        return false;
-                    }
-
+                if (_client.Connected)
+                {
+                    _stream = _client.GetStream();
                     _listeningCts = new CancellationTokenSource();
+                    // Bắt đầu lắng nghe gói tin từ Server
                     _ = StartListeningAsync(_listeningCts.Token);
-                    
-                    // Lưu IP và Port để các form khác sử dụng
+
                     CurrentServerIP = ipAddress;
                     CurrentServerPort = port;
-                    
-                    Logger.Success($"Đã kết nối thành công đến {ipAddress}:{port}!");
+
+                    Logger.Success($"Kết nối THÀNH CÔNG đến {ipAddress}:{port}!");
                     return true;
-                }
-                else
-                {
-                    Logger.Error($"Kết nối thất bại (Timeout sau 10 giây) đến {ipAddress}:{port}");
-                    DisconnectInternal(false);
-                    return false;
                 }
             }
             catch (SocketException sockEx)
             {
-                string errorDetail = GetSocketErrorDetail(sockEx);
-                Logger.Error($"Lỗi Socket khi kết nối đến {ipAddress}:{port}: {errorDetail}", sockEx);
-                DisconnectInternal(false);
-                return false;
+                string msg = $"Lỗi Socket ({sockEx.SocketErrorCode}): Không thể kết nối đến {ipAddress}.";
+                if (sockEx.SocketErrorCode == SocketError.ConnectionRefused)
+                    msg += " (Server từ chối hoặc chưa mở Port 9000)";
+                else if (sockEx.SocketErrorCode == SocketError.TimedOut)
+                    msg += " (Sai IP hoặc Firewall chặn)";
+
+                Logger.Error(msg);
             }
             catch (Exception ex)
             {
-                Logger.Error($"Kết nối thất bại đến {ipAddress}:{port}: {ex.Message}", ex);
-                DisconnectInternal(false);
-                return false;
+                Logger.Error($"Lỗi kết nối chung: {ex.Message}");
             }
+
+            DisconnectInternal(false);
+            return false;
         }
 
-        // --- LẮNG NGHE ---
         private async Task StartListeningAsync(CancellationToken cancellationToken)
         {
-            Logger.Info("Bắt đầu lắng nghe Server...");
             try
             {
-                while (_client != null && _client.Connected && _stream != null && _stream.CanRead && !cancellationToken.IsCancellationRequested)
+                while (_client != null && _client.Connected && _stream != null && !cancellationToken.IsCancellationRequested)
                 {
-                    // BinaryFormatter.Deserialize sẽ block cho đến khi có dữ liệu
-                    // Không cần check DataAvailable, chỉ cần deserialize trực tiếp
                     object? receivedPacket = null;
                     try
                     {
-                        receivedPacket = await Task.Run(() => _formatter.Deserialize(_stream), cancellationToken);
-                    }
-                    catch (System.Runtime.Serialization.SerializationException serEx)
-                    {
-                        // Lỗi serialization thường xảy ra khi stream bị đóng hoặc dữ liệu không đầy đủ
-                        if (serEx.Message.Contains("End of Stream") || 
-                            serEx.Message.Contains("parsing was completed"))
+                        // Deserialize trực tiếp, Task.Run để tránh block UI thread
+                        receivedPacket = await Task.Run(() =>
                         {
-                            Logger.Info("Server đã đóng kết nối (End of Stream)");
-                            break; // Thoát vòng lặp một cách graceful
-                        }
-                        throw; // Nếu là lỗi khác, throw lại
+                            try { return _formatter.Deserialize(_stream); }
+                            catch { return null; }
+                        }, cancellationToken);
                     }
-                    catch (IOException ioEx)
-                    {
-                        // IOException xảy ra khi connection bị đóng
-                        Logger.Info($"Connection đã bị đóng: {ioEx.Message}");
-                        break;
-                    }
-                    catch (System.Net.Sockets.SocketException sockEx)
-                    {
-                        // SocketException xảy ra khi network có vấn đề
-                        Logger.Warning($"Socket error: {sockEx.Message}");
-                        break;
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        // Stream đã bị dispose, connection đã đóng
-                        Logger.Info("Stream đã bị dispose");
-                        break;
-                    }
-                    catch (Exception deserializeEx)
-                    {
-                        // Các exception khác
-                        if (deserializeEx.InnerException is IOException)
-                        {
-                            Logger.Warning($"Lỗi deserialize (có thể do server đóng connection): {deserializeEx.Message}");
-                            break;
-                        }
-                        throw;
-                    }
-                    
+                    catch { break; }
+
                     if (receivedPacket != null)
                     {
-                        // Log receipt of certain packets for debugging
-                        if (receivedPacket is GameResponsePacket grp)
-                        {
-                            Logger.Info($"[NetworkManager] Received GameResponsePacket: Sender={grp.SenderID}, Receiver={grp.ReceiverID}, Accepted={grp.Accepted}");
-                        }
                         HandlePacket(receivedPacket);
+                    }
+                    else
+                    {
+                        // Nếu Deserialize trả về null hoặc throw exception -> Ngắt kết nối
+                        break;
                     }
                 }
             }
             catch (Exception ex)
             {
-                // Chỉ log warning cho các exception không mong đợi (không phải SerializationException, IOException, SocketException, ObjectDisposedException)
-                if (!(ex is System.Runtime.Serialization.SerializationException) &&
-                    !(ex is IOException) &&
-                    !(ex is System.Net.Sockets.SocketException) &&
-                    !(ex is ObjectDisposedException))
-                {
-                    Logger.Warning($"Ngắt kết nối khi đang lắng nghe: {ex.GetType().Name} - {ex.Message}");
-                }
-                
+                if (!cancellationToken.IsCancellationRequested)
+                    Logger.Warning($"Ngắt kết nối khi đang lắng nghe: {ex.Message}");
+            }
+            finally
+            {
+                // Thông báo rớt mạng nếu không phải do user chủ động ngắt
                 if (!cancellationToken.IsCancellationRequested && _homeForm != null && !_homeForm.IsDisposed)
                 {
                     _homeForm.BeginInvoke(new Action(() =>
-                        MessageBox.Show("Mất kết nối đến máy chủ!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error)));
+                        MessageBox.Show("Mất kết nối đến máy chủ!", "Lỗi mạng", MessageBoxButtons.OK, MessageBoxIcon.Error)));
                     Disconnect();
                 }
             }
         }
 
-        // --- XỬ LÝ GÓI TIN ĐẾN ---
         private void HandlePacket(object packet)
         {
             try
             {
-                // 1. Các gói tin Login/Register (Dùng TaskCompletionSource) - XỬ LÝ TRƯỚC TIÊN
                 if (packet is LoginResultPacket pLogin)
                 {
-                    Logger.Info($"Nhận được LoginResultPacket: Success={pLogin.Success}, UserID={pLogin.UserID}");
-                    
                     TaskCompletionSource<LoginResultPacket>? completionSource;
-                    lock (_loginLock)
-                    {
-                        completionSource = _loginCompletionSource;
-                    }
-                    
-                    // Chỉ set result nếu TaskCompletionSource vẫn còn tồn tại và chưa được set
+                    lock (_loginLock) completionSource = _loginCompletionSource;
+
                     if (completionSource != null && !completionSource.Task.IsCompleted)
-                    {
-                        bool setResult = completionSource.TrySetResult(pLogin);
-                        if (setResult)
-                        {
-                            Logger.Success("Đã set result vào LoginCompletionSource thành công.");
-                        }
-                        else
-                        {
-                            Logger.Warning("Không thể set result vào LoginCompletionSource (có thể đã completed).");
-                        }
-                    }
-                    else
-                    {
-                        Logger.Warning($"LoginCompletionSource is null hoặc đã completed. completionSource={completionSource != null}, IsCompleted={completionSource?.Task.IsCompleted}");
-                    }
-                    return; // QUAN TRỌNG: Return ngay để không xử lý các packet khác
+                        completionSource.TrySetResult(pLogin);
+                    return;
                 }
                 if (packet is RegisterResultPacket pRegister)
                 {
-                    // Chỉ set result nếu TaskCompletionSource vẫn còn tồn tại và chưa được set
                     if (_registerCompletionSource != null && !_registerCompletionSource.Task.IsCompleted)
-                    {
                         _registerCompletionSource.TrySetResult(pRegister);
-                    }
-                    return; // QUAN TRỌNG: Return ngay
+                    return;
                 }
-
-                // 2. Gói tin Quên Mật Khẩu (Dùng Event)
                 if (packet is ForgotPasswordResultPacket pForgot)
                 {
                     OnForgotPasswordResult?.Invoke(pForgot);
-                    return; // QUAN TRỌNG: Return ngay
+                    return;
                 }
-
-                // 2.5. Gói tin Lịch sử Chat (Dùng TaskCompletionSource và Event)
                 if (packet is ChatHistoryResponsePacket pChatHistory)
                 {
                     if (_chatHistoryCompletionSource != null && !_chatHistoryCompletionSource.Task.IsCompleted)
-                    {
                         _chatHistoryCompletionSource.TrySetResult(pChatHistory);
-                    }
                     OnChatHistoryReceived?.Invoke(pChatHistory);
-                    return; // QUAN TRỌNG: Return ngay
-                }
-
-                // 3. Các gói tin cần Update UI trên Home (Dùng Invoke)
-                // CHỈ XỬ LÝ KHI ĐÃ LOGIN XONG (UserID đã được set)
-                if (string.IsNullOrEmpty(UserID))
-                {
-                    Logger.Warning($"Bỏ qua packet {packet.GetType().Name} vì chưa login xong.");
                     return;
                 }
 
-                if (_homeForm == null || _homeForm.IsDisposed)
-                {
-                    Logger.Warning($"Bỏ qua packet {packet.GetType().Name} vì _homeForm is null hoặc disposed.");
-                    return;
-                }
+                if (string.IsNullOrEmpty(UserID) || _homeForm == null || _homeForm.IsDisposed) return;
 
+                // Xử lý các gói tin UI
                 Action? action = packet switch
                 {
                     UserStatusPacket p => () => _homeForm.HandleUserStatusUpdate(p),
@@ -333,180 +224,85 @@ namespace ChatAppClient.Forms
             }
             catch (Exception ex)
             {
-                // Xử lý exception để không làm gián đoạn quá trình login
-                Logger.Error($"Lỗi khi xử lý packet {packet?.GetType().Name}: {ex.Message}", ex);
+                Logger.Error($"Lỗi xử lý packet {packet?.GetType().Name}: {ex.Message}");
             }
         }
 
-        // --- CÁC HÀM GỬI ---
-
         public async Task<LoginResultPacket> LoginAsync(LoginPacket packet)
         {
-            if (_client == null || !_client.Connected || _stream == null) throw new InvalidOperationException("Chưa kết nối.");
-            
+            if (_client == null || !_client.Connected) throw new InvalidOperationException("Chưa kết nối Server.");
+
             TaskCompletionSource<LoginResultPacket> completionSource;
             lock (_loginLock)
             {
-                // Tạo TaskCompletionSource mới (không hủy task cũ để tránh lỗi cancel)
                 _loginCompletionSource = new TaskCompletionSource<LoginResultPacket>();
                 completionSource = _loginCompletionSource;
             }
-            
-            if (!SendPacket(packet)) // Gửi
+
+            if (!SendPacket(packet))
             {
-                lock (_loginLock)
-                {
-                    _loginCompletionSource = null;
-                }
-                throw new InvalidOperationException("Không thể gửi gói tin đăng nhập.");
+                lock (_loginLock) _loginCompletionSource = null;
+                throw new InvalidOperationException("Gửi gói tin đăng nhập thất bại.");
             }
-            
-            Logger.Info("Đã gửi LoginPacket, đang chờ phản hồi...");
-            
-            try
+
+            var timeoutTask = Task.Delay(15000); // 15s timeout
+            var resultTask = completionSource.Task;
+
+            if (await Task.WhenAny(resultTask, timeoutTask) == resultTask)
             {
-                var timeoutTask = Task.Delay(15000); // Tăng timeout lên 15 giây
-                var resultTask = completionSource.Task;
-                var completedTask = await Task.WhenAny(resultTask, timeoutTask);
-                
-                // Kiểm tra xem resultTask đã completed chưa
-                // (có thể completed ngay cả khi timeoutTask hoàn thành trước do race condition)
-                if (resultTask.IsCompleted)
-                {
-                    var result = await resultTask;
-                    Logger.Success($"Đã nhận được phản hồi đăng nhập: Success={result.Success}");
-                    lock (_loginLock)
-                    {
-                        _loginCompletionSource = null; // Clear sau khi nhận được kết quả
-                    }
-                    return result;
-                }
-                
-                // Nếu đến đây nghĩa là timeout xảy ra và resultTask chưa completed
-                // Kiểm tra lại một lần nữa để tránh race condition
-                if (resultTask.IsCompleted)
-                {
-                    var result = await resultTask;
-                    Logger.Success($"Đã nhận được phản hồi đăng nhập (sau timeout check): Success={result.Success}");
-                    lock (_loginLock)
-                    {
-                        _loginCompletionSource = null;
-                    }
-                    return result;
-                }
-                
-                Logger.Error("Timeout: Không nhận được phản hồi đăng nhập sau 15 giây.");
-                lock (_loginLock)
-                {
-                    _loginCompletionSource = null;
-                }
-                throw new TimeoutException("Không nhận được phản hồi đăng nhập. Vui lòng kiểm tra kết nối và thử lại.");
+                lock (_loginLock) _loginCompletionSource = null;
+                return await resultTask;
             }
-            catch (TaskCanceledException)
-            {
-                Logger.Warning("Đăng nhập bị hủy.");
-                lock (_loginLock)
-                {
-                    _loginCompletionSource = null;
-                }
-                throw new InvalidOperationException("Đăng nhập bị hủy.");
-            }
+
+            lock (_loginLock) _loginCompletionSource = null;
+            throw new TimeoutException("Server phản hồi quá lâu (Timeout).");
         }
 
         public async Task<RegisterResultPacket> RegisterAsync(RegisterPacket packet)
         {
-            if (_client == null || !_client.Connected || _stream == null) throw new InvalidOperationException("Chưa kết nối.");
+            if (_client == null || !_client.Connected) throw new InvalidOperationException("Chưa kết nối.");
             _registerCompletionSource = new TaskCompletionSource<RegisterResultPacket>();
             SendPacket(packet);
-            var timeoutTask = Task.Delay(10000);
-            var resultTask = _registerCompletionSource.Task;
-            if (await Task.WhenAny(resultTask, timeoutTask) == resultTask) return await resultTask;
-            else throw new TimeoutException("Không nhận được phản hồi đăng ký.");
+
+            if (await Task.WhenAny(_registerCompletionSource.Task, Task.Delay(10000)) == _registerCompletionSource.Task)
+                return await _registerCompletionSource.Task;
+            else
+                throw new TimeoutException("Đăng ký Timeout.");
         }
 
         public async Task<ChatHistoryResponsePacket> RequestChatHistoryAsync(string friendID, int limit = 100)
         {
-            if (_client == null || !_client.Connected || _stream == null) 
-                throw new InvalidOperationException("Chưa kết nối.");
-            
-            if (string.IsNullOrEmpty(UserID))
-                throw new InvalidOperationException("Chưa đăng nhập.");
+            if (_client == null || !_client.Connected || string.IsNullOrEmpty(UserID))
+                throw new InvalidOperationException("Chưa sẵn sàng.");
 
             _chatHistoryCompletionSource = new TaskCompletionSource<ChatHistoryResponsePacket>();
-            
-            var request = new ChatHistoryRequestPacket
-            {
-                UserID = UserID,
-                FriendID = friendID,
-                Limit = limit
-            };
-            
-            if (!SendPacket(request))
-            {
-                _chatHistoryCompletionSource = null;
-                throw new InvalidOperationException("Không thể gửi yêu cầu lịch sử chat.");
-            }
-            
-            try
-            {
-                var timeoutTask = Task.Delay(10000);
-                var resultTask = _chatHistoryCompletionSource.Task;
-                var completedTask = await Task.WhenAny(resultTask, timeoutTask);
-                
-                if (resultTask.IsCompleted)
-                {
-                    var result = await resultTask;
-                    _chatHistoryCompletionSource = null;
-                    return result;
-                }
-                
-                _chatHistoryCompletionSource = null;
-                throw new TimeoutException("Không nhận được lịch sử chat sau 10 giây.");
-            }
-            catch (TaskCanceledException)
-            {
-                _chatHistoryCompletionSource = null;
-                throw new InvalidOperationException("Yêu cầu lịch sử chat bị hủy.");
-            }
+
+            var request = new ChatHistoryRequestPacket { UserID = UserID, FriendID = friendID, Limit = limit };
+            if (!SendPacket(request)) return new ChatHistoryResponsePacket { Success = false };
+
+            if (await Task.WhenAny(_chatHistoryCompletionSource.Task, Task.Delay(10000)) == _chatHistoryCompletionSource.Task)
+                return await _chatHistoryCompletionSource.Task;
+
+            return new ChatHistoryResponsePacket { Success = false, Message = "Timeout" };
         }
 
-        // *** HÀM QUAN TRỌNG ĐÃ SỬA: Trả về bool ***
         public bool SendPacket(object packet)
         {
             NetworkStream? currentStream = _stream;
-            // Kiểm tra kỹ trước khi gửi
-            if (_client == null || !_client.Connected || currentStream == null)
-            {
-                Logger.Warning("Lỗi gửi gói tin: Chưa kết nối hoặc stream null.");
-                return false; // Báo thất bại
-            }
+            if (_client == null || !_client.Connected || currentStream == null) return false;
 
             try
             {
-                // Sử dụng lock để đảm bảo thread-safe và không bị gián đoạn khi đang login
-                lock (currentStream) 
-                { 
-                    // Kiểm tra lại connection sau khi lock
-                    if (_client == null || !_client.Connected || currentStream == null)
-                    {
-                        Logger.Warning("Kết nối bị mất trong khi gửi packet.");
-                        return false;
-                    }
-
+                lock (currentStream)
+                {
                     _formatter.Serialize(currentStream, packet);
-                    currentStream.Flush(); // Đảm bảo dữ liệu được gửi ngay lập tức
+                    currentStream.Flush();
                 }
-                return true; // Gửi thành công
+                return true;
             }
-            catch (Exception ex)
-            {
-                Logger.Error($"Lỗi I/O khi gửi gói tin: {ex.Message}", ex);
-                // Không throw exception để tránh làm gián đoạn quá trình login
-                return false; // Báo thất bại
-            }
+            catch { return false; }
         }
 
-        // --- TIỆN ÍCH ---
         public void SetUserCredentials(string userId, string userName)
         {
             this.UserID = userId;
@@ -516,32 +312,6 @@ namespace ChatAppClient.Forms
         public void Disconnect()
         {
             DisconnectInternal(true);
-        }
-
-        /// <summary>
-        /// Lấy thông tin chi tiết về lỗi Socket để debug
-        /// </summary>
-        private string GetSocketErrorDetail(SocketException ex)
-        {
-            string detail = $"ErrorCode: {ex.SocketErrorCode} ({ex.ErrorCode})";
-            
-            switch (ex.SocketErrorCode)
-            {
-                case System.Net.Sockets.SocketError.ConnectionRefused:
-                    return $"{detail} - Server từ chối kết nối. Kiểm tra: Server đã Start chưa? Firewall Server đã mở chưa?";
-                case System.Net.Sockets.SocketError.TimedOut:
-                    return $"{detail} - Kết nối timeout. Kiểm tra: Hai máy cùng mạng? Firewall chặn?";
-                case System.Net.Sockets.SocketError.HostUnreachable:
-                    return $"{detail} - Không thể đến host. Kiểm tra: IP có đúng? Hai máy cùng mạng?";
-                case System.Net.Sockets.SocketError.NetworkUnreachable:
-                    return $"{detail} - Mạng không thể truy cập. Kiểm tra: WiFi đã kết nối?";
-                case System.Net.Sockets.SocketError.ConnectionReset:
-                    return $"{detail} - Kết nối bị reset. Có thể do Server đóng đột ngột hoặc Firewall chặn";
-                case System.Net.Sockets.SocketError.AccessDenied:
-                    return $"{detail} - Truy cập bị từ chối. Cần mở Firewall trên máy Client!";
-                default:
-                    return $"{detail} - {ex.Message}";
-            }
         }
 
         private void DisconnectInternal(bool showMessage)
