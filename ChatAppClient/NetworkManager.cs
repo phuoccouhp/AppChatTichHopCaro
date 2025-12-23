@@ -28,6 +28,10 @@ namespace ChatAppClient.Forms
         // Các biến thông tin User
         public string? UserID { get; private set; }
         public string? UserName { get; private set; }
+        
+        // Lưu IP server đã kết nối để các form khác sử dụng
+        public string? CurrentServerIP { get; private set; }
+        public int CurrentServerPort { get; private set; } = 9000;
 
         // Các biến Task/Event để xử lý phản hồi
         private TaskCompletionSource<LoginResultPacket>? _loginCompletionSource;
@@ -105,6 +109,11 @@ namespace ChatAppClient.Forms
 
                     _listeningCts = new CancellationTokenSource();
                     _ = StartListeningAsync(_listeningCts.Token);
+                    
+                    // Lưu IP và Port để các form khác sử dụng
+                    CurrentServerIP = ipAddress;
+                    CurrentServerPort = port;
+                    
                     Logger.Success($"Đã kết nối thành công đến {ipAddress}:{port}!");
                     return true;
                 }

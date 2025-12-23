@@ -116,14 +116,13 @@ namespace ChatAppClient.Forms
         // Hàm phụ trợ để đảm bảo kết nối
         private async Task<bool> EnsureConnectionAsync()
         {
-            // Tạm thời hardcode IP hoặc lấy từ biến tĩnh toàn cục nếu bạn có.
-            // Để chuyên nghiệp, bạn nên thêm ô nhập IP vào Form Đăng Ký.
-            string defaultIp = "127.0.0.1";
-            int port = 9000;
+            // Sử dụng IP đã lưu từ lần kết nối trước (nếu có)
+            string serverIp = NetworkManager.Instance.CurrentServerIP ?? "127.0.0.1";
+            int port = NetworkManager.Instance.CurrentServerPort;
 
             try
             {
-                return await NetworkManager.Instance.ConnectAsync(defaultIp, port);
+                return await NetworkManager.Instance.ConnectAsync(serverIp, port);
             }
             catch
             {

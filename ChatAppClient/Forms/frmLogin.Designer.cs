@@ -173,7 +173,7 @@ namespace ChatAppClient.Forms
             txtServerIP.Margin = new Padding(4, 5, 4, 5);
             txtServerIP.Name = "txtServerIP";
             txtServerIP.Padding = new Padding(13, 8, 13, 8);
-            txtServerIP.PlaceholderText = "127.0.0.1";
+            txtServerIP.PlaceholderText = "Server IP (vd: 192.168.1.100)";
             txtServerIP.Size = new Size(467, 69);
             txtServerIP.TabIndex = 1;
             // 

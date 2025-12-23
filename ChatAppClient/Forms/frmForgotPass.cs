@@ -46,11 +46,12 @@ namespace ChatAppClient.Forms
             }
 
             // --- KIỂM TRA KẾT NỐI ---
-            // Tạm dùng IP mặc định localhost nếu user chưa login
-            string defaultIp = "127.0.0.1";
+            // Sử dụng IP đã lưu từ lần kết nối trước (nếu có)
+            string serverIp = NetworkManager.Instance.CurrentServerIP ?? "127.0.0.1";
+            int port = NetworkManager.Instance.CurrentServerPort;
 
             // Hàm ConnectAsync sẽ tự trả về true nếu đã kết nối rồi
-            bool isConnected = await NetworkManager.Instance.ConnectAsync(defaultIp, 9000);
+            bool isConnected = await NetworkManager.Instance.ConnectAsync(serverIp, port);
 
             if (!isConnected)
             {
