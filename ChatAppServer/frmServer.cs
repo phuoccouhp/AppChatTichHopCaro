@@ -107,6 +107,64 @@ namespace ChatAppServer
             Application.Restart();
         }
 
+        private void btnOpenFirewall_Click(object sender, EventArgs e)
+        {
+            var result = MessageBox.Show(
+                "Mở port 9000 trên Windows Firewall?\n\n" +
+                "Điều này cho phép các máy khác trong mạng kết nối đến Server.\n" +
+                "Yêu cầu quyền Administrator (sẽ hiện hộp thoại UAC).",
+                "Mở Firewall",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                try
+                {
+                    btnOpenFirewall.Enabled = false;
+                    btnOpenFirewall.Text = "Đang mở...";
+
+                    bool success = FirewallHelper.OpenPortAsAdmin(PORT, "ChatAppServer");
+
+                    if (success)
+                    {
+                        Logger.Success($"✓ Đã mở port {PORT} trên Windows Firewall thành công!");
+                        btnOpenFirewall.Text = "✓ Đã mở";
+                        btnOpenFirewall.BackColor = Color.Green;
+                        
+                        MessageBox.Show(
+                            $"Đã mở port {PORT} thành công!\n\n" +
+                            "Bây giờ các máy khác có thể kết nối đến Server.\n" +
+                            "Hãy đảm bảo cả hai máy cùng một mạng WiFi.",
+                            "Thành công",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        throw new Exception("Không thể mở port. Có thể bạn đã từ chối UAC.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Lỗi mở Firewall: {ex.Message}");
+                    btnOpenFirewall.Text = "🔓 Mở Firewall";
+                    btnOpenFirewall.Enabled = true;
+                    
+                    MessageBox.Show(
+                        $"Lỗi: {ex.Message}\n\n" +
+                        "Bạn có thể mở Firewall thủ công:\n" +
+                        "1. Mở Windows Defender Firewall\n" +
+                        "2. Chọn 'Inbound Rules' → 'New Rule'\n" +
+                        "3. Chọn 'Port' → TCP → Port 9000\n" +
+                        "4. Cho phép kết nối (Allow)",
+                        "Lỗi mở Firewall",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+            }
+        }
+
         #region Xử lý Menu Chuột Phải
 
         // Khi nhấn chuột phải, tự động chọn dòng đó

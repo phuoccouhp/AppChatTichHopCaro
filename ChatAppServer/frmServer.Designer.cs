@@ -30,6 +30,7 @@
         {
             this.btnStart = new System.Windows.Forms.Button();
             this.btnStop = new System.Windows.Forms.Button();
+            this.btnOpenFirewall = new System.Windows.Forms.Button();
             this.rtbLog = new System.Windows.Forms.RichTextBox();
             this.lstUsers = new System.Windows.Forms.ListBox();
             this.lblStatus = new System.Windows.Forms.Label();
@@ -49,13 +50,26 @@
             // btnStop
             // 
             this.btnStop.Enabled = false;
-            this.btnStop.Location = new System.Drawing.Point(151, 12);
+            this.btnStop.Location = new System.Drawing.Point(121, 12);
             this.btnStop.Name = "btnStop";
-            this.btnStop.Size = new System.Drawing.Size(103, 60);
+            this.btnStop.Size = new System.Drawing.Size(103, 55);
             this.btnStop.TabIndex = 1;
             this.btnStop.Text = "Stop Server";
             this.btnStop.UseVisualStyleBackColor = true;
             this.btnStop.Click += new System.EventHandler(this.btnStop_Click);
+            // 
+            // btnOpenFirewall
+            // 
+            this.btnOpenFirewall.BackColor = System.Drawing.Color.Orange;
+            this.btnOpenFirewall.ForeColor = System.Drawing.Color.White;
+            this.btnOpenFirewall.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Bold);
+            this.btnOpenFirewall.Location = new System.Drawing.Point(460, 12);
+            this.btnOpenFirewall.Name = "btnOpenFirewall";
+            this.btnOpenFirewall.Size = new System.Drawing.Size(130, 55);
+            this.btnOpenFirewall.TabIndex = 6;
+            this.btnOpenFirewall.Text = "🔓 Mở Firewall";
+            this.btnOpenFirewall.UseVisualStyleBackColor = false;
+            this.btnOpenFirewall.Click += new System.EventHandler(this.btnOpenFirewall_Click);
             // 
             // rtbLog
             // 
@@ -105,6 +119,7 @@
             this.ClientSize = new System.Drawing.Size(800, 450);
             this.Controls.Add(this.btnStart);
             this.Controls.Add(this.btnStop);
+            this.Controls.Add(this.btnOpenFirewall);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.lblServerIP);
             this.Controls.Add(this.rtbLog);
@@ -121,6 +136,7 @@
 
         private System.Windows.Forms.Button btnStart;
         private System.Windows.Forms.Button btnStop;
+        private System.Windows.Forms.Button btnOpenFirewall;
         private System.Windows.Forms.RichTextBox rtbLog;
         private System.Windows.Forms.ListBox lstUsers;
         private System.Windows.Forms.Label lblStatus;
