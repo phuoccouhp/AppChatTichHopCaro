@@ -1,7 +1,9 @@
 ﻿#pragma warning disable SYSLIB0011 // Tắt cảnh báo BinaryFormatter
 using ChatApp.Shared;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -86,16 +88,28 @@ namespace ChatAppServer
 
                 case UpdateProfilePacket p: HandleUpdateProfile(p); break;
 
+                case ChatHistoryRequestPacket p: HandleChatHistoryRequest(p); break;
+
                 case TextPacket p:
                     Logger.Info($"[Chat] {p.SenderID} -> {p.ReceiverID}: {p.MessageContent}");
+                    // Lưu tin nhắn vào database
+                    DatabaseManager.Instance.SaveMessage(p.SenderID, p.ReceiverID, p.MessageContent, "Text", null);
                     _server.RelayPrivatePacket(p.ReceiverID, p);
                     break;
                 case FilePacket p:
                     Logger.Info($"[File] {p.SenderID} -> {p.ReceiverID}: {p.FileName}");
+                    // Lưu file vào database (lưu tên file, không lưu dữ liệu file)
+                    string fileMessage = p.IsImage ? $"Đã gửi ảnh: {p.FileName}" : $"Đã gửi file: {p.FileName}";
+                    DatabaseManager.Instance.SaveMessage(p.SenderID, p.ReceiverID, fileMessage, p.IsImage ? "Image" : "File", p.FileName);
                     _server.RelayPrivatePacket(p.ReceiverID, p);
                     break;
                 case GameInvitePacket p:
                     Logger.Info($"[Game] {p.SenderID} mời {p.ReceiverID}");
+                    // Lưu game invite vào database
+                    string inviteMessage = $"{p.SenderName} mời bạn chơi Caro";
+                    int messageId = DatabaseManager.Instance.SaveMessage(p.SenderID, p.ReceiverID, inviteMessage, "GameInvite", "Caro");
+                    // Lưu MessageID vào một dictionary để có thể cập nhật sau
+                    _server.StoreGameInviteMessageId(p.SenderID, p.ReceiverID, messageId);
                     _server.RelayPrivatePacket(p.ReceiverID, p);
                     break;
                 case GameResponsePacket p: _server.ProcessGameResponse(p); break;
@@ -114,6 +128,11 @@ namespace ChatAppServer
 
                 case TankInvitePacket p:
                     Logger.Info($"[Tank Game] {p.SenderID} mời {p.ReceiverID}");
+                    // Lưu tank invite vào database
+                    string tankInviteMessage = $"{p.SenderName} mời bạn chơi Tank Game";
+                    int tankMessageId = DatabaseManager.Instance.SaveMessage(p.SenderID, p.ReceiverID, tankInviteMessage, "GameInvite", "Tank");
+                    // Lưu MessageID vào một dictionary để có thể cập nhật sau
+                    _server.StoreGameInviteMessageId(p.SenderID, p.ReceiverID, tankMessageId);
                     _server.RelayPrivatePacket(p.ReceiverID, p);
                     break;
                 case TankResponsePacket p: _server.ProcessTankResponse(p); break;
@@ -207,6 +226,45 @@ namespace ChatAppServer
             _server.BroadcastPacket(p, null);
         }
 
+        private void HandleChatHistoryRequest(ChatHistoryRequestPacket p)
+        {
+            try
+            {
+                // Lấy lịch sử chat từ database
+                var messages = DatabaseManager.Instance.GetChatHistory(p.UserID, p.FriendID, p.Limit);
+                
+                // Convert sang ChatHistoryMessage
+                var response = new ChatHistoryResponsePacket
+                {
+                    Success = true,
+                    Message = "Lấy lịch sử chat thành công",
+                    Messages = messages.Select(m => new ChatHistoryMessage
+                    {
+                        MessageID = m.MessageID,
+                        SenderID = m.SenderID ?? "",
+                        ReceiverID = m.ReceiverID ?? "",
+                        MessageContent = m.MessageContent ?? "",
+                        MessageType = m.MessageType,
+                        FileName = m.FileName,
+                        CreatedAt = m.CreatedAt
+                    }).ToList()
+                };
+                
+                SendPacket(response);
+                Logger.Info($"[Chat History] {p.UserID} đã lấy lịch sử chat với {p.FriendID} ({messages.Count} tin nhắn)");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Lỗi lấy lịch sử chat", ex);
+                SendPacket(new ChatHistoryResponsePacket
+                {
+                    Success = false,
+                    Message = "Lỗi khi lấy lịch sử chat: " + ex.Message,
+                    Messages = new List<ChatHistoryMessage>()
+                });
+            }
+        }
+
         private void HandleLogin(LoginPacket p)
         {
             // Hỗ trợ đăng nhập bằng username hoặc email
@@ -254,8 +312,10 @@ namespace ChatAppServer
                 { 
                     lock (_stream) 
                     { 
+                        Logger.Info($"[ClientHandler] Sending packet {packet.GetType().Name} to {(UserID ?? "unknown")} ");
                         _formatter.Serialize(_stream, packet);
                         _stream.Flush(); // Đảm bảo dữ liệu được gửi ngay lập tức
+                        Logger.Info($"[ClientHandler] Sent packet {packet.GetType().Name} to {(UserID ?? "unknown")} ");
                     } 
                 }
                 catch (Exception ex) { Logger.Error($"Gửi thất bại cho {UserID}", ex); Close(); }

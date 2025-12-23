@@ -175,7 +175,7 @@ namespace ChatAppClient.Forms
             txtServerIP.Padding = new Padding(13, 8, 13, 8);
             txtServerIP.PlaceholderText = "127.0.0.1";
             txtServerIP.Size = new Size(467, 69);
-            txtServerIP.TabIndex = 4;
+            txtServerIP.TabIndex = 1;
             // 
             // rdoUsername
             // 
@@ -187,7 +187,7 @@ namespace ChatAppClient.Forms
             rdoUsername.Location = new Point(101, 220);
             rdoUsername.Name = "rdoUsername";
             rdoUsername.Size = new Size(88, 23);
-            rdoUsername.TabIndex = 11;
+            rdoUsername.TabIndex = 2;
             rdoUsername.TabStop = true;
             rdoUsername.Text = "Username";
             rdoUsername.UseVisualStyleBackColor = false;
@@ -202,7 +202,7 @@ namespace ChatAppClient.Forms
             rdoEmail.Location = new Point(220, 220);
             rdoEmail.Name = "rdoEmail";
             rdoEmail.Size = new Size(58, 23);
-            rdoEmail.TabIndex = 12;
+            rdoEmail.TabIndex = 3;
             rdoEmail.Text = "Email";
             rdoEmail.UseVisualStyleBackColor = false;
             rdoEmail.CheckedChanged += RdoLoginType_CheckedChanged;

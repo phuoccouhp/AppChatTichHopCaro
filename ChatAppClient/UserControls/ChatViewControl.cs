@@ -54,6 +54,140 @@ namespace ChatAppClient.UserControls
             btnStartGame.ContextMenuStrip = gameMenu;
 
             LoadEmojis();
+            
+            // Load lịch sử chat từ database
+            LoadChatHistory();
+        }
+
+        private async void LoadChatHistory()
+        {
+            if (string.IsNullOrEmpty(_myId) || string.IsNullOrEmpty(_friendId))
+                return;
+
+            try
+            {
+                var response = await NetworkManager.Instance.RequestChatHistoryAsync(_friendId, 100);
+                
+                if (response.Success && response.Messages != null && response.Messages.Count > 0)
+                {
+                    // Hiển thị lịch sử chat (từ cũ đến mới)
+                    foreach (var msg in response.Messages)
+                    {
+                        if (msg.MessageType == "GameInvite")
+                        {
+                            // Xử lý game invite message
+                            bool isOutgoing = msg.SenderID == _myId;
+                            string senderName = isOutgoing ? NetworkManager.Instance.UserName ?? "Bạn" : _friendName;
+                            GameType gameType = msg.FileName == "Tank" ? GameType.Tank : GameType.Caro;
+                            
+                            var invite = new GameInvitePacket 
+                            { 
+                                SenderID = msg.SenderID, 
+                                SenderName = senderName, 
+                                ReceiverID = msg.ReceiverID 
+                            };
+                            
+                            var bubble = new GameInviteBubble();
+                            bubble.SetInvite(senderName, isOutgoing ? MessageType.Outgoing : MessageType.Incoming, gameType, msg.MessageID);
+                            
+                            // Kiểm tra xem có status trong message content không (đã được cập nhật)
+                            string content = msg.MessageContent ?? "";
+                            if (content.Contains("✓ Đã chấp nhận"))
+                            {
+                                bubble.UpdateStatus(GameInviteStatus.Accepted);
+                            }
+                            else if (content.Contains("✗ Đã từ chối"))
+                            {
+                                bubble.UpdateStatus(GameInviteStatus.Declined);
+                            }
+                            
+                            // Lưu bubble để có thể cập nhật sau
+                            string key = isOutgoing ? _friendId : msg.SenderID;
+                            if (!_gameInviteBubbles.ContainsKey(key))
+                            {
+                                _gameInviteBubbles[key] = bubble;
+                            }
+                            
+                            // Chỉ cho phép response nếu là incoming và chưa có response
+                            if (!isOutgoing && bubble.Status == GameInviteStatus.Pending)
+                            {
+                                bubble.OnResponse += (s, accepted) =>
+                                {
+                                    string? myId = NetworkManager.Instance.UserID;
+                                    if (myId != null)
+                                    {
+                                        if (gameType == GameType.Caro)
+                                        {
+                                            NetworkManager.Instance.SendPacket(new GameResponsePacket 
+                                            { 
+                                                SenderID = myId, 
+                                                ReceiverID = msg.SenderID, 
+                                                Accepted = accepted 
+                                            });
+                                        }
+                                        else
+                                        {
+                                            NetworkManager.Instance.SendPacket(new TankResponsePacket
+                                            {
+                                                SenderID = myId,
+                                                ReceiverID = msg.SenderID,
+                                                Accepted = accepted
+                                            });
+                                        }
+                                    }
+                                    bubble.UpdateStatus(accepted ? GameInviteStatus.Accepted : GameInviteStatus.Declined);
+                                };
+                            }
+                            
+                            flpMessages.Controls.Add(bubble);
+                        }
+                        else if (msg.SenderID == _myId)
+                        {
+                            // Tin nhắn của mình
+                            if (msg.MessageType == "Text")
+                            {
+                                AddMessage(msg.MessageContent ?? "", MessageType.Outgoing);
+                            }
+                            else if (msg.MessageType == "Image" || msg.MessageType == "File")
+                            {
+                                // File/Image - chỉ hiển thị thông báo vì không có dữ liệu file
+                                string displayText = msg.MessageType == "Image" 
+                                    ? $"Đã gửi ảnh: {msg.FileName}" 
+                                    : $"Đã gửi file: {msg.FileName}";
+                                AddMessage(displayText, MessageType.Outgoing);
+                            }
+                        }
+                        else
+                        {
+                            // Tin nhắn từ bạn
+                            if (msg.MessageType == "Text")
+                            {
+                                AddMessage(msg.MessageContent ?? "", MessageType.Incoming);
+                            }
+                            else if (msg.MessageType == "Image" || msg.MessageType == "File")
+                            {
+                                // File/Image - chỉ hiển thị thông báo
+                                string displayText = msg.MessageType == "Image" 
+                                    ? $"Đã nhận ảnh: {msg.FileName}" 
+                                    : $"Đã nhận file: {msg.FileName}";
+                                AddMessage(displayText, MessageType.Incoming);
+                            }
+                        }
+                    }
+                    
+                    // Scroll xuống cuối để xem tin nhắn mới nhất
+                    if (flpMessages.Controls.Count > 0)
+                    {
+                        var lastControl = flpMessages.Controls[flpMessages.Controls.Count - 1];
+                        ScrollToBottom(lastControl);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Không hiển thị lỗi, chỉ log
+                System.Diagnostics.Debug.WriteLine($"Lỗi load lịch sử chat: {ex.Message}");
+            }
         }
 
         #region == GỬI TIN (TEXT, FILE, GAME) ==
@@ -108,7 +242,8 @@ namespace ChatAppClient.UserControls
                 {
                     btnStartGame.Enabled = false;
                     btnStartGame.Text = "...";
-                    MessageBox.Show($"Đã gửi lời mời chơi Caro đến {_friendName}!\nĐang chờ phản hồi...", "Thông báo");
+                    // Hiển thị game invite như tin nhắn
+                    ReceiveGameInvite(invite, GameType.Caro, MessageType.Outgoing);
                 }
                 else
                 {
@@ -144,7 +279,9 @@ namespace ChatAppClient.UserControls
                 {
                     btnStartGame.Enabled = false;
                     btnStartGame.Text = "...";
-                    MessageBox.Show($"Đã gửi lời mời chơi Tank Game đến {_friendName}!\nĐang chờ phản hồi...", "Thông báo");
+                    // Hiển thị game invite như tin nhắn
+                    var gameInvite = new GameInvitePacket { SenderID = _myId, SenderName = senderName, ReceiverID = _friendId };
+                    ReceiveGameInvite(gameInvite, GameType.Tank, MessageType.Outgoing);
                 }
                 else
                 {
@@ -314,6 +451,107 @@ namespace ChatAppClient.UserControls
         private void Bubble_OnForwardTextRequested(object? sender, string message)
         {
             ShowForwardDialog(message, null, null);
+        }
+
+        // Dictionary để lưu game invite bubbles theo senderID để có thể cập nhật sau
+        private Dictionary<string, GameInviteBubble> _gameInviteBubbles = new Dictionary<string, GameInviteBubble>();
+
+        public void ReceiveGameInvite(GameInvitePacket invite, GameType gameType, MessageType type)
+        {
+            if (_parentForm != null && _parentForm.InvokeRequired)
+            {
+                _parentForm.Invoke(new Action(() => ReceiveGameInvite(invite, gameType, type)));
+                return;
+            }
+
+            int usableWidth = GetUsableWidth();
+            var bubble = new GameInviteBubble();
+            string senderName = type == MessageType.Outgoing ? NetworkManager.Instance.UserName ?? "Bạn" : invite.SenderName;
+            bubble.SetInvite(senderName, type, gameType);
+            
+            // Lưu bubble để có thể cập nhật sau
+            string key = type == MessageType.Outgoing ? _friendId : invite.SenderID;
+            if (!_gameInviteBubbles.ContainsKey(key))
+            {
+                _gameInviteBubbles[key] = bubble;
+            }
+            else
+            {
+                // Nếu đã có bubble cũ, xóa nó
+                var oldBubble = _gameInviteBubbles[key];
+                if (flpMessages.Controls.Contains(oldBubble))
+                {
+                    flpMessages.Controls.Remove(oldBubble);
+                }
+                _gameInviteBubbles[key] = bubble;
+            }
+
+            // Xử lý sự kiện response
+            if (type == MessageType.Incoming)
+            {
+                bubble.OnResponse += (s, accepted) =>
+                {
+                    string? myId = NetworkManager.Instance.UserID;
+                    if (myId != null)
+                    {
+                        if (gameType == GameType.Caro)
+                        {
+                            NetworkManager.Instance.SendPacket(new GameResponsePacket 
+                            { 
+                                SenderID = myId, 
+                                ReceiverID = invite.SenderID, 
+                                Accepted = accepted 
+                            });
+                        }
+                        else
+                        {
+                            NetworkManager.Instance.SendPacket(new TankResponsePacket
+                            {
+                                SenderID = myId,
+                                ReceiverID = invite.SenderID,
+                                Accepted = accepted
+                            });
+                        }
+                    }
+                    // Cập nhật bubble ngay lập tức
+                    bubble.UpdateStatus(accepted ? GameInviteStatus.Accepted : GameInviteStatus.Declined);
+                };
+            }
+
+            flpMessages.Controls.Add(bubble);
+            ScrollToBottom(bubble);
+        }
+
+        public void UpdateGameInviteStatus(string senderID, bool accepted, GameType gameType)
+        {
+            if (_parentForm != null && _parentForm.InvokeRequired)
+            {
+                _parentForm.Invoke(new Action(() => UpdateGameInviteStatus(senderID, accepted, gameType)));
+                return;
+            }
+
+            Logger.Info($"[ChatViewControl] UpdateGameInviteStatus called for senderID={senderID}, accepted={accepted}");
+
+            // Tìm bubble tương ứng
+            if (_gameInviteBubbles.TryGetValue(senderID, out var bubble))
+            {
+                Logger.Info($"[ChatViewControl] Found invite bubble by key={senderID}");
+                bubble.UpdateStatus(accepted ? GameInviteStatus.Accepted : GameInviteStatus.Declined);
+            }
+            else
+            {
+                Logger.Info($"[ChatViewControl] Invite bubble not found by key={senderID}, searching all controls...");
+                // Nếu không tìm thấy, tìm trong tất cả các controls
+                foreach (Control ctrl in flpMessages.Controls)
+                {
+                    if (ctrl is GameInviteBubble gameBubble)
+                    {
+                        Logger.Info($"[ChatViewControl] Found invite bubble in controls, updating status");
+                        gameBubble.UpdateStatus(accepted ? GameInviteStatus.Accepted : GameInviteStatus.Declined);
+                        break;
+                    }
+                }
+            }
         }
 
         #endregion

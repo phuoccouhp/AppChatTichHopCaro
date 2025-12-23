@@ -32,7 +32,9 @@ namespace ChatAppClient.Forms
         // Các biến Task/Event để xử lý phản hồi
         private TaskCompletionSource<LoginResultPacket>? _loginCompletionSource;
         private TaskCompletionSource<RegisterResultPacket>? _registerCompletionSource;
+        private TaskCompletionSource<ChatHistoryResponsePacket>? _chatHistoryCompletionSource;
         public event Action<ForgotPasswordResultPacket>? OnForgotPasswordResult; // Sự kiện quên mật khẩu
+        public event Action<ChatHistoryResponsePacket>? OnChatHistoryReceived; // Sự kiện nhận lịch sử chat
 
         private CancellationTokenSource? _listeningCts;
         private readonly object _loginLock = new object(); // Lock cho thread safety
@@ -155,6 +157,11 @@ namespace ChatAppClient.Forms
                     
                     if (receivedPacket != null)
                     {
+                        // Log receipt of certain packets for debugging
+                        if (receivedPacket is GameResponsePacket grp)
+                        {
+                            Logger.Info($"[NetworkManager] Received GameResponsePacket: Sender={grp.SenderID}, Receiver={grp.ReceiverID}, Accepted={grp.Accepted}");
+                        }
                         HandlePacket(receivedPacket);
                     }
                 }
@@ -220,6 +227,17 @@ namespace ChatAppClient.Forms
                 if (packet is ForgotPasswordResultPacket pForgot)
                 {
                     OnForgotPasswordResult?.Invoke(pForgot);
+                    return; // QUAN TRỌNG: Return ngay
+                }
+
+                // 2.5. Gói tin Lịch sử Chat (Dùng TaskCompletionSource và Event)
+                if (packet is ChatHistoryResponsePacket pChatHistory)
+                {
+                    if (_chatHistoryCompletionSource != null && !_chatHistoryCompletionSource.Task.IsCompleted)
+                    {
+                        _chatHistoryCompletionSource.TrySetResult(pChatHistory);
+                    }
+                    OnChatHistoryReceived?.Invoke(pChatHistory);
                     return; // QUAN TRỌNG: Return ngay
                 }
 
@@ -350,6 +368,52 @@ namespace ChatAppClient.Forms
             var resultTask = _registerCompletionSource.Task;
             if (await Task.WhenAny(resultTask, timeoutTask) == resultTask) return await resultTask;
             else throw new TimeoutException("Không nhận được phản hồi đăng ký.");
+        }
+
+        public async Task<ChatHistoryResponsePacket> RequestChatHistoryAsync(string friendID, int limit = 100)
+        {
+            if (_client == null || !_client.Connected || _stream == null) 
+                throw new InvalidOperationException("Chưa kết nối.");
+            
+            if (string.IsNullOrEmpty(UserID))
+                throw new InvalidOperationException("Chưa đăng nhập.");
+
+            _chatHistoryCompletionSource = new TaskCompletionSource<ChatHistoryResponsePacket>();
+            
+            var request = new ChatHistoryRequestPacket
+            {
+                UserID = UserID,
+                FriendID = friendID,
+                Limit = limit
+            };
+            
+            if (!SendPacket(request))
+            {
+                _chatHistoryCompletionSource = null;
+                throw new InvalidOperationException("Không thể gửi yêu cầu lịch sử chat.");
+            }
+            
+            try
+            {
+                var timeoutTask = Task.Delay(10000);
+                var resultTask = _chatHistoryCompletionSource.Task;
+                var completedTask = await Task.WhenAny(resultTask, timeoutTask);
+                
+                if (resultTask.IsCompleted)
+                {
+                    var result = await resultTask;
+                    _chatHistoryCompletionSource = null;
+                    return result;
+                }
+                
+                _chatHistoryCompletionSource = null;
+                throw new TimeoutException("Không nhận được lịch sử chat sau 10 giây.");
+            }
+            catch (TaskCanceledException)
+            {
+                _chatHistoryCompletionSource = null;
+                throw new InvalidOperationException("Yêu cầu lịch sử chat bị hủy.");
+            }
         }
 
         // *** HÀM QUAN TRỌNG ĐÃ SỬA: Trả về bool ***

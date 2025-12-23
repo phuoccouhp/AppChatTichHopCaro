@@ -368,22 +368,60 @@ namespace ChatAppClient.Forms
         {
             if (this.InvokeRequired) { this.Invoke(new Action(() => HandleIncomingGameInvite(invite))); return; }
 
-            DialogResult result = MessageBox.Show($"{invite.SenderName} muốn thách đấu Caro. Đồng ý?", "Lời Mời", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            string? myId = NetworkManager.Instance.UserID;
-            if (myId != null)
+            // Hiển thị game invite như tin nhắn trong chat
+            ChatViewControl chatControl;
+            if (!openChatControls.TryGetValue(invite.SenderID, out chatControl))
             {
-                NetworkManager.Instance.SendPacket(new GameResponsePacket { SenderID = myId, ReceiverID = invite.SenderID, Accepted = (result == DialogResult.Yes) });
+                string senderName = invite.SenderName;
+                FriendListItem friendItem = null;
+                foreach (Control ctrl in flpFriendsList.Controls) 
+                { 
+                    if (ctrl is FriendListItem item && item.FriendID == invite.SenderID) 
+                    { 
+                        senderName = item.FriendName; 
+                        friendItem = item; 
+                        break; 
+                    } 
+                }
+
+                chatControl = new ChatViewControl(invite.SenderID, senderName, this) 
+                { 
+                    Name = invite.SenderID, 
+                    Dock = DockStyle.Fill, 
+                    Visible = false 
+                };
+                openChatControls.Add(invite.SenderID, chatControl);
+                pnlMain.Controls.Add(chatControl);
+            }
+            chatControl.ReceiveGameInvite(invite, GameType.Caro, MessageType.Incoming);
+
+            if (_currentChatControl == null || _currentChatControl.Name != invite.SenderID)
+            {
+                FriendListItem itemToAlert = null;
+                foreach (Control ctrl in flpFriendsList.Controls) 
+                { 
+                    if (ctrl is FriendListItem item && item.FriendID == invite.SenderID) 
+                    { 
+                        itemToAlert = item; 
+                        break; 
+                    } 
+                }
+                itemToAlert?.SetNewMessageAlert(true);
             }
         }
 
         public void HandleGameResponse(GameResponsePacket packet)
         {
             if (this.InvokeRequired) { this.Invoke(new Action(() => HandleGameResponse(packet))); return; }
-            
-            // Tìm chat control của người nhận lời mời (người gửi response)
-            // packet.SenderID là người phản hồi, packet.ReceiverID là người gửi lời mời
-            if (openChatControls.TryGetValue(packet.ReceiverID, out var chatControl))
+
+            // packet.SenderID là người phản hồi (invitee), packet.ReceiverID là người đã gửi lời mời (inviter)
+            // Tại client của inviter, cần tìm chat control theo ID của người trả lời (senderID) vì chat controls được key bởi friend ID
+            string chatKey = packet.SenderID; // responder ID
+            if (openChatControls.TryGetValue(chatKey, out var chatControl))
             {
+                // Cập nhật game invite bubble trong chat
+                chatControl.UpdateGameInviteStatus(packet.SenderID, packet.Accepted, GameType.Caro);
+
                 if (!packet.Accepted)
                 {
                     chatControl.HandleGameInviteDeclined();
@@ -392,6 +430,14 @@ namespace ChatAppClient.Forms
                 {
                     // Nếu chấp nhận, reset button để chờ GameStartPacket
                     chatControl.ResetGameButton();
+                }
+            }
+            else
+            {
+                // Nếu chat control chưa mở (không có), vẫn có thể notify bằng MessageBox
+                if (!packet.Accepted)
+                {
+                    MessageBox.Show($"Lời mời của bạn đã bị từ chối bởi {packet.SenderID}.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
         }
@@ -466,22 +512,53 @@ namespace ChatAppClient.Forms
         {
             if (this.InvokeRequired) { this.Invoke(new Action(() => HandleTankInvite(packet))); return; }
             
-            DialogResult result = MessageBox.Show(
-                $"{packet.SenderName} mời bạn chơi Tank Game. Bạn có muốn chơi không?",
-                "Lời mời chơi Tank Game",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
-
-            string? myId = NetworkManager.Instance.UserID;
-            if (myId != null)
+            // Hiển thị tank invite như tin nhắn trong chat
+            ChatViewControl chatControl;
+            if (!openChatControls.TryGetValue(packet.SenderID, out chatControl))
             {
-                var response = new TankResponsePacket
-                {
-                    SenderID = myId,
-                    ReceiverID = packet.SenderID,
-                    Accepted = (result == DialogResult.Yes)
+                string senderName = packet.SenderName;
+                FriendListItem friendItem = null;
+                foreach (Control ctrl in flpFriendsList.Controls) 
+                { 
+                    if (ctrl is FriendListItem item && item.FriendID == packet.SenderID) 
+                    { 
+                        senderName = item.FriendName; 
+                        friendItem = item; 
+                        break; 
+                    } 
+                }
+
+                chatControl = new ChatViewControl(packet.SenderID, senderName, this) 
+                { 
+                    Name = packet.SenderID, 
+                    Dock = DockStyle.Fill, 
+                    Visible = false 
                 };
-                NetworkManager.Instance.SendPacket(response);
+                openChatControls.Add(packet.SenderID, chatControl);
+                pnlMain.Controls.Add(chatControl);
+            }
+            
+            // Tạo GameInvitePacket tương đương để sử dụng cùng logic
+            var invite = new GameInvitePacket 
+            { 
+                SenderID = packet.SenderID, 
+                SenderName = packet.SenderName, 
+                ReceiverID = packet.ReceiverID 
+            };
+            chatControl.ReceiveGameInvite(invite, GameType.Tank, MessageType.Incoming);
+
+            if (_currentChatControl == null || _currentChatControl.Name != packet.SenderID)
+            {
+                FriendListItem itemToAlert = null;
+                foreach (Control ctrl in flpFriendsList.Controls) 
+                { 
+                    if (ctrl is FriendListItem item && item.FriendID == packet.SenderID) 
+                    { 
+                        itemToAlert = item; 
+                        break; 
+                    } 
+                }
+                itemToAlert?.SetNewMessageAlert(true);
             }
         }
 
@@ -493,6 +570,9 @@ namespace ChatAppClient.Forms
             // packet.SenderID là người phản hồi, packet.ReceiverID là người gửi lời mời
             if (openChatControls.TryGetValue(packet.ReceiverID, out var chatControl))
             {
+                // Cập nhật game invite bubble trong chat
+                chatControl.UpdateGameInviteStatus(packet.SenderID, packet.Accepted, GameType.Tank);
+                
                 if (!packet.Accepted)
                 {
                     chatControl.HandleGameInviteDeclined();
