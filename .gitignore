@@ -1,1 +1,4 @@
 *.vsidx
+
+# Cấu hình local - mỗi máy tự cấu hình riêng
+ChatAppServer/appsettings.json

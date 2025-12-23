@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using System.IO;
+using System.Windows.Forms;
 
 namespace ChatAppServer
 {
@@ -10,6 +11,8 @@ namespace ChatAppServer
     public static class AppConfig
     {
         private static IConfiguration? _configuration;
+        private static readonly string AppSettingsPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
+        private static readonly string ExamplePath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.example.json");
 
         /// <summary>
         /// Khởi tạo configuration từ file appsettings.json
@@ -17,11 +20,62 @@ namespace ChatAppServer
         /// </summary>
         public static void Initialize()
         {
+            // Kiểm tra nếu chưa có appsettings.json
+            if (!File.Exists(AppSettingsPath))
+            {
+                // Nếu có file example thì copy
+                if (File.Exists(ExamplePath))
+                {
+                    File.Copy(ExamplePath, AppSettingsPath);
+                    MessageBox.Show(
+                        "Đã tạo file appsettings.json từ template.\n\n" +
+                        "Vui lòng mở file appsettings.json và sửa Data Source phù hợp với máy của bạn:\n\n" +
+                        "• SQL Server mặc định: localhost\n" +
+                        "• SQL Express: localhost\\SQLEXPRESS\n" +
+                        "• LocalDB: (localdb)\\MSSQLLocalDB\n\n" +
+                        "Sau đó khởi động lại ứng dụng.",
+                        "Cấu hình Database",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
+                else
+                {
+                    // Tạo file mặc định với SQLEXPRESS (phổ biến nhất)
+                    CreateDefaultConfig();
+                    MessageBox.Show(
+                        "Đã tạo file appsettings.json với cấu hình mặc định (SQL Express).\n\n" +
+                        "Nếu máy bạn dùng SQL Server khác, vui lòng sửa Data Source trong file appsettings.json:\n\n" +
+                        "• SQL Server mặc định: localhost\n" +
+                        "• SQL Express: localhost\\SQLEXPRESS\n" +
+                        "• LocalDB: (localdb)\\MSSQLLocalDB\n\n" +
+                        "Sau đó khởi động lại ứng dụng.",
+                        "Cấu hình Database",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
+            }
+
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
             _configuration = builder.Build();
+        }
+
+        /// <summary>
+        /// Tạo file cấu hình mặc định (SQL Express - phổ biến nhất)
+        /// </summary>
+        private static void CreateDefaultConfig()
+        {
+            string defaultConfig = @"{
+  ""ConnectionStrings"": {
+    ""ChatAppDB"": ""Data Source=localhost\\SQLEXPRESS;Initial Catalog=ChatAppDB;Integrated Security=True""
+  },
+  ""AppSettings"": {
+    ""ServerPort"": 9000
+  }
+}";
+            File.WriteAllText(AppSettingsPath, defaultConfig);
         }
 
         /// <summary>
@@ -82,4 +136,3 @@ namespace ChatAppServer
         }
     }
 }
-
