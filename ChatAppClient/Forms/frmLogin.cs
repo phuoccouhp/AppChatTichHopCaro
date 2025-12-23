@@ -70,7 +70,11 @@ namespace ChatAppClient.Forms
                     "Lấy IP từ máy chủ:\n" +
                     "- Mở form Server\n" +
                     "- Nhấn Start Server\n" +
-                    "- Xem IP hiển thị trên form", 
+                    "- Xem IP hiển thị trên form\n\n" +
+                    "LƯU Ý:\n" +
+                    "- KHÔNG nhập 127.0.0.1 (chỉ dùng khi cùng máy)\n" +
+                    "- KHÔNG nhập IP Gateway (router IP)\n" +
+                    "- Phải là IP WiFi của máy Server", 
                     "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -99,12 +103,61 @@ namespace ChatAppClient.Forms
 
                 if (!connected)
                 {
-                    throw new Exception($"Không thể kết nối đến server tại {serverIp}:9000.\n\n" +
-                        "Vui lòng kiểm tra:\n" +
-                        "1. Địa chỉ IP có đúng không?\n" +
-                        "2. Server đã khởi động chưa?\n" +
-                        "3. Cả hai máy có cùng mạng không?\n" +
-                        "4. Firewall có chặn port 9000 không?");
+                    // Kiểm tra xem có ping được không
+                    bool canPing = false;
+                    try
+                    {
+                        using (var ping = new System.Net.NetworkInformation.Ping())
+                        {
+                            var reply = ping.Send(serverIp, 3000);
+                            canPing = (reply.Status == System.Net.NetworkInformation.IPStatus.Success);
+                        }
+                    }
+                    catch { }
+
+                    string helpText = $"Không thể kết nối đến server tại {serverIp}:9000\n\n";
+                    
+                    if (!canPing)
+                    {
+                        helpText += "🔴 KHÔNG PING ĐƯỢC - HAI MÁY KHÔNG CÙNG MẠNG!\n\n" +
+                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                            "NGUYÊN NHÂN:\n" +
+                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                            "• Hai máy KHÔNG cùng mạng WiFi\n" +
+                            "• Khác subnet (IP khác lớp)\n" +
+                            "• Router có AP Isolation\n\n" +
+                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                            "GIẢI PHÁP (Thử theo thứ tự):\n" +
+                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                            "1️⃣ DÙNG MOBILE HOTSPOT (Đơn giản nhất)\n" +
+                            "   → Bật Hotspot trên điện thoại\n" +
+                            "   → Cả hai máy kết nối WiFi từ điện thoại\n" +
+                            "   → Xem lại IP mới và thử lại\n\n" +
+                            "2️⃣ KIỂM TRA CÙNG WIFI\n" +
+                            "   → Đảm bảo cả hai máy cùng tên WiFi\n" +
+                            "   → Ngắt/kết nối lại WiFi trên cả hai máy\n" +
+                            "   → Chạy ipconfig để xem IP mới\n\n" +
+                            "3️⃣ KIỂM TRA SUBNET\n" +
+                            "   → IP phải cùng subnet (3 số đầu giống)\n" +
+                            "   → Ví dụ: 192.168.1.10 và 192.168.1.20 = OK ✓\n" +
+                            "   → Ví dụ: 192.168.1.10 và 192.168.2.20 = SAI ✗\n\n" +
+                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                            "Xem file HUONG_DAN_KHAC_MANG.md để biết chi tiết!";
+                    }
+                    else
+                    {
+                        helpText += "✅ Ping được nhưng không kết nối được port 9000\n\n" +
+                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                            "KIỂM TRA:\n" +
+                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                            "□ Server đã Start chưa? (Phải thấy 'Server: Running...')\n" +
+                            "□ Firewall Server đã mở chưa? (Chạy OpenFirewall.bat)\n" +
+                            "□ Firewall Client đã mở chưa? (Chạy OpenFirewall.bat)\n" +
+                            "□ IP nhập có đúng không? (Lấy từ form Server)\n\n" +
+                            "Xem file CHECKLIST_KET_NOI.md để kiểm tra chi tiết!";
+                    }
+                    
+                    throw new Exception(helpText);
                 }
 
                 // 4. Gửi gói tin Login

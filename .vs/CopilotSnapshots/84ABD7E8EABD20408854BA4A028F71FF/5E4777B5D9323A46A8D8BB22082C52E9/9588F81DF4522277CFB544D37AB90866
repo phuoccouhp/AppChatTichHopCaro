@@ -1,0 +1,445 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
+
+namespace ChatAppServer
+{
+    /// <summary>
+    /// Helper class để mở port trên Windows Firewall và kiểm tra kết nối mạng
+    /// </summary>
+    public static class FirewallHelper
+    {
+        /// <summary>
+        /// Mở port trên Windows Firewall cho cả Inbound và Outbound
+        /// </summary>
+        public static bool OpenPort(int port, string ruleName = "ChatAppServer")
+        {
+            try
+            {
+                RunNetshCommand($"advfirewall firewall delete rule name=\"{ruleName}\"");
+                
+                string inboundResult = RunNetshCommand(
+                    $"advfirewall firewall add rule name=\"{ruleName}\" " +
+                    $"dir=in action=allow protocol=TCP localport={port} " +
+                    $"profile=any enable=yes");
+
+                string outboundResult = RunNetshCommand(
+                    $"advfirewall firewall add rule name=\"{ruleName} (Out)\" " +
+                    $"dir=out action=allow protocol=TCP localport={port} " +
+                    $"profile=any enable=yes");
+
+                Logger.Success($"Đã mở port {port} trên Windows Firewall");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Lỗi khi mở port {port} trên Firewall", ex);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Kiểm tra xem rule đã tồn tại chưa
+        /// </summary>
+        public static bool IsPortOpen(int port, string ruleName = "ChatAppServer")
+        {
+            try
+            {
+                // Kiểm tra inbound rule
+                string inboundResult = RunNetshCommand($"advfirewall firewall show rule name=\"{ruleName}\" dir=in");
+                
+                // Kiểm tra outbound rule
+                string outboundResult = RunNetshCommand($"advfirewall firewall show rule name=\"{ruleName} (Out)\" dir=out");
+                
+                // Nếu cả hai output không rỗng và chứa "Rule Name" hoặc "Tên quy tắc", rule tồn tại
+                bool inboundExists = !string.IsNullOrEmpty(inboundResult) && 
+                    (inboundResult.Contains("Rule Name") || inboundResult.Contains("Tên quy tắc"));
+                
+                bool outboundExists = !string.IsNullOrEmpty(outboundResult) && 
+                    (outboundResult.Contains("Rule Name") || outboundResult.Contains("Tên quy tắc"));
+                
+                if (inboundExists && outboundExists)
+                {
+                    Logger.Success($"✓ Firewall rule '{ruleName}' tồn tại (port {port})");
+                    return true;
+                }
+                else if (inboundExists)
+                {
+                    Logger.Warning($"⚠ Chỉ tồn tại inbound rule (thiếu outbound) cho port {port}");
+                    return true; // Vẫn coi là OK nếu inbound tồn tại
+                }
+                else if (outboundExists)
+                {
+                    Logger.Warning($"⚠ Chỉ tồn tại outbound rule (thiếu inbound) cho port {port}");
+                    return true; // Vẫn coi là OK nếu outbound tồn tại
+                }
+                
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Lỗi khi kiểm tra firewall rule: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Chạy lệnh netsh
+        /// </summary>
+        private static string RunNetshCommand(string arguments)
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = "netsh",
+                    Arguments = arguments,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+
+                using (Process process = new Process())
+                {
+                    process.StartInfo = psi;
+                    process.Start();
+                    
+                    string output = process.StandardOutput.ReadToEnd();
+                    string error = process.StandardError.ReadToEnd();
+                    
+                    bool finished = process.WaitForExit(5000); // Timeout 5 giây
+                    
+                    if (!finished)
+                    {
+                        try { process.Kill(); } catch { }
+                        Logger.Warning($"Netsh command timeout: {arguments}");
+                        return "";
+                    }
+                    
+                    if (process.ExitCode != 0 && !string.IsNullOrEmpty(error))
+                    {
+                        Logger.Warning($"Netsh command error: {error}");
+                    }
+                    
+                    return output;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Lỗi khi chạy netsh command: {ex.Message}");
+                return "";
+            }
+        }
+
+        /// <summary>
+        /// Mở port với quyền Administrator bằng cách chạy file batch
+        /// </summary>
+        public static bool OpenPortAsAdmin(int port, string ruleName = "ChatAppServer")
+        {
+            string tempBatchFile = null;
+            try
+            {
+                // Tạo file batch tạm thời - chỉ cho Private network (WiFi)
+                string batchContent = $@"@echo off
+echo Opening Firewall Port {port}...
+netsh advfirewall firewall delete rule name=""{ruleName}"" >nul 2>&1
+netsh advfirewall firewall delete rule name=""{ruleName} (Out)"" >nul 2>&1
+netsh advfirewall firewall add rule name=""{ruleName}"" dir=in action=allow protocol=TCP localport={port} profile=private,domain enable=yes
+if %errorlevel% neq 0 (
+    echo Error: Failed to add inbound rule
+    exit /b 1
+)
+netsh advfirewall firewall add rule name=""{ruleName} (Out)"" dir=out action=allow protocol=TCP localport={port} profile=private,domain enable=yes
+if %errorlevel% neq 0 (
+    echo Error: Failed to add outbound rule
+    exit /b 1
+)
+echo Success: Firewall port {port} opened successfully
+exit /b 0
+";
+                tempBatchFile = Path.Combine(Path.GetTempPath(), $"open_firewall_chatapp_{Guid.NewGuid().ToString("N").Substring(0, 8)}.bat");
+                File.WriteAllText(tempBatchFile, batchContent, System.Text.Encoding.Default); // Dùng encoding mặc định để hỗ trợ tiếng Việt
+
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = tempBatchFile,
+                    UseShellExecute = true,
+                    Verb = "runas", // Yêu cầu quyền admin (hiện UAC)
+                    CreateNoWindow = false,
+                    WindowStyle = ProcessWindowStyle.Normal
+                };
+
+                Process? process = null;
+                try
+                {
+                    process = Process.Start(psi);
+                    if (process == null)
+                    {
+                        Logger.Error("Không thể khởi động process để mở firewall. Có thể do UAC hoặc quyền truy cập.");
+                        return false;
+                    }
+
+                    // Đợi process hoàn thành với timeout 15 giây
+                    bool finished = process.WaitForExit(15000);
+                    
+                    if (!finished)
+                    {
+                        Logger.Warning("Process mở firewall timeout (quá 15 giây). Có thể đang chờ UAC.");
+                        try { process.Kill(); } catch { }
+                        return false;
+                    }
+
+                    int exitCode = process.ExitCode;
+                    
+                    // Xóa file batch tạm
+                    try 
+                    { 
+                        File.Delete(tempBatchFile);
+                        tempBatchFile = null; // Đánh dấu đã xóa
+                    } 
+                    catch (Exception delEx)
+                    {
+                        Logger.Warning($"Không thể xóa file batch tạm: {delEx.Message}");
+                    }
+                    
+                    if (exitCode == 0)
+                    {
+                        Logger.Success($"Firewall rule được tạo thành công (ExitCode: {exitCode})");
+                        return true;
+                    }
+                    else
+                    {
+                        Logger.Error($"Process mở firewall trả về mã lỗi: {exitCode}");
+                        return false;
+                    }
+                }
+                finally
+                {
+                    process?.Dispose();
+                    // Đảm bảo xóa file batch nếu chưa xóa
+                    if (tempBatchFile != null)
+                    {
+                        try { File.Delete(tempBatchFile); } catch { }
+                    }
+                }
+            }
+            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+            {
+                // User đã từ chối UAC
+                Logger.Warning("Người dùng đã từ chối yêu cầu quyền Administrator (UAC bị hủy)");
+                try { if (tempBatchFile != null) File.Delete(tempBatchFile); } catch { }
+                return false;
+            }
+            catch (System.ComponentModel.Win32Exception ex)
+            {
+                Logger.Error($"Lỗi Win32 khi mở firewall: {ex.Message} (NativeErrorCode: {ex.NativeErrorCode})");
+                try { if (tempBatchFile != null) File.Delete(tempBatchFile); } catch { }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Lỗi khi mở port với quyền Admin: {ex.GetType().Name} - {ex.Message}", ex);
+                try { if (tempBatchFile != null) File.Delete(tempBatchFile); } catch { }
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Test kết nối đến một địa chỉ IP:Port
+        /// </summary>
+        public static (bool success, string message, int latencyMs) TestConnection(string ipAddress, int port, int timeoutMs = 5000)
+        {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                using (TcpClient client = new TcpClient())
+                {
+                    var result = client.BeginConnect(ipAddress, port, null, null);
+                    bool success = result.AsyncWaitHandle.WaitOne(timeoutMs);
+                    stopwatch.Stop();
+
+                    if (success && client.Connected)
+                    {
+                        client.EndConnect(result);
+                        return (true, $"Kết nối thành công đến {ipAddress}:{port}", (int)stopwatch.ElapsedMilliseconds);
+                    }
+                    else
+                    {
+                        return (false, $"Không thể kết nối đến {ipAddress}:{port} (Timeout)", (int)stopwatch.ElapsedMilliseconds);
+                    }
+                }
+            }
+            catch (SocketException ex)
+            {
+                stopwatch.Stop();
+                string errorMsg = ex.SocketErrorCode switch
+                {
+                    SocketError.ConnectionRefused => "Port đang đóng hoặc không có service lắng nghe",
+                    SocketError.TimedOut => "Kết nối timeout - có thể do firewall chặn",
+                    SocketError.NetworkUnreachable => "Không thể truy cập mạng",
+                    SocketError.HostUnreachable => "Không thể truy cập host - kiểm tra IP",
+                    SocketError.HostNotFound => "Không tìm thấy host",
+                    _ => $"Lỗi socket: {ex.SocketErrorCode}"
+                };
+                return (false, errorMsg, (int)stopwatch.ElapsedMilliseconds);
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                return (false, $"Lỗi: {ex.Message}", (int)stopwatch.ElapsedMilliseconds);
+            }
+        }
+
+        /// <summary>
+        /// Ping đến một địa chỉ IP
+        /// </summary>
+        public static (bool success, string message, int latencyMs) Ping(string ipAddress, int timeoutMs = 3000)
+        {
+            try
+            {
+                using (var ping = new System.Net.NetworkInformation.Ping())
+                {
+                    var reply = ping.Send(ipAddress, timeoutMs);
+                    if (reply.Status == System.Net.NetworkInformation.IPStatus.Success)
+                    {
+                        return (true, $"Ping thành công ({reply.RoundtripTime}ms)", (int)reply.RoundtripTime);
+                    }
+                    else
+                    {
+                        return (false, $"Ping thất bại: {reply.Status}", 0);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Lỗi ping: {ex.Message}", 0);
+            }
+        }
+
+        /// <summary>
+        /// Lấy tất cả địa chỉ IP của máy
+        /// </summary>
+        public static List<string> GetAllLocalIPs()
+        {
+            var ips = new List<string>();
+            try
+            {
+                var host = Dns.GetHostEntry(Dns.GetHostName());
+                foreach (var ip in host.AddressList)
+                {
+                    if (ip.AddressFamily == AddressFamily.InterNetwork)
+                    {
+                        ips.Add(ip.ToString());
+                    }
+                }
+            }
+            catch { }
+            return ips;
+        }
+
+        /// <summary>
+        /// Kiểm tra xem port có đang được sử dụng không
+        /// </summary>
+        public static bool IsPortInUse(int port)
+        {
+            try
+            {
+                using (TcpListener listener = new TcpListener(IPAddress.Loopback, port))
+                {
+                    listener.Start();
+                    listener.Stop();
+                    return false; // Port không được sử dụng
+                }
+            }
+            catch (SocketException)
+            {
+                return true; // Port đang được sử dụng
+            }
+        }
+
+        /// <summary>
+        /// Kiểm tra xem port có đang lắng nghe (LISTEN) từ bên ngoài không
+        /// </summary>
+        public static bool IsPortListening(int port)
+        {
+            try
+            {
+                // Cách 1: Thử kết nối đến localhost
+                using (TcpClient client = new TcpClient())
+                {
+                    try
+                    {
+                        var result = client.BeginConnect(IPAddress.Loopback, port, null, null);
+                        bool success = result.AsyncWaitHandle.WaitOne(2000); // Timeout 2 giây
+                        
+                        if (success && client.Connected)
+                        {
+                            client.EndConnect(result);
+                            return true; // Port đang lắng nghe
+                        }
+                    }
+                    catch (SocketException sockEx)
+                    {
+                        // ConnectionRefused nghĩa là không có service nào lắng nghe
+                        if (sockEx.SocketErrorCode == SocketError.ConnectionRefused)
+                        {
+                            return false;
+                        }
+                        // Các lỗi khác có thể do firewall hoặc network
+                        Logger.Warning($"Socket exception khi check port {port}: {sockEx.SocketErrorCode}");
+                        return false;
+                    }
+                }
+                
+                // Cách 2: Kiểm tra bằng netstat (backup method)
+                try
+                {
+                    ProcessStartInfo psi = new ProcessStartInfo
+                    {
+                        FileName = "netstat",
+                        Arguments = "-an",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        CreateNoWindow = true
+                    };
+                    
+                    using (Process process = Process.Start(psi))
+                    {
+                        if (process != null)
+                        {
+                            string output = process.StandardOutput.ReadToEnd();
+                            process.WaitForExit(3000);
+                            
+                            // Tìm dòng có chứa port đang LISTEN
+                            string[] lines = output.Split('\n');
+                            foreach (string line in lines)
+                            {
+                                if (line.Contains($":{port}") && line.Contains("LISTENING"))
+                                {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception netstatEx)
+                {
+                    Logger.Warning($"Không thể kiểm tra port bằng netstat: {netstatEx.Message}");
+                }
+                
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Lỗi khi kiểm tra port listening: {ex.Message}");
+                return false;
+            }
+        }
+    }
+}
+

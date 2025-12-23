@@ -56,18 +56,169 @@ namespace ChatAppServer
             if (_stream == null) return;
             try
             {
-                while (_client != null && _client.Connected && _stream != null)
+                while (_client != null && _client.Connected && _stream != null && _stream.CanRead)
                 {
-                    object? receivedPacket = await Task.Run(() => _formatter.Deserialize(_stream));
-                    if (receivedPacket != null)
+                    try
                     {
-                        HandlePacket(receivedPacket);
+                        // Kiểm tra connection trước khi deserialize
+                        if (!_client.Connected || _stream == null || !_stream.CanRead)
+                        {
+                            Logger.Info($"[Client {UserID ?? "???"}] Connection đã bị đóng trước khi deserialize");
+                            break;
+                        }
+
+                        // Deserialize packet với error handling toàn diện
+                        object? receivedPacket = null;
+                        try
+                        {
+                            receivedPacket = await Task.Run(() =>
+                            {
+                                try
+                                {
+                                    return _formatter.Deserialize(_stream);
+                                }
+                                catch (System.Runtime.Serialization.SerializationException ex)
+                                {
+                                    // Wrap lại exception để có thể nhận biết ở ngoài
+                                    throw new AggregateException("Deserialize failed", ex);
+                                }
+                                catch (Exception ex)
+                                {
+                                    // Wrap tất cả exception khác
+                                    throw new AggregateException("Unexpected error in Deserialize", ex);
+                                }
+                            });
+                        }
+                        catch (AggregateException aggEx)
+                        {
+                            // Unwrap AggregateException
+                            var innerEx = aggEx.GetBaseException();
+                            if (innerEx is System.Runtime.Serialization.SerializationException serEx)
+                            {
+                                // Xử lý SerializationException - KHÔNG throw lại
+                                if (serEx.Message.Contains("End of Stream") || 
+                                    serEx.Message.Contains("parsing was completed"))
+                                {
+                                    Logger.Info($"[Client {UserID ?? "???"}] Client đã đóng kết nối (End of Stream - from Task.Run)");
+                                }
+                                else
+                                {
+                                    Logger.Warning($"[Client {UserID ?? "???"}] Serialization error (from Task.Run): {serEx.Message}");
+                                }
+                                break; // Break để đóng connection
+                            }
+                            // Nếu không phải SerializationException, re-throw để được catch ở catch block bên ngoài
+                            throw innerEx ?? aggEx;
+                        }
+                        catch (System.Runtime.Serialization.SerializationException serEx)
+                        {
+                            // Catch trực tiếp nếu không qua AggregateException
+                            if (serEx.Message.Contains("End of Stream") || 
+                                serEx.Message.Contains("parsing was completed"))
+                            {
+                                Logger.Info($"[Client {UserID ?? "???"}] Client đã đóng kết nối (End of Stream - direct catch)");
+                            }
+                            else
+                            {
+                                Logger.Warning($"[Client {UserID ?? "???"}] Serialization error (direct catch): {serEx.Message}");
+                            }
+                            break; // Break để đóng connection
+                        }
+                        
+                        if (receivedPacket != null)
+                        {
+                            HandlePacket(receivedPacket);
+                        }
+                    }
+                    catch (System.Runtime.Serialization.SerializationException serEx)
+                    {
+                        // Lỗi serialization thường xảy ra khi stream bị đóng hoặc dữ liệu không đầy đủ
+                        // Luôn xử lý gracefully, không throw lại
+                        if (serEx.Message.Contains("End of Stream") || 
+                            serEx.Message.Contains("parsing was completed"))
+                        {
+                            Logger.Info($"[Client {UserID ?? "???"}] Client đã đóng kết nối (End of Stream)");
+                        }
+                        else
+                        {
+                            Logger.Warning($"[Client {UserID ?? "???"}] Serialization error: {serEx.Message}");
+                        }
+                        break; // Luôn break để đóng connection gracefully
+                    }
+                    catch (IOException ioEx)
+                    {
+                        // IOException xảy ra khi connection bị đóng
+                        Logger.Info($"[Client {UserID ?? "???"}] Connection đã bị đóng: {ioEx.Message}");
+                        break;
+                    }
+                    catch (System.Net.Sockets.SocketException sockEx)
+                    {
+                        // SocketException xảy ra khi network có vấn đề
+                        Logger.Warning($"[Client {UserID ?? "???"}] Socket error: {sockEx.Message}");
+                        break;
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Stream đã bị dispose, connection đã đóng
+                        Logger.Info($"[Client {UserID ?? "???"}] Stream đã bị dispose");
+                        break;
                     }
                 }
             }
+            catch (System.Runtime.Serialization.SerializationException serEx)
+            {
+                // Đảm bảo SerializationException LUÔN được handle ở đây - KHÔNG BAO GIỜ throw ra ngoài
+                if (serEx.Message.Contains("End of Stream") || 
+                    serEx.Message.Contains("parsing was completed"))
+                {
+                    Logger.Info($"[Client {UserID ?? "???"}] Client đã đóng kết nối (End of Stream - outer catch)");
+                }
+                else
+                {
+                    Logger.Warning($"[Client {UserID ?? "???"}] SerializationException (outer catch): {serEx.Message}");
+                }
+                // KHÔNG throw lại - chỉ log và tiếp tục đến finally block
+            }
+            catch (AggregateException aggEx)
+            {
+                // Kiểm tra xem có SerializationException bên trong không
+                var baseEx = aggEx.GetBaseException();
+                if (baseEx is System.Runtime.Serialization.SerializationException serEx)
+                {
+                    // Đã được handle, chỉ log
+                    if (serEx.Message.Contains("End of Stream") || 
+                        serEx.Message.Contains("parsing was completed"))
+                    {
+                        Logger.Info($"[Client {UserID ?? "???"}] Client đã đóng kết nối (End of Stream - AggregateException)");
+                    }
+                    else
+                    {
+                        Logger.Warning($"[Client {UserID ?? "???"}] SerializationException (AggregateException): {serEx.Message}");
+                    }
+                }
+                else
+                {
+                    // Nếu không phải SerializationException, log warning
+                    Logger.Warning($"[Client {UserID ?? "???"}] AggregateException: {aggEx.GetType().Name} - {aggEx.Message}");
+                    foreach (var innerEx in aggEx.InnerExceptions)
+                    {
+                        Logger.Warning($"  Inner: {innerEx.GetType().Name} - {innerEx.Message}");
+                    }
+                }
+                // KHÔNG throw lại
+            }
             catch (Exception ex)
             {
-                Logger.Warning($"[Client {UserID ?? "???"}] Đã ngắt kết nối: {ex.Message}");
+                // Chỉ log warning cho các exception không mong đợi
+                // KHÔNG BAO GIỜ throw lại để tránh unhandled exception
+                if (!(ex is IOException) &&
+                    !(ex is System.Net.Sockets.SocketException) &&
+                    !(ex is ObjectDisposedException) &&
+                    !(ex is System.Runtime.Serialization.SerializationException))
+                {
+                    Logger.Warning($"[Client {UserID ?? "???"}] Lỗi không mong đợi: {ex.GetType().Name} - {ex.Message}");
+                }
+                // KHÔNG throw lại - chỉ log
             }
             finally
             {

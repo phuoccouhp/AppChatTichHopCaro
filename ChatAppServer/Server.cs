@@ -38,27 +38,71 @@ namespace ChatAppServer
             try
             {
                 // Đảm bảo server có thể nhận kết nối từ cả localhost và IP mạng
-                // Bằng cách set SocketOption trước khi Start
-                _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                _listener.Start();
+                // Set các socket options để tối ưu kết nối
+                try
+                {
+                    _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                    _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                    _listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, 30000);
+                    _listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, 1000);
+                }
+                catch (Exception optEx)
+                {
+                    Logger.Warning($"Không thể set socket options: {optEx.Message}");
+                }
+                
+                // Bắt đầu lắng nghe
+                try
+                {
+                    _listener.Start(10); // Backlog = 10 clients có thể đợi
+                }
+                catch (Exception startEx)
+                {
+                    Logger.Error($"Không thể khởi động listener trên port {_port}", startEx);
+                    throw; // Re-throw để được catch ở ngoài
+                }
                 
                 // Log thông tin chi tiết về địa chỉ server đang lắng nghe
-                var localEndpoint = _listener.LocalEndpoint as IPEndPoint;
-                if (localEndpoint != null)
+                try
                 {
-                    Logger.Success($"Server đang lắng nghe tại {localEndpoint.Address}:{localEndpoint.Port}");
-                    if (localEndpoint.Address.Equals(IPAddress.Any) || localEndpoint.Address.Equals(IPAddress.IPv6Any))
+                    var localEndpoint = _listener.LocalEndpoint as IPEndPoint;
+                    if (localEndpoint != null)
                     {
-                        Logger.Info("Server lắng nghe trên TẤT CẢ interfaces (bao gồm 127.0.0.1 và IP mạng)");
-                        Logger.Info($"✓ Có thể kết nối qua 127.0.0.1:{_port} (localhost)");
-                        Logger.Info($"✓ Có thể kết nối qua IP mạng WiFi:{_port}");
+                        Logger.Success($"Server đang lắng nghe tại {localEndpoint.Address}:{localEndpoint.Port}");
+                        if (localEndpoint.Address.Equals(IPAddress.Any) || localEndpoint.Address.Equals(IPAddress.IPv6Any))
+                        {
+                            Logger.Info("✓ Server lắng nghe trên TẤT CẢ network interfaces");
+                            Logger.Info($"✓ Có thể kết nối qua 127.0.0.1:{_port} (localhost)");
+                            
+                            // Lấy IP thực tế của WiFi adapter
+                            try
+                            {
+                                string? wifiIP = GetWiFiIPAddress();
+                                if (!string.IsNullOrEmpty(wifiIP))
+                                {
+                                    Logger.Info($"✓ Clients có thể kết nối qua {wifiIP}:{_port}");
+                                }
+                            }
+                            catch (Exception wifiEx)
+                            {
+                                Logger.Warning($"Không thể lấy WiFi IP: {wifiEx.Message}");
+                            }
+                        }
                     }
                 }
+                catch (Exception logEx)
+                {
+                    Logger.Warning($"Lỗi khi log thông tin server: {logEx.Message}");
+                }
+                
+                // Kiểm tra firewall
+                Logger.Info("⚠ QUAN TRỌNG: Đảm bảo Firewall đã mở port 9000!");
+                Logger.Info("  → Click nút 'Mở Firewall' nếu chưa mở");
             }
             catch (Exception ex)
             {
                 Logger.Error($"Không thể khởi động listener trên port {_port}", ex);
-                return;
+                throw; // Re-throw để được catch ở nơi gọi
             }
 
             while (true)
@@ -66,22 +110,104 @@ namespace ChatAppServer
                 try
                 {
                     TcpClient clientSocket = await _listener.AcceptTcpClientAsync();
-                    Logger.Info($"[Connect] Client mới từ {(clientSocket.Client.RemoteEndPoint as IPEndPoint)?.Address} đã kết nối.");
+                    try
+                    {
+                        var remoteEP = clientSocket.Client.RemoteEndPoint as IPEndPoint;
+                        Logger.Info($"[Connect] Client mới từ {remoteEP?.Address} đã kết nối.");
+                    }
+                    catch (Exception logEx)
+                    {
+                        Logger.Warning($"Lỗi khi log client info: {logEx.Message}");
+                    }
 
-                    ClientHandler clientHandler = new ClientHandler(clientSocket, this);
+                    ClientHandler? clientHandler = null;
+                    try
+                    {
+                        clientHandler = new ClientHandler(clientSocket, this);
+                    }
+                    catch (Exception handlerEx)
+                    {
+                        Logger.Error($"Lỗi khi tạo ClientHandler: {handlerEx.Message}", handlerEx);
+                        try { clientSocket.Close(); } catch { }
+                        continue; // Bỏ qua client này và tiếp tục
+                    }
+
                     // Chạy handler này trên một luồng riêng để không chặn vòng lặp chính
-                    _ = clientHandler.StartHandlingAsync();
+                    // Thêm ContinueWith để handle exception và tránh unhandled exception
+                    if (clientHandler != null)
+                    {
+                        // Sử dụng ConfigureAwait(false) để tránh deadlock và đảm bảo exception được handle
+                        _ = clientHandler.StartHandlingAsync().ContinueWith(task =>
+                        {
+                            if (task.IsFaulted && task.Exception != null)
+                            {
+                                // Unwrap AggregateException và xử lý từng exception
+                                task.Exception.Flatten().Handle(ex =>
+                                {
+                                    // SerializationException đã được handle trong StartHandlingAsync
+                                    if (ex is System.Runtime.Serialization.SerializationException serEx)
+                                    {
+                                        // Chỉ log nếu chưa được log trong StartHandlingAsync
+                                        if (!serEx.Message.Contains("End of Stream") && 
+                                            !serEx.Message.Contains("parsing was completed"))
+                                        {
+                                            Logger.Warning($"[Server] SerializationException trong ContinueWith: {serEx.Message}");
+                                        }
+                                        return true; // Đã handle
+                                    }
+                                    
+                                    // Các exception khác đã được handle
+                                    if (ex is IOException || 
+                                        ex is System.Net.Sockets.SocketException || 
+                                        ex is ObjectDisposedException)
+                                    {
+                                        return true; // Đã handle
+                                    }
+                                    
+                                    // Các exception không mong đợi
+                                    Logger.Warning($"[Server] Unhandled exception trong client handler: {ex.GetType().Name} - {ex.Message}");
+                                    return true; // Mark as handled để tránh unhandled exception
+                                });
+                            }
+                        }, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
+                    }
                 }
                 catch (ObjectDisposedException)
                 {
                     Logger.Warning("Listener đã dừng.");
                     break;
                 }
+                catch (System.Net.Sockets.SocketException sockEx)
+                {
+                    Logger.Warning($"Socket exception khi accept client: {sockEx.Message}");
+                    // Tiếp tục vòng lặp để thử lại
+                    await Task.Delay(1000);
+                }
                 catch (Exception ex)
                 {
-                    Logger.Error($"Lỗi khi chấp nhận client", ex);
+                    Logger.Error($"Lỗi khi chấp nhận client: {ex.GetType().Name} - {ex.Message}", ex);
                     await Task.Delay(1000); // Đợi 1 chút trước khi thử lại
                 }
+            }
+        }
+
+        /// <summary>
+        /// Lấy IP thực tế của WiFi adapter (interface đang active)
+        /// </summary>
+        private string? GetWiFiIPAddress()
+        {
+            try
+            {
+                using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+                {
+                    socket.Connect("8.8.8.8", 65530);
+                    var endPoint = socket.LocalEndPoint as IPEndPoint;
+                    return endPoint?.Address.ToString();
+                }
+            }
+            catch
+            {
+                return null;
             }
         }
 
