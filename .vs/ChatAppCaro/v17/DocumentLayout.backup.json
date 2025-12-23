@@ -230,7 +230,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 16,
+          "SelectedChildIndex": 17,
           "Children": [
             {
               "$type": "Bookmark",
@@ -293,6 +293,10 @@
               "Name": "ST:0:0:{b1e99781-ab81-11d0-b683-00aa00a3ee26}"
             },
             {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c64b9c2-e352-428e-a56d-0ace190b99a6}"
+            },
+            {
               "$type": "Document",
               "DocumentIndex": 2,
               "Title": "FirewallHelper.cs",
@@ -313,14 +317,10 @@
               "RelativeDocumentMoniker": "ChatAppServer\\ClientHandler.cs",
               "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\ClientHandler.cs",
               "RelativeToolTip": "ChatAppServer\\ClientHandler.cs",
-              "ViewState": "AgIAAC0AAAAAAAAAAIAwwEoAAAANAAAAAAAAAA==",
+              "ViewState": "AgIAAD4AAAAAAAAAAAD4v00AAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-30T15:39:22.445Z",
               "EditorCaption": ""
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{1c64b9c2-e352-428e-a56d-0ace190b99a6}"
             },
             {
               "$type": "Bookmark",
@@ -338,7 +338,7 @@
               "RelativeDocumentMoniker": "ChatAppClient\\NetworkManager.cs",
               "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\NetworkManager.cs",
               "RelativeToolTip": "ChatAppClient\\NetworkManager.cs",
-              "ViewState": "AgIAAKAAAAAAAAAAAAAMwLYAAAAVAAAAAAAAAA==",
+              "ViewState": "AgIAAKAAAAAAAAAAAAAMwNMAAAAVAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-30T15:40:38.627Z",
               "EditorCaption": ""

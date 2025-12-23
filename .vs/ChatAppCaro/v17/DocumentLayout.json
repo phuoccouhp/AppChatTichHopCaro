@@ -230,7 +230,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 17,
+          "SelectedChildIndex": 15,
           "Children": [
             {
               "$type": "Bookmark",
@@ -289,14 +289,6 @@
               "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
             },
             {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{74946827-37a0-11d2-a273-00c04f8ef4ff}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{56df62a4-05a3-4e5b-aa1a-99371ccfb997}"
-            },
-            {
               "$type": "Document",
               "DocumentIndex": 2,
               "Title": "FirewallHelper.cs",
@@ -317,7 +309,7 @@
               "RelativeDocumentMoniker": "ChatAppServer\\ClientHandler.cs",
               "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\ClientHandler.cs",
               "RelativeToolTip": "ChatAppServer\\ClientHandler.cs",
-              "ViewState": "AgIAAC0AAAAAAAAAAIAwwD4AAAARAAAAAAAAAA==",
+              "ViewState": "AgIAAD4AAAAAAAAAAAD4v1IAAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-30T15:39:22.445Z",
               "EditorCaption": ""
@@ -325,6 +317,14 @@
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{1c64b9c2-e352-428e-a56d-0ace190b99a6}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{56df62a4-05a3-4e5b-aa1a-99371ccfb997}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{74946827-37a0-11d2-a273-00c04f8ef4ff}"
             },
             {
               "$type": "Bookmark",
@@ -338,7 +338,7 @@
               "RelativeDocumentMoniker": "ChatAppClient\\NetworkManager.cs",
               "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\NetworkManager.cs",
               "RelativeToolTip": "ChatAppClient\\NetworkManager.cs",
-              "ViewState": "AgIAAKAAAAAAAAAAAAAMwLYAAAAVAAAAAAAAAA==",
+              "ViewState": "AgIAAKAAAAAAAAAAAAAMwNMAAAAVAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-30T15:40:38.627Z",
               "EditorCaption": ""

@@ -152,7 +152,7 @@ namespace ChatAppClient.Forms
             Logger.Info("Bắt đầu lắng nghe Server...");
             try
             {
-                while (_client != null && _client.Connected && _stream != null && !cancellationToken.IsCancellationRequested)
+                while (_client != null && _client.Connected && _stream != null && _stream.CanRead && !cancellationToken.IsCancellationRequested)
                 {
                     // BinaryFormatter.Deserialize sẽ block cho đến khi có dữ liệu
                     // Không cần check DataAvailable, chỉ cần deserialize trực tiếp
@@ -161,13 +161,42 @@ namespace ChatAppClient.Forms
                     {
                         receivedPacket = await Task.Run(() => _formatter.Deserialize(_stream), cancellationToken);
                     }
+                    catch (System.Runtime.Serialization.SerializationException serEx)
+                    {
+                        // Lỗi serialization thường xảy ra khi stream bị đóng hoặc dữ liệu không đầy đủ
+                        if (serEx.Message.Contains("End of Stream") || 
+                            serEx.Message.Contains("parsing was completed"))
+                        {
+                            Logger.Info("Server đã đóng kết nối (End of Stream)");
+                            break; // Thoát vòng lặp một cách graceful
+                        }
+                        throw; // Nếu là lỗi khác, throw lại
+                    }
+                    catch (IOException ioEx)
+                    {
+                        // IOException xảy ra khi connection bị đóng
+                        Logger.Info($"Connection đã bị đóng: {ioEx.Message}");
+                        break;
+                    }
+                    catch (System.Net.Sockets.SocketException sockEx)
+                    {
+                        // SocketException xảy ra khi network có vấn đề
+                        Logger.Warning($"Socket error: {sockEx.Message}");
+                        break;
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Stream đã bị dispose, connection đã đóng
+                        Logger.Info("Stream đã bị dispose");
+                        break;
+                    }
                     catch (Exception deserializeEx)
                     {
-                        // Nếu connection bị đóng trong khi deserialize, có thể vẫn còn packet chưa xử lý
-                        // Kiểm tra xem có phải do server đóng connection sau khi gửi packet không
-                        if (deserializeEx is IOException || deserializeEx.InnerException is IOException)
+                        // Các exception khác
+                        if (deserializeEx.InnerException is IOException)
                         {
                             Logger.Warning($"Lỗi deserialize (có thể do server đóng connection): {deserializeEx.Message}");
+                            break;
                         }
                         throw;
                     }
@@ -185,7 +214,15 @@ namespace ChatAppClient.Forms
             }
             catch (Exception ex)
             {
-                Logger.Warning($"Ngắt kết nối khi đang lắng nghe: {ex.Message}");
+                // Chỉ log warning cho các exception không mong đợi (không phải SerializationException, IOException, SocketException, ObjectDisposedException)
+                if (!(ex is System.Runtime.Serialization.SerializationException) &&
+                    !(ex is IOException) &&
+                    !(ex is System.Net.Sockets.SocketException) &&
+                    !(ex is ObjectDisposedException))
+                {
+                    Logger.Warning($"Ngắt kết nối khi đang lắng nghe: {ex.GetType().Name} - {ex.Message}");
+                }
+                
                 if (!cancellationToken.IsCancellationRequested && _homeForm != null && !_homeForm.IsDisposed)
                 {
                     _homeForm.BeginInvoke(new Action(() =>

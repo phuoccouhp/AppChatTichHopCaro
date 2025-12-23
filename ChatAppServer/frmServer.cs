@@ -55,52 +55,199 @@ namespace ChatAppServer
             
             // Hiển thị IP ngay khi form load (trước khi start server)
             string localIPs = GetLocalIPAddresses();
-            lblServerIP.Text = $"Default Gateway (Router IP): {localIPs}";
-            lblServerIP.ForeColor = Color.Orange;
+            string wifiIP = null;
+            if (localIPs.Contains(","))
+            {
+                var parts = localIPs.Split(',');
+                if (parts.Length > 1)
+                {
+                    wifiIP = parts[1].Trim();
+                }
+            }
+            
+            if (!string.IsNullOrEmpty(wifiIP))
+            {
+                lblServerIP.Text = $"Server IP: {wifiIP} (Port: {PORT})";
+                lblServerIP.ForeColor = Color.Gray;
+            }
+            else
+            {
+                lblServerIP.Text = $"Server IP: {localIPs} (Port: {PORT})";
+                lblServerIP.ForeColor = Color.Orange;
+            }
         }
 
         private void btnStart_Click(object sender, EventArgs e)
         {
+            // Kiểm tra port có đang được sử dụng bởi process khác không
+            if (FirewallHelper.IsPortInUse(PORT))
+            {
+                Logger.Error($"✗ Port {PORT} đang được sử dụng bởi process khác!");
+                Logger.Error("Hãy đóng ứng dụng khác đang dùng port này hoặc thay đổi port.");
+                
+                var result = MessageBox.Show(
+                    $"Port {PORT} đang được sử dụng bởi process khác!\n\n" +
+                    "Bạn có muốn kiểm tra process nào đang dùng port này không?",
+                    "Port đã được sử dụng",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+                
+                if (result == DialogResult.Yes)
+                {
+                    CheckPortStatus();
+                }
+                return;
+            }
+
             btnStart.Enabled = false;
             btnStop.Enabled = true;
-            lblStatus.Text = "Server: Running...";
-            lblStatus.ForeColor = Color.Green;
+            lblStatus.Text = "Server: Starting...";
+            lblStatus.ForeColor = Color.Orange;
 
-            // Lấy và hiển thị địa chỉ IP local (Bây giờ là Default Gateway)
+            // Lấy và hiển thị địa chỉ IP WiFi thực tế của máy Server
             string serverIPs = GetLocalIPAddresses();
-            lblServerIP.Text = $"Default Gateway: {serverIPs} (Port: {PORT}) - CẦN PORT FORWARDING!";
-            lblServerIP.ForeColor = Color.Orange;
             
-            Logger.Info($"Địa chỉ IP của máy chủ: {serverIPs}");
-            Logger.Warning("⚠ THAY ĐỔI: Đang sử dụng Default Gateway (Router IP) thay vì IP WiFi!");
-            Logger.Warning("⚠ LƯU Ý: Router KHÔNG chạy Server! Cần cấu hình Port Forwarding trên router!");
-            Logger.Info($"Clients có thể kết nối đến:");
-            Logger.Info($"  - 127.0.0.1:{PORT} (nếu chạy trên cùng máy - localhost)");
-            // Tách IP mạng từ chuỗi (format: "127.0.0.1, 10.45.0.1")
-            string networkIP = null;
+            // Tách IP WiFi từ chuỗi (format: "127.0.0.1, 10.45.100.45")
+            string wifiIP = null;
             if (serverIPs.Contains(","))
             {
                 var parts = serverIPs.Split(',');
                 if (parts.Length > 1)
                 {
-                    networkIP = parts[1].Trim();
+                    wifiIP = parts[1].Trim();
                 }
             }
-            if (!string.IsNullOrEmpty(networkIP) && networkIP != "127.0.0.1")
+            
+            if (!string.IsNullOrEmpty(wifiIP))
             {
-                Logger.Info($"  - {networkIP}:{PORT} (Default Gateway - CẦN PORT FORWARDING trên router!)");
+                lblServerIP.Text = $"Server IP: {wifiIP} (Port: {PORT})";
+                lblServerIP.ForeColor = Color.Green;
             }
-            Logger.Info("Lưu ý: Đảm bảo router đã cấu hình Port Forwarding port 9000 đến máy Server!");
+            else
+            {
+                lblServerIP.Text = $"Server IP: {serverIPs} (Port: {PORT})";
+                lblServerIP.ForeColor = Color.Orange;
+            }
+            
+            Logger.Info($"Địa chỉ IP của máy chủ: {serverIPs}");
+            Logger.Info($"Clients có thể kết nối đến:");
+            Logger.Info($"  - 127.0.0.1:{PORT} (nếu chạy trên cùng máy - localhost)");
+            
+            if (!string.IsNullOrEmpty(wifiIP) && wifiIP != "127.0.0.1")
+            {
+                Logger.Success($"  - {wifiIP}:{PORT} (IP WiFi của Server - dùng IP này để kết nối từ máy khác)");
+            }
             Logger.Info("Đảm bảo cả hai máy đều cùng mạng WiFi và firewall cho phép port 9000");
 
-            _server = new Server(PORT);
-            _server.OnUserListChanged += Server_OnUserListChanged;
+            try
+            {
+                _server = new Server(PORT);
+                _server.OnUserListChanged += Server_OnUserListChanged;
 
+                // Sử dụng ContinueWith để đảm bảo exception được handle
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        Logger.Success($"Server khởi động tại port {PORT}...");
+                        Logger.Success($"Đang lắng nghe kết nối từ TẤT CẢ interfaces (localhost + IP mạng)...");
+                        await _server.StartAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error($"✗ Lỗi khi khởi động server: {ex.Message}", ex);
+                        // Khôi phục lại button
+                        try
+                        {
+                            if (InvokeRequired)
+                            {
+                                Invoke(new Action(() =>
+                                {
+                                    btnStart.Enabled = true;
+                                    btnStop.Enabled = false;
+                                    lblStatus.Text = "Server: Error";
+                                    lblStatus.ForeColor = Color.Red;
+                                }));
+                            }
+                        }
+                        catch (Exception invokeEx)
+                        {
+                            Logger.Error($"Lỗi khi khôi phục UI: {invokeEx.Message}");
+                        }
+                    }
+                }).ContinueWith(task =>
+                {
+                    // Đảm bảo exception từ Task.Run được handle
+                    if (task.IsFaulted && task.Exception != null)
+                    {
+                        foreach (var ex in task.Exception.InnerExceptions)
+                        {
+                            Logger.Error($"✗ Exception trong Task.Run start server: {ex.GetType().Name} - {ex.Message}", ex);
+                        }
+                        try
+                        {
+                            if (InvokeRequired)
+                            {
+                                Invoke(new Action(() =>
+                                {
+                                    btnStart.Enabled = true;
+                                    btnStop.Enabled = false;
+                                    lblStatus.Text = "Server: Error";
+                                    lblStatus.ForeColor = Color.Red;
+                                }));
+                            }
+                        }
+                        catch { }
+                    }
+                }, TaskContinuationOptions.OnlyOnFaulted);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"✗ Lỗi khi tạo Server object: {ex.Message}", ex);
+                btnStart.Enabled = true;
+                btnStop.Enabled = false;
+                lblStatus.Text = "Server: Error";
+                lblStatus.ForeColor = Color.Red;
+                MessageBox.Show($"Không thể khởi động server: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+            // Đợi một chút rồi kiểm tra xem server có đang listen không
             Task.Run(async () =>
             {
-                Logger.Success($"Server khởi động tại port {PORT}...");
-                Logger.Success($"Đang lắng nghe kết nối từ TẤT CẢ interfaces (localhost + IP mạng)...");
-                await _server.StartAsync();
+                try
+                {
+                    await Task.Delay(2000); // Đợi 2 giây để server khởi động
+                    
+                    if (InvokeRequired)
+                    {
+                        Invoke(new Action(() =>
+                        {
+                            try
+                            {
+                                if (FirewallHelper.IsPortListening(PORT))
+                                {
+                                    lblStatus.Text = "Server: Running ✓";
+                                    lblStatus.ForeColor = Color.Green;
+                                    Logger.Success($"✓ Xác nhận: Port {PORT} đang lắng nghe thành công!");
+                                }
+                                else
+                                {
+                                    // Không cần đổi status nếu server đang chạy nhưng port check thất bại
+                                    // Có thể do firewall hoặc port check không chính xác
+                                    Logger.Warning($"⚠ Port {PORT} check thất bại, nhưng server có thể vẫn đang chạy");
+                                }
+                            }
+                            catch (Exception checkEx)
+                            {
+                                Logger.Warning($"Lỗi khi kiểm tra port: {checkEx.Message}");
+                            }
+                        }));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning($"Lỗi trong task kiểm tra port: {ex.Message}");
+                }
             });
         }
 
@@ -125,40 +272,116 @@ namespace ChatAppServer
                 {
                     btnOpenFirewall.Enabled = false;
                     btnOpenFirewall.Text = "Đang mở...";
+                    Application.DoEvents(); // Cập nhật UI ngay lập tức
 
+                    Logger.Info($"Đang mở port {PORT} trên Windows Firewall...");
                     bool success = FirewallHelper.OpenPortAsAdmin(PORT, "ChatAppServer");
 
+                    if (!success)
+                    {
+                        Logger.Warning("OpenPortAsAdmin trả về false. Kiểm tra lại rule...");
+                    }
+
+                    // Đợi một chút để rule được tạo và commit vào firewall
+                    System.Threading.Thread.Sleep(2000); // Tăng lên 2 giây để đảm bảo
+                    
                     // Kiểm tra lại xem rule đã được tạo chưa
-                    System.Threading.Thread.Sleep(1000); // Đợi 1 giây để rule được tạo
                     bool ruleExists = FirewallHelper.IsPortOpen(PORT, "ChatAppServer");
+                    Logger.Info($"Kiểm tra rule: success={success}, ruleExists={ruleExists}");
                     
                     if (success && ruleExists)
                     {
                         Logger.Success($"✓ Đã mở port {PORT} trên Windows Firewall thành công!");
-                        btnOpenFirewall.Text = "✓ Đã mở";
-                        btnOpenFirewall.BackColor = Color.Green;
+                        
+                        if (InvokeRequired)
+                        {
+                            Invoke(new Action(() =>
+                            {
+                                btnOpenFirewall.Text = "✓ Đã mở";
+                                btnOpenFirewall.BackColor = Color.Green;
+                                btnOpenFirewall.Enabled = false; // Disable để tránh click lại
+                            }));
+                        }
+                        else
+                        {
+                            btnOpenFirewall.Text = "✓ Đã mở";
+                            btnOpenFirewall.BackColor = Color.Green;
+                            btnOpenFirewall.Enabled = false;
+                        }
                         
                         MessageBox.Show(
                             $"Đã mở port {PORT} thành công!\n\n" +
                             "Bây giờ các máy khác có thể kết nối đến Server.\n" +
-                            "Hãy đảm bảo cả hai máy cùng một mạng WiFi.",
+                            "Hãy đảm bảo cả hai máy cùng một mạng WiFi.\n\n" +
+                            "Lưu ý: Cần mở firewall trên CẢ HAI máy (Server và Client).",
                             "Thành công",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
+                    }
+                    else if (ruleExists)
+                    {
+                        // Rule đã tồn tại nhưng OpenPortAsAdmin trả về false (có thể do đã có rule từ trước)
+                        Logger.Success($"✓ Port {PORT} đã được mở (rule đã tồn tại)!");
+                        
+                        if (InvokeRequired)
+                        {
+                            Invoke(new Action(() =>
+                            {
+                                btnOpenFirewall.Text = "✓ Đã mở";
+                                btnOpenFirewall.BackColor = Color.Green;
+                                btnOpenFirewall.Enabled = false;
+                            }));
+                        }
+                        else
+                        {
+                            btnOpenFirewall.Text = "✓ Đã mở";
+                            btnOpenFirewall.BackColor = Color.Green;
+                            btnOpenFirewall.Enabled = false;
+                        }
+                        
+                        MessageBox.Show(
+                            $"Port {PORT} đã được mở trước đó!\n\n" +
+                            "Rule firewall đã tồn tại, bạn có thể tiếp tục sử dụng.",
+                            "Thông báo",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Information);
                     }
                     else
                     {
-                        throw new Exception("Không thể mở port. Có thể bạn đã từ chối UAC hoặc có lỗi.\n\n" +
-                            "Hãy thử:\n" +
-                            "1. Chạy file OpenFirewall.bat với quyền Admin\n" +
-                            "2. Hoặc mở Firewall thủ công (xem file MO_FIREWALL_THU_CONG.md)");
+                        // Thất bại
+                        string errorDetail = "";
+                        if (!success) errorDetail += "- Process mở firewall thất bại\n";
+                        if (!ruleExists) errorDetail += "- Rule không tồn tại sau khi tạo\n";
+                        
+                        throw new Exception($"Không thể mở port {PORT}.\n\n{errorDetail}\n" +
+                            "Có thể do:\n" +
+                            "1. Bạn đã từ chối UAC (yêu cầu quyền Admin)\n" +
+                            "2. Firewall service không chạy\n" +
+                            "3. Không có quyền Administrator\n\n" +
+                            "Giải pháp:\n" +
+                            "1. Chạy file OpenFirewall.bat với quyền Admin (Right-click → Run as administrator)\n" +
+                            "2. Hoặc mở Firewall thủ công (xem hướng dẫn bên dưới)");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error($"Lỗi mở Firewall: {ex.Message}");
-                    btnOpenFirewall.Text = "🔓 Mở Firewall";
-                    btnOpenFirewall.Enabled = true;
+                    Logger.Error($"Lỗi mở Firewall: {ex.Message}", ex);
+                    
+                    if (InvokeRequired)
+                    {
+                        Invoke(new Action(() =>
+                        {
+                            btnOpenFirewall.Text = "🔓 Mở Firewall";
+                            btnOpenFirewall.BackColor = Color.Orange;
+                            btnOpenFirewall.Enabled = true;
+                        }));
+                    }
+                    else
+                    {
+                        btnOpenFirewall.Text = "🔓 Mở Firewall";
+                        btnOpenFirewall.BackColor = Color.Orange;
+                        btnOpenFirewall.Enabled = true;
+                    }
                     
                     string errorMsg = $"Lỗi: {ex.Message}\n\n" +
                         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
@@ -254,9 +477,79 @@ namespace ChatAppServer
 
         #endregion
 
+        private void CheckPortStatus()
+        {
+            Logger.Info("=== KIỂM TRA TRẠNG THÁI PORT 9000 ===");
+            
+            // 1. Kiểm tra port có đang được sử dụng
+            bool portInUse = FirewallHelper.IsPortInUse(PORT);
+            if (portInUse)
+            {
+                Logger.Warning($"⚠ Port {PORT} đang được sử dụng bởi process khác");
+                Logger.Info("Để xem process nào đang dùng port, mở CMD và chạy:");
+                Logger.Info($"  netstat -ano | findstr :{PORT}");
+            }
+            else
+            {
+                Logger.Success($"✓ Port {PORT} không được sử dụng (có thể start server)");
+            }
+            
+            // 2. Kiểm tra port có đang lắng nghe
+            bool portListening = FirewallHelper.IsPortListening(PORT);
+            if (portListening)
+            {
+                Logger.Success($"✓ Port {PORT} đang lắng nghe (Server đang chạy)");
+            }
+            else
+            {
+                Logger.Warning($"⚠ Port {PORT} KHÔNG lắng nghe (Server chưa start hoặc có lỗi)");
+            }
+            
+            // 3. Kiểm tra firewall
+            bool firewallOpen = FirewallHelper.IsPortOpen(PORT);
+            if (firewallOpen)
+            {
+                Logger.Success($"✓ Firewall rule đã được tạo cho port {PORT}");
+            }
+            else
+            {
+                Logger.Warning($"⚠ Firewall rule chưa được tạo - Hãy click 'Mở Firewall'");
+            }
+            
+            Logger.Info("=== KẾT THÚC KIỂM TRA ===");
+            
+            string summary = $"TRẠNG THÁI PORT {PORT}:\n\n" +
+                $"1. Port đang được sử dụng: {(portInUse ? "⚠ CÓ" : "✓ KHÔNG")}\n" +
+                $"2. Port đang lắng nghe: {(portListening ? "✓ CÓ (Server đang chạy)" : "⚠ KHÔNG")}\n" +
+                $"3. Firewall rule: {(firewallOpen ? "✓ Đã mở" : "⚠ Chưa mở")}";
+            
+            MessageBox.Show(summary, "Kiểm Tra Port", MessageBoxButtons.OK,
+                portListening ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+        }
+
         private void btnTestConnection_Click(object sender, EventArgs e)
         {
-            // Hiển thị dialog để nhập IP test
+            // Nếu click vào button này, hiển thị menu: Test IP khác hoặc Check Port Local
+            var result = MessageBox.Show(
+                "Chọn chức năng:\n\n" +
+                "• YES: Kiểm tra Port 9000 (Local)\n" +
+                "• NO: Test kết nối đến IP khác",
+                "Test Kết Nối",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Question);
+            
+            if (result == DialogResult.Yes)
+            {
+                // Kiểm tra Port Local
+                CheckPortStatus();
+                return;
+            }
+            else if (result == DialogResult.Cancel)
+            {
+                return;
+            }
+            
+            // Test IP khác
             string testIP = ShowInputDialog(
                 "Nhập địa chỉ IP cần test kết nối:\n\n" +
                 "Ví dụ: Nếu bạn của bạn có IP 10.45.210.103,\n" +
@@ -388,84 +681,92 @@ LƯU Ý QUAN TRỌNG:
         #region Lấy địa chỉ IP Local
 
         /// <summary>
-        /// Lấy Default Gateway IP (Router IP) - THAY ĐỔI: Bây giờ lấy Gateway thay vì IP WiFi
+        /// Lấy IP WiFi thực tế của máy Server (KHÔNG phải Default Gateway)
         /// </summary>
         private string GetLocalIPAddresses()
         {
-            string gatewayIP = null;
+            string wifiIP = null;
             
-            // Lấy Default Gateway từ network interface
+            // Cách 1: Lấy IP từ socket connection (chính xác nhất)
             try
             {
-                var networkInterfaces = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
-                foreach (var ni in networkInterfaces)
+                using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
                 {
-                    // Chỉ lấy interface đang hoạt động và có kết nối
-                    if (ni.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up &&
-                        ni.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback)
+                    socket.Connect("8.8.8.8", 65530);
+                    var endPoint = socket.LocalEndPoint as IPEndPoint;
+                    if (endPoint != null)
                     {
-                        var properties = ni.GetIPProperties();
-                        foreach (var gateway in properties.GatewayAddresses)
-                        {
-                            if (gateway.Address.AddressFamily == AddressFamily.InterNetwork)
-                            {
-                                gatewayIP = gateway.Address.ToString();
-                                Logger.Info($"[Gateway] Tìm thấy Default Gateway: {gatewayIP} từ interface {ni.Name}");
-                                break;
-                            }
-                        }
-                        if (!string.IsNullOrEmpty(gatewayIP)) break;
+                        wifiIP = endPoint.Address.ToString();
+                        Logger.Info($"[IP] Tìm thấy IP WiFi: {wifiIP}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error($"Lỗi khi lấy Default Gateway: {ex.Message}");
+                Logger.Warning($"Không thể lấy IP WiFi từ socket: {ex.Message}");
             }
 
-            // Fallback: Nếu không lấy được Gateway, lấy IP WiFi như cũ
-            if (string.IsNullOrEmpty(gatewayIP))
+            // Cách 2: Nếu không lấy được, thử từ network interfaces
+            if (string.IsNullOrEmpty(wifiIP))
             {
-                Logger.Warning("[Gateway] Không tìm thấy Default Gateway, dùng IP WiFi thay thế");
-                
                 try
                 {
-                    using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+                    var networkInterfaces = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
+                    foreach (var ni in networkInterfaces)
                     {
-                        socket.Connect("8.8.8.8", 65530);
-                        var endPoint = socket.LocalEndPoint as IPEndPoint;
-                        if (endPoint != null)
+                        // Chỉ lấy interface đang hoạt động, không phải loopback
+                        if (ni.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up &&
+                            ni.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback &&
+                            (ni.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Wireless80211 ||
+                             ni.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Ethernet))
                         {
-                            gatewayIP = endPoint.Address.ToString();
+                            var properties = ni.GetIPProperties();
+                            foreach (var unicast in properties.UnicastAddresses)
+                            {
+                                if (unicast.Address.AddressFamily == AddressFamily.InterNetwork &&
+                                    !IPAddress.IsLoopback(unicast.Address))
+                                {
+                                    wifiIP = unicast.Address.ToString();
+                                    Logger.Info($"[IP] Tìm thấy IP từ interface {ni.Name}: {wifiIP}");
+                                    break;
+                                }
+                            }
+                            if (!string.IsNullOrEmpty(wifiIP)) break;
                         }
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Nếu không lấy được, thử từ host entry
-                    try
-                    {
-                        var host = Dns.GetHostEntry(Dns.GetHostName());
-                        foreach (var ip in host.AddressList)
-                        {
-                            if (ip.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(ip))
-                            {
-                                gatewayIP = ip.ToString();
-                                break;
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Error($"Lỗi khi lấy địa chỉ IP từ host entry: {ex.Message}");
-                    }
+                    Logger.Warning($"Lỗi khi lấy IP từ network interfaces: {ex.Message}");
                 }
             }
 
-            // Trả về cả 127.0.0.1 và Gateway IP
-            if (!string.IsNullOrEmpty(gatewayIP))
+            // Cách 3: Fallback - lấy từ host entry
+            if (string.IsNullOrEmpty(wifiIP))
             {
-                return $"127.0.0.1, {gatewayIP}";
+                try
+                {
+                    var host = Dns.GetHostEntry(Dns.GetHostName());
+                    foreach (var ip in host.AddressList)
+                    {
+                        if (ip.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(ip))
+                        {
+                            wifiIP = ip.ToString();
+                            Logger.Info($"[IP] Tìm thấy IP từ host entry: {wifiIP}");
+                            break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Lỗi khi lấy địa chỉ IP từ host entry: {ex.Message}");
+                }
+            }
+
+            // Trả về cả 127.0.0.1 và IP WiFi thực tế
+            if (!string.IsNullOrEmpty(wifiIP))
+            {
+                return $"127.0.0.1, {wifiIP}";
             }
             else
             {
