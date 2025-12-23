@@ -153,14 +153,16 @@ namespace ChatAppClient.Forms
                     object? receivedPacket = null;
                     try
                     {
-                        // KHÔNG dùng Task.Run vì NetworkStream không thread-safe
-                        // Deserialize sẽ block thread nhưng đó là hành vi mong muốn
-                        // Sử dụng Task.Run chỉ khi thực sự cần CPU-bound work
-                        receivedPacket = await Task.Run(() =>
+                        // Kiểm tra stream trước khi deserialize
+                        if (_stream == null || !_stream.CanRead)
                         {
-                            if (_stream == null) return null;
-                            return _formatter.Deserialize(_stream);
-                        }, cancellationToken);
+                            Logger.Info("Stream không khả dụng, ngắt kết nối");
+                            break;
+                        }
+
+                        // KHÔNG dùng Task.Run vì NetworkStream không thread-safe
+                        // Gọi Deserialize trực tiếp - method này đã chạy trên background thread
+                        receivedPacket = _formatter.Deserialize(_stream);
                     }
                     catch (System.Runtime.Serialization.SerializationException serEx)
                     {
@@ -181,6 +183,12 @@ namespace ChatAppClient.Forms
                     catch (OperationCanceledException)
                     {
                         // Cancellation được yêu cầu, break normally
+                        break;
+                    }
+                    catch (IOException ioEx)
+                    {
+                        // IOException xảy ra khi stream bị đóng
+                        Logger.Info($"Stream đã bị đóng: {ioEx.Message}");
                         break;
                     }
                     catch (Exception ex)
