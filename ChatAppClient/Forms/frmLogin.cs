@@ -20,12 +20,12 @@ namespace ChatAppClient.Forms
         {
             // Gán sự kiện Click cho nút Đăng nhập
             this.btnLogin.Click += BtnLogin_Click;
-            
+
             // Đảm bảo txtServerIP có thể nhập được
             txtServerIP.InnerTextBox.ReadOnly = false;
             txtServerIP.InnerTextBox.Enabled = true;
             txtServerIP.Enabled = true;
-            
+
             // Thiết lập mặc định
             UpdateLoginFieldPlaceholder();
             // (Optional) Pre-fill for testing if you want
@@ -57,7 +57,6 @@ namespace ChatAppClient.Forms
         private async void BtnLogin_Click(object sender, EventArgs e)
         {
             // Lấy dữ liệu từ các RoundedTextBox
-            // Lưu ý: RoundedTextBox thường dùng thuộc tính .Text giống TextBox thường
             string serverIp = txtServerIP.Text.Trim();
             string usernameOrEmail = txtUser.Text.Trim();
             string password = txtPass.Text.Trim();
@@ -74,8 +73,22 @@ namespace ChatAppClient.Forms
                     "LƯU Ý:\n" +
                     "- KHÔNG nhập 127.0.0.1 (chỉ dùng khi cùng máy)\n" +
                     "- KHÔNG nhập IP Gateway (router IP)\n" +
-                    "- Phải là IP WiFi của máy Server", 
+                    "- Phải là IP WiFi của máy Server",
                     "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Validate IP address format
+            if (!IsValidIPAddress(serverIp))
+            {
+                MessageBox.Show($"Địa chỉ IP không hợp lệ: {serverIp}\n\n" +
+                    "IP address phải có định dạng:\n" +
+                    "  - IPv4: xxx.xxx.xxx.xxx (ví dụ: 192.168.1.100)\n" +
+                    "  - Hoặc localhost: 127.0.0.1 (chỉ dùng khi cùng máy)\n\n" +
+                    "LƯU Ý:\n" +
+                    "- KHÔNG nhập IP Gateway (router IP)\n" +
+                    "- Phải là IP WiFi của máy Server",
+                    "IP không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             if (string.IsNullOrEmpty(usernameOrEmail) || string.IsNullOrEmpty(password))
@@ -103,20 +116,20 @@ namespace ChatAppClient.Forms
 
                 if (!connected)
                 {
-                    // Kiểm tra xem có ping được không
+                    // Kiểm tra xem có ping được không - sử dụng async để không block UI thread
                     bool canPing = false;
                     try
                     {
                         using (var ping = new System.Net.NetworkInformation.Ping())
                         {
-                            var reply = ping.Send(serverIp, 3000);
+                            var reply = await ping.SendPingAsync(serverIp, 3000);
                             canPing = (reply.Status == System.Net.NetworkInformation.IPStatus.Success);
                         }
                     }
                     catch { }
 
                     string helpText = $"Không thể kết nối đến server tại {serverIp}:9000\n\n";
-                    
+
                     if (!canPing)
                     {
                         helpText += "🔴 KHÔNG PING ĐƯỢC - HAI MÁY KHÔNG CÙNG MẠNG!\n\n" +
@@ -156,27 +169,44 @@ namespace ChatAppClient.Forms
                             "□ IP nhập có đúng không? (Lấy từ form Server)\n\n" +
                             "Xem file CHECKLIST_KET_NOI.md để kiểm tra chi tiết!";
                     }
-                    
+
                     throw new Exception(helpText);
                 }
 
                 // 4. Gửi gói tin Login
                 btnLogin.Text = "Logging in...";
-                var loginPacket = new LoginPacket 
-                { 
-                    Username = useEmail ? null : usernameOrEmail,
-                    Email = useEmail ? usernameOrEmail : null,
-                    Password = password,
-                    UseEmailLogin = useEmail
-                };
+                var loginPacket = new LoginPacket();
+
+                if (useEmail)
+                {
+                    loginPacket.Email = usernameOrEmail;
+                    loginPacket.Username = null;
+                    loginPacket.UseEmailLogin = true;
+                }
+                else
+                {
+                    loginPacket.Username = usernameOrEmail;
+                    loginPacket.Email = null;
+                    loginPacket.UseEmailLogin = false;
+                }
+
+                loginPacket.Password = password;
 
                 // Gọi hàm async trong NetworkManager
                 LoginResultPacket result = await NetworkManager.Instance.LoginAsync(loginPacket);
 
                 // 5. Xử lý kết quả (chỉ xử lý nếu form vẫn còn visible và chưa đóng)
+                // Đảm bảo chạy trên UI thread
                 if (!this.IsDisposed && this.Visible)
                 {
-                    ProcessLoginResult(result);
+                    if (this.InvokeRequired)
+                    {
+                        this.Invoke(new Action(() => ProcessLoginResult(result)));
+                    }
+                    else
+                    {
+                        ProcessLoginResult(result);
+                    }
                 }
             }
             catch (Exception ex)
@@ -207,25 +237,41 @@ namespace ChatAppClient.Forms
         {
             // Kiểm tra form vẫn còn tồn tại và visible
             if (this.IsDisposed || !this.Visible) return;
-            
+
             if (result.Success)
             {
                 // Đăng nhập thành công!
-                NetworkManager.Instance.SetUserCredentials(result.UserID, result.UserName);
+                NetworkManager.Instance.SetUserCredentials(result.UserID ?? string.Empty, result.UserName ?? string.Empty);
+
+                // Đảm bảo OnlineUsers không null
+                var onlineUsers = result.OnlineUsers ?? new List<UserStatus>();
 
                 // Mở Form Home
-                frmHome homeForm = new frmHome(result.OnlineUsers);
-                homeForm.Show();
-
-                // Ẩn form login
-                this.Hide();
+                try
+                {
+                    // Tạo form trước (có thể mất thời gian)
+                    frmHome homeForm = new frmHome(onlineUsers);
+                    
+                    // Hiển thị form mới trước
+                    homeForm.Show();
+                    
+                    // Sau đó mới ẩn form login (để tránh flicker)
+                    this.Hide();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Lỗi khi mở giao diện chính: {ex.Message}\n\nChi tiết: {ex.StackTrace}", 
+                        "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    btnLogin.Enabled = true;
+                    btnLogin.Text = "Log in";
+                }
             }
             else
             {
                 // Đăng nhập thất bại - chỉ hiển thị nếu form vẫn còn visible
                 if (!this.IsDisposed && this.Visible)
                 {
-                    MessageBox.Show($"Login Failed: {result.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Login Failed: {result.Message ?? "Không xác định được lỗi"}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     btnLogin.Enabled = true;
                     btnLogin.Text = "Log in";
                 }
@@ -265,6 +311,30 @@ namespace ChatAppClient.Forms
             {
                 return false;
             }
+        }
+
+        // Hàm kiểm tra IP address hợp lệ
+        private bool IsValidIPAddress(string ipAddress)
+        {
+            if (string.IsNullOrWhiteSpace(ipAddress))
+                return false;
+
+            // Cho phép localhost
+            if (ipAddress == "127.0.0.1" || ipAddress == "localhost")
+                return true;
+
+            // Kiểm tra định dạng IPv4
+            string[] parts = ipAddress.Split('.');
+            if (parts.Length != 4)
+                return false;
+
+            foreach (string part in parts)
+            {
+                if (!int.TryParse(part, out int num) || num < 0 || num > 255)
+                    return false;
+            }
+
+            return true;
         }
     }
 }

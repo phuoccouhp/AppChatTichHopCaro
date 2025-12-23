@@ -153,9 +153,53 @@ namespace ChatAppServer
                         Logger.Success($"Đang lắng nghe kết nối từ TẤT CẢ interfaces (localhost + IP mạng)...");
                         await _server.StartAsync();
                     }
+                    catch (SocketException sockEx)
+                    {
+                        Logger.Error($"✗ Lỗi Socket khi khởi động server: {sockEx.SocketErrorCode} - {sockEx.Message}", sockEx);
+                        // Khôi phục lại button
+                        try
+                        {
+                            if (InvokeRequired)
+                            {
+                                Invoke(new Action(() =>
+                                {
+                                    btnStart.Enabled = true;
+                                    btnStop.Enabled = false;
+                                    lblStatus.Text = "Server: Socket Error";
+                                    lblStatus.ForeColor = Color.Red;
+                                }));
+                            }
+                        }
+                        catch (Exception invokeEx)
+                        {
+                            Logger.Error($"Lỗi khi khôi phục UI: {invokeEx.Message}");
+                        }
+                    }
+                    catch (InvalidOperationException ioEx)
+                    {
+                        Logger.Error($"✗ Lỗi InvalidOperation khi khởi động server: {ioEx.Message}", ioEx);
+                        // Khôi phục lại button
+                        try
+                        {
+                            if (InvokeRequired)
+                            {
+                                Invoke(new Action(() =>
+                                {
+                                    btnStart.Enabled = true;
+                                    btnStop.Enabled = false;
+                                    lblStatus.Text = "Server: Error";
+                                    lblStatus.ForeColor = Color.Red;
+                                }));
+                            }
+                        }
+                        catch (Exception invokeEx)
+                        {
+                            Logger.Error($"Lỗi khi khôi phục UI: {invokeEx.Message}");
+                        }
+                    }
                     catch (Exception ex)
                     {
-                        Logger.Error($"✗ Lỗi khi khởi động server: {ex.Message}", ex);
+                        Logger.Error($"✗ Lỗi khi khởi động server: {ex.GetType().Name} - {ex.Message}", ex);
                         // Khôi phục lại button
                         try
                         {

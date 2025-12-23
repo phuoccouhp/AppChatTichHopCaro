@@ -25,8 +25,41 @@ namespace ChatAppServer
         {
             get
             {
-                try { return (_client.Client.RemoteEndPoint as IPEndPoint)?.Address.ToString(); }
-                catch { return "Unknown"; }
+                try 
+                { 
+                    if (_client == null)
+                        return "Unknown";
+                    
+                    var socket = _client.Client;
+                    if (socket == null)
+                        return "Unknown";
+                    
+                    var remoteEndPoint = socket.RemoteEndPoint as IPEndPoint;
+                    if (remoteEndPoint == null)
+                        return "Unknown";
+                    
+                    return remoteEndPoint.Address?.ToString() ?? "Unknown";
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Client đã bị dispose
+                    return "Unknown";
+                }
+                catch (NullReferenceException)
+                {
+                    // Client hoặc Client.Client đã null
+                    return "Unknown";
+                }
+                catch (InvalidOperationException)
+                {
+                    // Client đã bị đóng hoặc không connected
+                    return "Unknown";
+                }
+                catch
+                {
+                    // Bất kỳ exception nào khác
+                    return "Unknown";
+                }
             }
         }
         public DateTime LoginTime { get; private set; } = DateTime.Now;
@@ -37,23 +70,94 @@ namespace ChatAppServer
 
         public ClientHandler(TcpClient client, Server server)
         {
+            if (client == null)
+            {
+                throw new ArgumentNullException(nameof(client), "TcpClient cannot be null");
+            }
+            if (server == null)
+            {
+                throw new ArgumentNullException(nameof(server), "Server cannot be null");
+            }
+
             _client = client;
             _server = server;
             try
             {
+                // Kiểm tra client đã connected chưa
+                if (!_client.Connected)
+                {
+                    Logger.Warning($"[ClientHandler] Client chưa connected khi khởi tạo handler");
+                    throw new InvalidOperationException("TcpClient is not connected");
+                }
+
+                // Cấu hình TcpClient để tối ưu kết nối
+                _client.NoDelay = true; // Tắt Nagle algorithm để gửi packet ngay lập tức
+                _client.ReceiveTimeout = 30000; // 30 giây timeout
+                _client.SendTimeout = 30000;
+                _client.ReceiveBufferSize = 8192;
+                _client.SendBufferSize = 8192;
+
                 _stream = _client.GetStream();
+                if (_stream == null)
+                {
+                    Logger.Error("Không thể lấy NetworkStream từ TcpClient", null);
+                    throw new InvalidOperationException("NetworkStream is null");
+                }
+
+                // Kiểm tra stream có thể đọc/ghi không
+                if (!_stream.CanRead || !_stream.CanWrite)
+                {
+                    Logger.Error($"Stream không thể đọc/ghi: CanRead={_stream.CanRead}, CanWrite={_stream.CanWrite}", null);
+                    throw new InvalidOperationException("NetworkStream is not readable/writable");
+                }
+
+                // Cấu hình stream timeout
+                _stream.ReadTimeout = 30000;
+                _stream.WriteTimeout = 30000;
+
                 _formatter = new BinaryFormatter();
+                Logger.Info($"[ClientHandler] Đã khởi tạo thành công cho client từ {ClientIP}");
             }
             catch (Exception ex)
             {
-                Logger.Error("Không thể khởi tạo ClientHandler", ex);
-                Close();
+                Logger.Error($"Không thể khởi tạo ClientHandler: {ex.GetType().Name} - {ex.Message}", ex);
+                // Đảm bảo cleanup đúng cách
+                try
+                {
+                    _stream?.Close();
+                    _stream?.Dispose();
+                }
+                catch { }
+                try
+                {
+                    _client?.Close();
+                    _client?.Dispose();
+                }
+                catch { }
+                _stream = null;
+                _client = null;
+                throw; // Re-throw để Server biết và xử lý
             }
         }
 
         public async Task StartHandlingAsync()
         {
-            if (_stream == null) return;
+            if (_stream == null)
+            {
+                Logger.Warning($"[ClientHandler] Không thể bắt đầu xử lý: Stream is null cho client từ {ClientIP}");
+                Close();
+                return;
+            }
+
+            if (_client == null || !_client.Connected)
+            {
+                Logger.Warning($"[ClientHandler] Không thể bắt đầu xử lý: Client không connected từ {ClientIP}");
+                Close();
+                return;
+            }
+
+            Logger.Info($"[ClientHandler] Bắt đầu xử lý packets cho client từ {ClientIP}");
+            
             try
             {
                 while (_client != null && _client.Connected && _stream != null && _stream.CanRead)
@@ -61,37 +165,72 @@ namespace ChatAppServer
                     try
                     {
                         // Kiểm tra connection trước khi deserialize
-                        if (!_client.Connected || _stream == null || !_stream.CanRead)
+                        if (_client == null || !_client.Connected)
                         {
-                            Logger.Info($"[Client {UserID ?? "???"}] Connection đã bị đóng trước khi deserialize");
+                            Logger.Info($"[Client {UserID ?? ClientIP}] Client đã ngắt kết nối");
+                            break;
+                        }
+
+                        if (_stream == null || !_stream.CanRead)
+                        {
+                            Logger.Info($"[Client {UserID ?? ClientIP}] Stream không khả dụng");
                             break;
                         }
 
                         // Deserialize packet với error handling toàn diện
                         // KHÔNG dùng Task.Run vì NetworkStream không thread-safe
+                        // QUAN TRỌNG: Phải lock stream để tránh race condition với Serialize
                         object? receivedPacket = null;
+                        bool shouldBreak = false;
                         try
                         {
-                            // Gọi Deserialize trực tiếp trên thread hiện tại
-                            // NetworkStream sẽ block cho đến khi có dữ liệu hoặc connection đóng
-                            receivedPacket = _formatter.Deserialize(_stream);
+                            // Lock stream để đảm bảo thread-safety với Serialize
+                            lock (_stream)
+                            {
+                                // Kiểm tra lại sau khi lock
+                                if (_stream == null || !_stream.CanRead)
+                                {
+                                    Logger.Info($"[Client {UserID ?? ClientIP}] Stream không khả dụng sau khi lock");
+                                    shouldBreak = true;
+                                }
+                                else
+                                {
+                                    // Gọi Deserialize trực tiếp trên thread hiện tại
+                                    // NetworkStream sẽ block cho đến khi có dữ liệu hoặc connection đóng
+                                    receivedPacket = _formatter.Deserialize(_stream);
+                                }
+                            }
+                            
+                            if (shouldBreak) break;
+                            
+                            if (receivedPacket != null)
+                            {
+                                Logger.Info($"[Client {UserID ?? ClientIP}] Received packet: {receivedPacket.GetType().Name}");
+                            }
+                            else
+                            {
+                                Logger.Warning($"[Client {UserID ?? ClientIP}] Deserialize trả về null");
+                                break;
+                            }
                         }
                         catch (System.Runtime.Serialization.SerializationException serEx)
                         {
                             // SerializationException xảy ra khi stream bị đóng hoặc dữ liệu không đầy đủ
                             // Đây là tình huống bình thường khi client đóng kết nối
-                            if (serEx.Message.Contains("End of Stream") || 
-                                serEx.Message.Contains("parsing was completed"))
+                            string errorMsg = serEx.Message ?? "";
+                            if (errorMsg.Contains("End of Stream") ||
+                                errorMsg.Contains("parsing was completed") ||
+                                errorMsg.Contains("does not contain a valid BinaryHeader"))
                             {
-                                Logger.Info($"[Client {UserID ?? "???"}] Client đã đóng kết nối (End of Stream)");
+                                Logger.Info($"[Client {UserID ?? ClientIP}] Client đã đóng kết nối (End of Stream)");
                             }
                             else
                             {
-                                Logger.Warning($"[Client {UserID ?? "???"}] Serialization error: {serEx.Message}");
+                                Logger.Warning($"[Client {UserID ?? ClientIP}] Serialization error: {errorMsg}");
                             }
                             break; // Break để đóng connection gracefully
                         }
-                        
+
                         if (receivedPacket != null)
                         {
                             HandlePacket(receivedPacket);
@@ -101,7 +240,7 @@ namespace ChatAppServer
                     {
                         // Lỗi serialization thường xảy ra khi stream bị đóng hoặc dữ liệu không đầy đủ
                         // Luôn xử lý gracefully, không throw lại
-                        if (serEx.Message.Contains("End of Stream") || 
+                        if (serEx.Message.Contains("End of Stream") ||
                             serEx.Message.Contains("parsing was completed"))
                         {
                             Logger.Info($"[Client {UserID ?? "???"}] Client đã đóng kết nối (End of Stream)");
@@ -115,19 +254,19 @@ namespace ChatAppServer
                     catch (IOException ioEx)
                     {
                         // IOException xảy ra khi connection bị đóng
-                        Logger.Info($"[Client {UserID ?? "???"}] Connection đã bị đóng: {ioEx.Message}");
+                        Logger.Info($"[Client {UserID ?? ClientIP}] Connection đã bị đóng: {ioEx.Message}");
                         break;
                     }
                     catch (System.Net.Sockets.SocketException sockEx)
                     {
                         // SocketException xảy ra khi network có vấn đề
-                        Logger.Warning($"[Client {UserID ?? "???"}] Socket error: {sockEx.Message}");
+                        Logger.Warning($"[Client {UserID ?? ClientIP}] Socket error ({sockEx.SocketErrorCode}): {sockEx.Message}");
                         break;
                     }
                     catch (ObjectDisposedException)
                     {
                         // Stream đã bị dispose, connection đã đóng
-                        Logger.Info($"[Client {UserID ?? "???"}] Stream đã bị dispose");
+                        Logger.Info($"[Client {UserID ?? ClientIP}] Stream đã bị dispose");
                         break;
                     }
                 }
@@ -135,14 +274,16 @@ namespace ChatAppServer
             catch (System.Runtime.Serialization.SerializationException serEx)
             {
                 // Đảm bảo SerializationException LUÔN được handle ở đây - KHÔNG BAO GIỜ throw ra ngoài
-                if (serEx.Message.Contains("End of Stream") || 
-                    serEx.Message.Contains("parsing was completed"))
+                string errorMsg = serEx.Message ?? "";
+                if (errorMsg.Contains("End of Stream") ||
+                    errorMsg.Contains("parsing was completed") ||
+                    errorMsg.Contains("does not contain a valid BinaryHeader"))
                 {
-                    Logger.Info($"[Client {UserID ?? "???"}] Client đã đóng kết nối (End of Stream - outer catch)");
+                    Logger.Info($"[Client {UserID ?? ClientIP}] Client đã đóng kết nối (End of Stream - outer catch)");
                 }
                 else
                 {
-                    Logger.Warning($"[Client {UserID ?? "???"}] SerializationException (outer catch): {serEx.Message}");
+                    Logger.Warning($"[Client {UserID ?? ClientIP}] SerializationException (outer catch): {errorMsg}");
                 }
                 // KHÔNG throw lại - chỉ log và tiếp tục đến finally block
             }
@@ -153,20 +294,22 @@ namespace ChatAppServer
                 if (baseEx is System.Runtime.Serialization.SerializationException serEx)
                 {
                     // Đã được handle, chỉ log
-                    if (serEx.Message.Contains("End of Stream") || 
-                        serEx.Message.Contains("parsing was completed"))
+                    string errorMsg = serEx.Message ?? "";
+                    if (errorMsg.Contains("End of Stream") ||
+                        errorMsg.Contains("parsing was completed") ||
+                        errorMsg.Contains("does not contain a valid BinaryHeader"))
                     {
-                        Logger.Info($"[Client {UserID ?? "???"}] Client đã đóng kết nối (End of Stream - AggregateException)");
+                        Logger.Info($"[Client {UserID ?? ClientIP}] Client đã đóng kết nối (End of Stream - AggregateException)");
                     }
                     else
                     {
-                        Logger.Warning($"[Client {UserID ?? "???"}] SerializationException (AggregateException): {serEx.Message}");
+                        Logger.Warning($"[Client {UserID ?? ClientIP}] SerializationException (AggregateException): {errorMsg}");
                     }
                 }
                 else
                 {
                     // Nếu không phải SerializationException, log warning
-                    Logger.Warning($"[Client {UserID ?? "???"}] AggregateException: {aggEx.GetType().Name} - {aggEx.Message}");
+                    Logger.Warning($"[Client {UserID ?? ClientIP}] AggregateException: {aggEx.GetType().Name} - {aggEx.Message}");
                     foreach (var innerEx in aggEx.InnerExceptions)
                     {
                         Logger.Warning($"  Inner: {innerEx.GetType().Name} - {innerEx.Message}");
@@ -183,12 +326,17 @@ namespace ChatAppServer
                     !(ex is ObjectDisposedException) &&
                     !(ex is System.Runtime.Serialization.SerializationException))
                 {
-                    Logger.Warning($"[Client {UserID ?? "???"}] Lỗi không mong đợi: {ex.GetType().Name} - {ex.Message}");
+                    Logger.Warning($"[Client {UserID ?? ClientIP}] Lỗi không mong đợi: {ex.GetType().Name} - {ex.Message}");
+                    if (ex.InnerException != null)
+                    {
+                        Logger.Warning($"  Inner Exception: {ex.InnerException.GetType().Name} - {ex.InnerException.Message}");
+                    }
                 }
                 // KHÔNG throw lại - chỉ log
             }
             finally
             {
+                Logger.Info($"[ClientHandler] Kết thúc xử lý cho client {UserID ?? ClientIP}");
                 Close();
             }
         }
@@ -350,7 +498,7 @@ namespace ChatAppServer
             {
                 // Lấy lịch sử chat từ database
                 var messages = DatabaseManager.Instance.GetChatHistory(p.UserID, p.FriendID, p.Limit);
-                
+
                 // Convert sang ChatHistoryMessage
                 var response = new ChatHistoryResponsePacket
                 {
@@ -367,7 +515,7 @@ namespace ChatAppServer
                         CreatedAt = m.CreatedAt
                     }).ToList()
                 };
-                
+
                 SendPacket(response);
                 Logger.Info($"[Chat History] {p.UserID} đã lấy lịch sử chat với {p.FriendID} ({messages.Count} tin nhắn)");
             }
@@ -385,8 +533,40 @@ namespace ChatAppServer
 
         private void HandleLogin(LoginPacket p)
         {
+            // Validate packet
+            if (p == null || string.IsNullOrEmpty(p.Password))
+            {
+                var result = new LoginResultPacket { Success = false, Message = "Dữ liệu đăng nhập không hợp lệ." };
+                SendPacket(result);
+                Logger.Warning($"[Login Fail] Invalid LoginPacket from IP {this.ClientIP}");
+                try
+                {
+                    _stream?.Flush();
+                    System.Threading.Thread.Sleep(100);
+                }
+                catch { }
+                Close();
+                return;
+            }
+
             // Hỗ trợ đăng nhập bằng username hoặc email
             string loginValue = p.UseEmailLogin ? (p.Email ?? "") : (p.Username ?? "");
+
+            if (string.IsNullOrEmpty(loginValue))
+            {
+                var result = new LoginResultPacket { Success = false, Message = "Vui lòng nhập tên đăng nhập hoặc Email." };
+                SendPacket(result);
+                Logger.Warning($"[Login Fail] Empty login value from IP {this.ClientIP}");
+                try
+                {
+                    _stream?.Flush();
+                    System.Threading.Thread.Sleep(100);
+                }
+                catch { }
+                Close();
+                return;
+            }
+
             var user = DatabaseManager.Instance.Login(loginValue, p.Password, p.UseEmailLogin);
             if (user != null)
             {
@@ -417,34 +597,109 @@ namespace ChatAppServer
                     System.Threading.Thread.Sleep(100);
                 }
                 catch { }
-                Logger.Warning($"[Login Fail] {p.Username} từ IP {this.ClientIP}");
+                Logger.Warning($"[Login Fail] Invalid credentials from IP {this.ClientIP}");
                 Close();
             }
         }
 
         public void SendPacket(object packet)
         {
-            if (_client != null && _client.Connected && _stream != null)
+            if (packet == null)
             {
-                try 
-                { 
-                    lock (_stream) 
-                    { 
-                        Logger.Info($"[ClientHandler] Sending packet {packet.GetType().Name} to {(UserID ?? "unknown")} ");
-                        _formatter.Serialize(_stream, packet);
-                        _stream.Flush(); // Đảm bảo dữ liệu được gửi ngay lập tức
-                        Logger.Info($"[ClientHandler] Sent packet {packet.GetType().Name} to {(UserID ?? "unknown")} ");
-                    } 
+                Logger.Warning($"[ClientHandler] Không thể gửi packet null cho {UserID ?? "unknown"}");
+                return;
+            }
+
+            if (_client == null || !_client.Connected)
+            {
+                Logger.Warning($"[ClientHandler] Không thể gửi packet: Client không connected cho {UserID ?? "unknown"}");
+                return;
+            }
+
+            if (_stream == null || !_stream.CanWrite)
+            {
+                Logger.Warning($"[ClientHandler] Không thể gửi packet: Stream không khả dụng cho {UserID ?? "unknown"}");
+                return;
+            }
+
+            try
+            {
+                lock (_stream)
+                {
+                    // Kiểm tra lại sau khi lock
+                    if (_stream == null || !_stream.CanWrite)
+                    {
+                        Logger.Warning($"[ClientHandler] Stream không khả dụng sau khi lock cho {UserID ?? "unknown"}");
+                        return;
+                    }
+
+                    _formatter.Serialize(_stream, packet);
+                    _stream.Flush(); // Đảm bảo dữ liệu được gửi ngay lập tức
                 }
-                catch (Exception ex) { Logger.Error($"Gửi thất bại cho {UserID}", ex); Close(); }
+            }
+            catch (System.Runtime.Serialization.SerializationException serEx)
+            {
+                Logger.Error($"Lỗi serialization khi gửi packet {packet.GetType().Name} cho {UserID}: {serEx.Message}", serEx);
+                Close();
+            }
+            catch (IOException ioEx)
+            {
+                Logger.Warning($"Lỗi IO khi gửi packet {packet.GetType().Name} cho {UserID}: {ioEx.Message}");
+                Close();
+            }
+            catch (SocketException sockEx)
+            {
+                Logger.Warning($"Lỗi Socket khi gửi packet {packet.GetType().Name} cho {UserID}: {sockEx.SocketErrorCode} - {sockEx.Message}");
+                Close();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Gửi thất bại cho {UserID}: {ex.GetType().Name} - {ex.Message}", ex);
+                Close();
             }
         }
 
         public void Close()
         {
-            if (UserID != null) _server.RemoveClient(this.UserID);
-            _stream?.Close();
-            _client?.Close();
+            try
+            {
+                if (UserID != null)
+                {
+                    Logger.Info($"[ClientHandler] Đóng kết nối cho user: {UserID}");
+                    _server.RemoveClient(this.UserID);
+                }
+                else
+                {
+                    Logger.Info($"[ClientHandler] Đóng kết nối cho client từ {ClientIP} (chưa đăng nhập)");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Lỗi khi remove client: {ex.Message}");
+            }
+
+            try
+            {
+                _stream?.Close();
+                _stream?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Lỗi khi đóng stream: {ex.Message}");
+            }
+
+            try
+            {
+                _client?.Close();
+                _client?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Lỗi khi đóng client: {ex.Message}");
+            }
+
+            _stream = null;
+            _client = null;
         }
     }
 }

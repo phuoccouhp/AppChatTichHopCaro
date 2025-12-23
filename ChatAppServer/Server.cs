@@ -62,24 +62,50 @@ namespace ChatAppServer
                     Logger.Success($"Check Firewall: Port {_port} đã mở sẵn sàng.");
                 }
 
-                // --- BƯỚC 2: CẤU HÌNH SOCKET ---
+                // --- BƯỚC 2: KIỂM TRA LISTENER ---
+                if (_listener == null)
+                {
+                    Logger.Error("Listener is null! Không thể khởi động server.");
+                    throw new InvalidOperationException("TcpListener is null");
+                }
+
+                // --- BƯỚC 3: CẤU HÌNH SOCKET ---
                 try
                 {
-                    _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                    _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-                    // KeepAliveTime: thời gian (ms) không có hoạt động trước khi gửi packet thăm dò (30s)
-                    _listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, 30000);
-                    _listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, 1000);
+                    if (_listener.Server != null)
+                    {
+                        _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                        _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                        // KeepAliveTime: thời gian (ms) không có hoạt động trước khi gửi packet thăm dò (30s)
+                        _listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, 30000);
+                        _listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, 1000);
+                    }
                 }
                 catch (Exception optEx)
                 {
                     Logger.Warning($"Không thể set socket options: {optEx.Message}");
+                    // Không throw vì đây không phải lỗi nghiêm trọng
                 }
 
-                // --- BƯỚC 3: BẮT ĐẦU LẮNG NGHE ---
+                // --- BƯỚC 4: BẮT ĐẦU LẮNG NGHE ---
                 try
                 {
                     _listener.Start(100); // Backlog = 100 clients
+                    Logger.Success($"Listener đã bắt đầu lắng nghe trên port {_port}");
+                }
+                catch (SocketException sockEx)
+                {
+                    Logger.Error($"Lỗi Socket khi khởi động listener trên port {_port}: {sockEx.SocketErrorCode} - {sockEx.Message}", sockEx);
+                    if (sockEx.SocketErrorCode == SocketError.AddressAlreadyInUse)
+                    {
+                        Logger.Error($"Port {_port} đang được sử dụng bởi ứng dụng khác. Hãy đóng ứng dụng đó hoặc thay đổi port.");
+                    }
+                    throw;
+                }
+                catch (InvalidOperationException ioEx)
+                {
+                    Logger.Error($"Lỗi InvalidOperation khi khởi động listener: {ioEx.Message}", ioEx);
+                    throw;
                 }
                 catch (Exception startEx)
                 {
@@ -87,7 +113,13 @@ namespace ChatAppServer
                     throw;
                 }
 
-                // --- BƯỚC 4: HIỂN THỊ THÔNG TIN KẾT NỐI CHO NGƯỜI DÙNG ---
+                // --- BƯỚC 5: HIỂN THỊ THÔNG TIN KẾT NỐI CHO NGƯỜI DÙNG ---
+                if (_listener == null)
+                {
+                    Logger.Error("Listener is null sau khi Start! Không thể lấy thông tin kết nối.");
+                    throw new InvalidOperationException("TcpListener is null after Start");
+                }
+
                 var localEndpoint = _listener.LocalEndpoint as IPEndPoint;
                 if (localEndpoint != null)
                 {
@@ -111,6 +143,10 @@ namespace ChatAppServer
                     }
                     Logger.Info("=========================================================");
                 }
+                else
+                {
+                    Logger.Warning("Không thể lấy LocalEndpoint từ listener");
+                }
             }
             catch (Exception ex)
             {
@@ -123,13 +159,31 @@ namespace ChatAppServer
             {
                 try
                 {
+                    // Kiểm tra listener trước khi accept
+                    if (_listener == null)
+                    {
+                        Logger.Error("Listener is null! Không thể chấp nhận kết nối mới.");
+                        break;
+                    }
+
                     TcpClient clientSocket = await _listener.AcceptTcpClientAsync();
+                    
+                    // Kiểm tra client socket
+                    if (clientSocket == null)
+                    {
+                        Logger.Warning("AcceptTcpClientAsync trả về null client socket");
+                        continue;
+                    }
+
                     try
                     {
                         var remoteEP = clientSocket.Client.RemoteEndPoint as IPEndPoint;
-                        Logger.Info($"[Connect] Client mới kết nối từ: {remoteEP?.Address}");
+                        Logger.Info($"[Connect] Client mới kết nối từ: {remoteEP?.Address}:{remoteEP?.Port}");
                     }
-                    catch { }
+                    catch (Exception epEx)
+                    {
+                        Logger.Warning($"Không thể lấy RemoteEndPoint: {epEx.Message}");
+                    }
 
                     ClientHandler? clientHandler = null;
                     try
@@ -139,7 +193,12 @@ namespace ChatAppServer
                     catch (Exception handlerEx)
                     {
                         Logger.Error($"Lỗi tạo ClientHandler: {handlerEx.Message}", handlerEx);
-                        try { clientSocket.Close(); } catch { }
+                        try 
+                        { 
+                            clientSocket.Close(); 
+                            clientSocket.Dispose();
+                        } 
+                        catch { }
                         continue;
                     }
 
@@ -148,11 +207,12 @@ namespace ChatAppServer
                         // Chạy handler trên thread riêng, xử lý lỗi task
                         _ = clientHandler.StartHandlingAsync().ContinueWith(task =>
                         {
-                            if (task.IsFaulted)
+                            if (task.IsFaulted && task.Exception != null)
                             {
-                                Logger.Warning($"[Server] Lỗi trong ClientHandler: {task.Exception?.GetBaseException().Message}");
+                                var baseEx = task.Exception.GetBaseException();
+                                Logger.Warning($"[Server] Lỗi trong ClientHandler: {baseEx.GetType().Name} - {baseEx.Message}");
                             }
-                        });
+                        }, TaskContinuationOptions.OnlyOnFaulted);
                     }
                 }
                 catch (ObjectDisposedException)
@@ -160,9 +220,20 @@ namespace ChatAppServer
                     Logger.Warning("Listener đã dừng.");
                     break;
                 }
+                catch (InvalidOperationException ioEx)
+                {
+                    // Listener chưa start hoặc đã stop
+                    Logger.Error($"Listener không sẵn sàng: {ioEx.Message}", ioEx);
+                    await Task.Delay(2000);
+                }
+                catch (SocketException sockEx)
+                {
+                    Logger.Error($"Lỗi Socket khi chấp nhận client: {sockEx.SocketErrorCode} - {sockEx.Message}", sockEx);
+                    await Task.Delay(1000);
+                }
                 catch (Exception ex)
                 {
-                    Logger.Error($"Lỗi khi chấp nhận client: {ex.Message}", ex);
+                    Logger.Error($"Lỗi khi chấp nhận client: {ex.GetType().Name} - {ex.Message}", ex);
                     await Task.Delay(1000);
                 }
             }

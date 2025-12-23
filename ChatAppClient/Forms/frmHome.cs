@@ -21,7 +21,7 @@ namespace ChatAppClient.Forms
             openChatControls = new Dictionary<string, ChatViewControl>();
             openGameForms = new Dictionary<string, frmCaroGame>();
             openTankGameForms = new Dictionary<string, frmTankGame>();
-            _initialUsers = initialUsers;
+            _initialUsers = initialUsers ?? new List<UserStatus>(); // Đảm bảo không null
             btnSettings.MouseEnter += (s, e) =>
             {
                 btnSettings.BackColor = Color.FromArgb(80, 83, 95); // Màu xám sáng
@@ -78,12 +78,27 @@ namespace ChatAppClient.Forms
 
         private void frmHome_Load(object sender, EventArgs e)
         {
-            NetworkManager.Instance.RegisterHomeForm(this);
-            string? userName = NetworkManager.Instance.UserName ?? "User";
-            lblWelcome.Text = $"Chào mừng, {userName}!";
-            LoadInitialFriendList();
-            lblMainWelcome.Visible = true;
-            LoadMyAvatar();
+            try
+            {
+                NetworkManager.Instance.RegisterHomeForm(this);
+                string? userName = NetworkManager.Instance.UserName ?? "User";
+                lblWelcome.Text = $"Chào mừng, {userName}!";
+                
+                // Load danh sách bạn bè trước (nhanh hơn)
+                LoadInitialFriendList();
+                
+                // Hiển thị welcome message
+                lblMainWelcome.Visible = true;
+                
+                // Load avatar sau (có thể chậm nếu file lớn)
+                LoadMyAvatar();
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không crash app
+                System.Diagnostics.Debug.WriteLine($"frmHome_Load error: {ex.Message}");
+                MessageBox.Show($"Lỗi khi tải giao diện: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
         private void txtSearch_TextChanged(object sender, EventArgs e)
         {
@@ -138,35 +153,65 @@ namespace ChatAppClient.Forms
         }
         private void LoadMyAvatar()
         {
-            // [TEST] Đặt màu đỏ để biết chắc chắn PictureBox đang nằm ở đó
-            pbUserAvatar.BackColor = Color.White;
-
-            string? myId = NetworkManager.Instance.UserID;
-            if (string.IsNullOrEmpty(myId)) return;
-            string imagePath = System.IO.Path.Combine("Images", $"{myId}.png");
-
-            // ... (code load ảnh cũ của bạn) ...
-            if (System.IO.File.Exists(imagePath))
+            try
             {
-                using (var bmp = new Bitmap(imagePath))
+                // [TEST] Đặt màu đỏ để biết chắc chắn PictureBox đang nằm ở đó
+                pbUserAvatar.BackColor = Color.White;
+
+                string? myId = NetworkManager.Instance.UserID;
+                if (string.IsNullOrEmpty(myId)) return;
+                string imagePath = System.IO.Path.Combine("Images", $"{myId}.png");
+
+                // Load ảnh nếu tồn tại
+                if (System.IO.File.Exists(imagePath))
                 {
-                    pbUserAvatar.Image = new Bitmap(bmp);
-                    pbUserAvatar.BackColor = Color.Transparent; // Nếu có ảnh thì bỏ màu đỏ đi
+                    try
+                    {
+                        using (var bmp = new Bitmap(imagePath))
+                        {
+                            // Tạo bitmap mới để tránh dispose issue
+                            var newBmp = new Bitmap(bmp);
+                            pbUserAvatar.Image = newBmp;
+                            pbUserAvatar.BackColor = Color.Transparent; // Nếu có ảnh thì bỏ màu đỏ đi
+                        }
+                    }
+                    catch
+                    {
+                        // Nếu load ảnh lỗi, giữ nguyên màu trắng
+                    }
+                }
+
+                // Bo tròn - chỉ làm nếu control đã sẵn sàng
+                if (pbUserAvatar.Width > 0 && pbUserAvatar.Height > 0)
+                {
+                    System.Drawing.Drawing2D.GraphicsPath gp = new System.Drawing.Drawing2D.GraphicsPath();
+                    gp.AddEllipse(0, 0, pbUserAvatar.Width, pbUserAvatar.Height);
+                    pbUserAvatar.Region = new Region(gp);
                 }
             }
-
-            // Bo tròn
-            System.Drawing.Drawing2D.GraphicsPath gp = new System.Drawing.Drawing2D.GraphicsPath();
-            gp.AddEllipse(0, 0, pbUserAvatar.Width, pbUserAvatar.Height);
-            pbUserAvatar.Region = new Region(gp);
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không crash app
+                System.Diagnostics.Debug.WriteLine($"LoadMyAvatar error: {ex.Message}");
+            }
         }
         private void LoadInitialFriendList()
         {
             if (_initialUsers == null) return;
             foreach (var user in _initialUsers)
             {
-                AddFriendToList(user.UserID, user.UserName,
-                    user.IsOnline ? "Online" : "Offline", user.IsOnline);
+                // Kiểm tra null để tránh lỗi
+                if (user == null) continue;
+                
+                string userId = user.UserID ?? string.Empty;
+                string userName = user.UserName ?? "Unknown";
+                
+                // Chỉ thêm nếu có UserID hợp lệ
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    AddFriendToList(userId, userName,
+                        user.IsOnline ? "Online" : "Offline", user.IsOnline);
+                }
             }
         }
 
@@ -215,8 +260,11 @@ namespace ChatAppClient.Forms
 
         public void AddFriendToList(string id, string name, string status, bool isOnline)
         {
+            // Kiểm tra null để tránh lỗi
+            if (string.IsNullOrEmpty(id)) return;
+            
             FriendListItem item = new FriendListItem();
-            item.SetData(id, name, status, isOnline);
+            item.SetData(id ?? string.Empty, name ?? "Unknown", status ?? "Offline", isOnline);
 
             item.Click += (sender, e) => FriendItem_Click(item);
             foreach (Control control in item.Controls) control.Click += (sender, e) => FriendItem_Click(item);
@@ -306,14 +354,21 @@ namespace ChatAppClient.Forms
                 }
             }
 
+            // Kiểm tra null để tránh lỗi
+            if (packet == null || string.IsNullOrEmpty(packet.UserID)) return;
+            
             if (packet.IsOnline)
             {
-                if (existingItem == null) AddFriendToList(packet.UserID, packet.UserName, "Online", true);
-                else existingItem.SetData(packet.UserID, packet.UserName, "Online", true);
+                string userId = packet.UserID ?? string.Empty;
+                string userName = packet.UserName ?? "Unknown";
+                if (existingItem == null) AddFriendToList(userId, userName, "Online", true);
+                else existingItem.SetData(userId, userName, "Online", true);
             }
             else if (existingItem != null)
             {
-                existingItem.SetData(packet.UserID, packet.UserName, "Offline", false);
+                string userId = packet.UserID ?? string.Empty;
+                string userName = packet.UserName ?? "Unknown";
+                existingItem.SetData(userId, userName, "Offline", false);
             }
         }
 

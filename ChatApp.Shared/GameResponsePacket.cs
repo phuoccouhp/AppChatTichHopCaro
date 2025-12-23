@@ -4,8 +4,11 @@ namespace ChatApp.Shared
     [Serializable]
     public class GameResponsePacket
     {
-        public string SenderID { get; set; } 
-        public string ReceiverID { get; set; } 
+        public string SenderID { get; set; } = string.Empty;
+        public string ReceiverID { get; set; } = string.Empty;
         public bool Accepted { get; set; }
+
+        // Parameterless constructor required for BinaryFormatter
+        public GameResponsePacket() { }
     }
 }

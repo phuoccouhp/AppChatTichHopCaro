@@ -6,7 +6,10 @@ namespace ChatApp.Shared
     public class ForgotPasswordResultPacket
     {
         public bool Success { get; set; }
-        public string Message { get; set; }
+        public string Message { get; set; } = string.Empty;
         public bool IsStep1Success { get; set; } // True: Đã gửi OTP thành công, False: Đổi pass xong/Lỗi
+
+        // Parameterless constructor required for BinaryFormatter
+        public ForgotPasswordResultPacket() { }
     }
 }

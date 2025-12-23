@@ -11,5 +11,8 @@ namespace ChatApp.Shared
         public int RemainingHealth { get; set; }
         public bool IsGameOver { get; set; }
         public string? WinnerID { get; set; }
+
+        // Parameterless constructor required for BinaryFormatter
+        public TankHitPacket() { }
     }
 }
