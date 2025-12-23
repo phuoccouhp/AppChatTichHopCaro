@@ -47,6 +47,9 @@
     <Compile Update="UserControls\FriendListItem.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Update="UserControls\GameInviteBubble.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Update="UserControls\ImageBubble.cs">
       <SubType>UserControl</SubType>
     </Compile>

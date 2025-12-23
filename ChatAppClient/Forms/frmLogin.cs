@@ -21,6 +21,20 @@ namespace ChatAppClient.Forms
             // Gán sự kiện Click cho nút Đăng nhập
             this.btnLogin.Click += BtnLogin_Click;
             
+            // Đảm bảo txtServerIP có thể nhập được
+            txtServerIP.InnerTextBox.ReadOnly = false;
+            txtServerIP.InnerTextBox.Enabled = true;
+            txtServerIP.Enabled = true;
+            
+            // Thêm event để đảm bảo khi click vào txtServerIP, nó sẽ focus và xóa placeholder
+            txtServerIP.Click += (s, e) => {
+                if (txtServerIP.InnerTextBox.Text == txtServerIP.PlaceholderText || string.IsNullOrEmpty(txtServerIP.InnerTextBox.Text))
+                {
+                    txtServerIP.InnerTextBox.Text = "";
+                    txtServerIP.InnerTextBox.Focus();
+                }
+            };
+            
             // Thiết lập mặc định
             UpdateLoginFieldPlaceholder();
             // (Optional) Pre-fill for testing if you want

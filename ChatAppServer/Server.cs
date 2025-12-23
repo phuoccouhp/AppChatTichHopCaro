@@ -18,6 +18,8 @@ namespace ChatAppServer
         private readonly Dictionary<string, GameSession> _gameSessions = new Dictionary<string, GameSession>();
         // Quản lý Tank Game
         public TankGameManager TankGameManager { get; private set; }
+        // Lưu MessageID của game invite (Key = "SenderID:ReceiverID", Value = MessageID)
+        private readonly Dictionary<string, int> _gameInviteMessageIds = new Dictionary<string, int>();
 
         // Sự kiện để báo cho Giao diện (Form) biết khi danh sách user thay đổi
         public event Action<List<string>>? OnUserListChanged;
@@ -148,13 +150,48 @@ namespace ChatAppServer
 
         public List<UserStatus> GetOnlineUsers(string excludeUserID)
         {
-            lock (_clients)
+            // Trả về danh sách các contact (người đã từng nhắn tin) cho user excludeUserID
+            // Kèm theo trạng thái online nếu họ đang kết nối
+            var result = new List<UserStatus>();
+            try
             {
-                return _clients.Values
-                    .Where(c => c.UserID != null && c.UserID != excludeUserID)
-                    .Select(c => new UserStatus { UserID = c.UserID, UserName = c.UserName, IsOnline = true })
-                    .ToList();
+                // Lấy contacts từ database
+                var contacts = DatabaseManager.Instance.GetContacts(excludeUserID);
+
+                // Dùng dictionary để dễ tra cứu
+                var dict = new Dictionary<string, UserStatus>(StringComparer.OrdinalIgnoreCase);
+                foreach (var c in contacts)
+                {
+                    if (c.UserID != null && c.UserID != excludeUserID)
+                        dict[c.UserID] = new UserStatus { UserID = c.UserID, UserName = c.UserName, IsOnline = false };
+                }
+
+                // Thêm/đánh dấu các user đang online
+                lock (_clients)
+                {
+                    foreach (var client in _clients.Values)
+                    {
+                        if (string.IsNullOrEmpty(client.UserID) || client.UserID == excludeUserID) continue;
+                        if (dict.ContainsKey(client.UserID))
+                        {
+                            dict[client.UserID].IsOnline = true;
+                            dict[client.UserID].UserName = client.UserName; // ưu tiên tên hiện tại
+                        }
+                        else
+                        {
+                            // Nếu họ online nhưng chưa là contact, vẫn thêm vào danh sách (tương tự behavior cũ)
+                            dict[client.UserID] = new UserStatus { UserID = client.UserID, UserName = client.UserName, IsOnline = true };
+                        }
+                    }
+                }
+
+                result = new List<UserStatus>(dict.Values);
             }
+            catch (Exception ex)
+            {
+                Logger.Error("Lỗi khi lấy danh sách online/contacts", ex);
+            }
+            return result;
         }
 
         // Hàm cập nhật danh sách user lên giao diện Server
@@ -191,7 +228,9 @@ namespace ChatAppServer
             {
                 if (_clients.TryGetValue(receiverID, out ClientHandler receiver))
                 {
+                    Logger.Info($"[RelayPrivatePacket] Sending packet {packet.GetType().Name} to {receiverID}");
                     receiver.SendPacket(packet);
+                    Logger.Info($"[RelayPrivatePacket] Sent packet {packet.GetType().Name} to {receiverID}");
                 }
                 else
                 {
@@ -204,11 +243,55 @@ namespace ChatAppServer
 
         #region Xử lý Logic Game
 
+        // Lưu MessageID của game invite
+        public void StoreGameInviteMessageId(string senderID, string receiverID, int messageId)
+        {
+            if (messageId > 0)
+            {
+                string key = $"{senderID}:{receiverID}";
+                lock (_gameInviteMessageIds)
+                {
+                    _gameInviteMessageIds[key] = messageId;
+                }
+            }
+        }
+
+        // Lấy và xóa MessageID của game invite
+        private int GetAndRemoveGameInviteMessageId(string senderID, string receiverID)
+        {
+            string key = $"{senderID}:{receiverID}";
+            lock (_gameInviteMessageIds)
+            {
+                if (_gameInviteMessageIds.TryGetValue(key, out int messageId))
+                {
+                    _gameInviteMessageIds.Remove(key);
+                    return messageId;
+                }
+            }
+            return 0;
+        }
+
         public void ProcessGameResponse(GameResponsePacket response)
         {
+            Logger.Info($"[ProcessGameResponse] Received response: Sender={response.SenderID}, Receiver={response.ReceiverID}, Accepted={response.Accepted}");
+            // Cập nhật tin nhắn trong database
+            int messageId = GetAndRemoveGameInviteMessageId(response.SenderID, response.ReceiverID);
+            if (messageId > 0)
+            {
+                string statusText = response.Accepted ? "✓ Đã chấp nhận" : "✗ Đã từ chối";
+                var messages = DatabaseManager.Instance.GetChatHistory(response.ReceiverID, response.SenderID, 100);
+                var message = messages.FirstOrDefault(m => m.MessageID == messageId);
+                if (message != null)
+                {
+                    string updatedMessage = message.MessageContent + " - " + statusText;
+                    DatabaseManager.Instance.UpdateMessage(messageId, updatedMessage);
+                }
+            }
+
             if (!response.Accepted)
             {
                 Logger.Warning($"[Game] {response.SenderID} từ chối {response.ReceiverID}");
+                Logger.Info($"[ProcessGameResponse] Relaying decline to inviter {response.ReceiverID}");
                 RelayPrivatePacket(response.ReceiverID, response);
                 return;
             }
@@ -379,6 +462,20 @@ namespace ChatAppServer
         // --- XỬ LÝ TANK GAME ---
         public void ProcessTankResponse(TankResponsePacket response)
         {
+            // Cập nhật tin nhắn trong database
+            int messageId = GetAndRemoveGameInviteMessageId(response.ReceiverID, response.SenderID);
+            if (messageId > 0)
+            {
+                string statusText = response.Accepted ? "✓ Đã chấp nhận" : "✗ Đã từ chối";
+                var messages = DatabaseManager.Instance.GetChatHistory(response.ReceiverID, response.SenderID, 100);
+                var message = messages.FirstOrDefault(m => m.MessageID == messageId);
+                if (message != null)
+                {
+                    string updatedMessage = message.MessageContent + " - " + statusText;
+                    DatabaseManager.Instance.UpdateMessage(messageId, updatedMessage);
+                }
+            }
+
             if (!response.Accepted)
             {
                 Logger.Warning($"[Tank Game] {response.SenderID} từ chối {response.ReceiverID}");

@@ -1,4 +1,6 @@
 ﻿using System;
+using ChatApp.Shared;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 
 namespace ChatAppServer
@@ -15,7 +17,7 @@ namespace ChatAppServer
 
         private DatabaseManager() { }
 
-        // Hàm kiểm tra đăng nhập (hỗ trợ cả username và email)
+        // Hàm kiểm tra đăng nhập (hỗ trợ cả username và email) - với password hashing
         public UserData? Login(string usernameOrEmail, string password, bool useEmail = false)
         {
             using (SqlConnection conn = new SqlConnection(_connectionString))
@@ -26,31 +28,116 @@ namespace ChatAppServer
                     string query;
                     if (useEmail)
                     {
-                        query = "SELECT Username, DisplayName FROM Users WHERE Email = @u AND Password = @p";
+                        query = "SELECT Username, DisplayName, Password FROM Users WHERE Email = @u";
                     }
                     else
                     {
-                        query = "SELECT Username, DisplayName FROM Users WHERE Username = @u AND Password = @p";
+                        query = "SELECT Username, DisplayName, Password FROM Users WHERE Username = @u";
                     }
 
+                    // Khai báo biến bên ngoài block using để có thể sử dụng sau
+                    string? storedPassword = null;
+                    string username = "";
+                    string displayName = "";
+                    bool needToHashPassword = false;
+                    bool passwordValid = false;
+                    
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
-                        // Dùng tham số (@u, @p) để chống hack SQL Injection
+                        // Dùng tham số (@u) để chống hack SQL Injection
                         cmd.Parameters.AddWithValue("@u", usernameOrEmail);
-                        cmd.Parameters.AddWithValue("@p", password);
-
+                        
                         using (SqlDataReader reader = cmd.ExecuteReader())
                         {
                             if (reader.Read())
                             {
-                                // Tìm thấy user!
-                                return new UserData
+                                // Lấy password đã hash từ database
+                                storedPassword = reader["Password"]?.ToString();
+                                username = reader["Username"]?.ToString() ?? "";
+                                displayName = reader["DisplayName"]?.ToString() ?? "";
+                                
+                                Logger.Info($"[Login] Tìm thấy user: {username}");
+                                
+                                if (string.IsNullOrEmpty(storedPassword))
                                 {
-                                    Username = reader["Username"].ToString(),
-                                    DisplayName = reader["DisplayName"].ToString()
-                                };
+                                    Logger.Warning($"[Login] Password trong database rỗng cho user: {username}");
+                                    return null;
+                                }
                             }
+                            else
+                            {
+                                Logger.Warning($"[Login] Không tìm thấy user: {usernameOrEmail}");
+                                return null;
+                            }
+                        } // Đóng reader trước khi update password
+                    } // Đóng command
+                    
+                    // Kiểm tra password sau khi đóng reader và command
+                    // Trim để loại bỏ khoảng trắng thừa
+                    if (storedPassword == null)
+                    {
+                        Logger.Warning($"[Login] Password null cho user: {usernameOrEmail}");
+                        return null;
+                    }
+                    storedPassword = storedPassword.Trim();
+                    password = password.Trim();
+                    
+                    // Kiểm tra xem password có được hash chưa (format: "salt:hash")
+                    if (storedPassword.Contains(":"))
+                    {
+                        // Password đã được hash, verify bình thường
+                        passwordValid = PasswordHelper.VerifyPassword(password, storedPassword);
+                        if (!passwordValid)
+                        {
+                            int storedLen = storedPassword.Length;
+                            string storedPrefix = storedPassword.Substring(0, Math.Min(8, storedPassword.Length));
+                            Logger.Warning($"[Login] Password hash không khớp cho user: {username}. StoredLen={storedLen}, StoredPrefix={storedPrefix}...");
                         }
+                    }
+                    else
+                    {
+                        // Password cũ (plain text) - backward compatibility
+                        // So sánh trực tiếp (chỉ cho password cũ) - case sensitive
+                        passwordValid = (storedPassword.Equals(password, StringComparison.Ordinal));
+                        
+                        if (!passwordValid)
+                        {
+                            int storedLen = storedPassword.Length;
+                            int inputLen = password.Length;
+                            string storedPrefix = storedPassword.Length > 4 ? storedPassword.Substring(0, 4) : storedPassword;
+                            Logger.Warning($"[Login] Password plain text không khớp cho user: {username}. StoredLen={storedLen}, InputLen={inputLen}, StoredPrefix={storedPrefix}...");
+                        }
+                        else
+                        {
+                            // Đánh dấu cần hash lại password
+                            needToHashPassword = true;
+                        }
+                    }
+                    
+                    // Hash lại password nếu cần (sử dụng connection mới để tránh conflict)
+                    if (needToHashPassword && passwordValid)
+                    {
+                        try
+                        {
+                            string hashedPassword = PasswordHelper.HashPassword(password);
+                            UpdatePasswordForUserSeparateConnection(username, hashedPassword);
+                            Logger.Info($"[Migration] Đã tự động hash password cho user: {username}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Error($"[Migration] Lỗi khi hash password cho user: {username}", ex);
+                            // Vẫn cho phép đăng nhập dù không hash được
+                        }
+                    }
+                    
+                    if (passwordValid)
+                    {
+                        // Password đúng!
+                        return new UserData
+                        {
+                            Username = username,
+                            DisplayName = displayName
+                        };
                     }
                 }
                 catch (Exception ex)
@@ -58,7 +145,7 @@ namespace ChatAppServer
                     Logger.Error("Lỗi kết nối CSDL", ex);
                 }
             }
-            return null; // Không tìm thấy hoặc lỗi
+            return null; // Không tìm thấy hoặc password sai
         }
         // (Trong class DatabaseManager)
         public void UpdateDisplayName(string username, string newDisplayName)
@@ -101,12 +188,15 @@ namespace ChatAppServer
                     }
 
                     // Nếu chưa, thêm mới
+                    // Hash password trước khi lưu
+                    string hashedPassword = PasswordHelper.HashPassword(password);
+                    
                     // Mặc định Tên hiển thị (DisplayName) sẽ giống Username
                     string insertQuery = "INSERT INTO Users (Username, Password, DisplayName, Email) VALUES (@u, @p, @d, @e)";
                     using (SqlCommand cmd = new SqlCommand(insertQuery, conn))
                     {
                         cmd.Parameters.AddWithValue("@u", username);
-                        cmd.Parameters.AddWithValue("@p", password);
+                        cmd.Parameters.AddWithValue("@p", hashedPassword); // Lưu password đã hash
                         cmd.Parameters.AddWithValue("@d", username); // DisplayName mặc định
                         cmd.Parameters.AddWithValue("@e", email);
                         cmd.ExecuteNonQuery();
@@ -137,20 +227,211 @@ namespace ChatAppServer
             }
         }
 
-        // Cập nhật mật khẩu mới
-        public void UpdatePassword(string email, string newPassword)
+        // Helper method để update password theo username (dùng trong migration)
+        // Sử dụng connection riêng để tránh conflict với reader đang mở
+        private void UpdatePasswordForUserSeparateConnection(string username, string hashedPassword)
         {
             using (SqlConnection conn = new SqlConnection(_connectionString))
             {
                 conn.Open();
-                string query = "UPDATE Users SET Password = @p WHERE Email = @e";
+                string query = "UPDATE Users SET Password = @p WHERE Username = @u";
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
-                    cmd.Parameters.AddWithValue("@p", newPassword);
-                    cmd.Parameters.AddWithValue("@e", email);
+                    cmd.Parameters.AddWithValue("@p", hashedPassword);
+                    cmd.Parameters.AddWithValue("@u", username);
                     cmd.ExecuteNonQuery();
                 }
             }
+        }
+
+        // Cập nhật mật khẩu mới - với password hashing
+        public void UpdatePassword(string email, string newPassword)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                try
+                {
+                    conn.Open();
+                    // Hash password trước khi lưu
+                    string hashedPassword = PasswordHelper.HashPassword(newPassword);
+                    
+                    string query = "UPDATE Users SET Password = @p WHERE Email = @e";
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@p", hashedPassword);
+                        cmd.Parameters.AddWithValue("@e", email);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Lỗi cập nhật mật khẩu", ex);
+                }
+            }
+        }
+
+        // Lưu tin nhắn vào database và trả về MessageID
+        public int SaveMessage(string senderID, string receiverID, string messageContent, string messageType = "Text", string? fileName = null)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                try
+                {
+                    conn.Open();
+                    string query = @"INSERT INTO Messages (SenderID, ReceiverID, MessageContent, MessageType, FileName, CreatedAt) 
+                                     OUTPUT INSERTED.MessageID
+                                     VALUES (@sender, @receiver, @content, @type, @fileName, GETDATE())";
+                    
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@sender", senderID);
+                        cmd.Parameters.AddWithValue("@receiver", receiverID);
+                        cmd.Parameters.AddWithValue("@content", messageContent ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@type", messageType);
+                        cmd.Parameters.AddWithValue("@fileName", fileName ?? (object)DBNull.Value);
+                        object result = cmd.ExecuteScalar();
+                        return result != null ? Convert.ToInt32(result) : 0;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Lỗi lưu tin nhắn vào database", ex);
+                    return 0;
+                }
+            }
+        }
+
+        // Cập nhật nội dung tin nhắn
+        public void UpdateMessage(int messageID, string newContent)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                try
+                {
+                    conn.Open();
+                    string query = @"UPDATE Messages SET MessageContent = @content WHERE MessageID = @id";
+                    
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@content", newContent);
+                        cmd.Parameters.AddWithValue("@id", messageID);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Lỗi cập nhật tin nhắn trong database", ex);
+                }
+            }
+        }
+
+        // Lấy lịch sử chat giữa 2 người dùng
+        public List<MessageData> GetChatHistory(string userID1, string userID2, int limit = 100)
+        {
+            var messages = new List<MessageData>();
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                try
+                {
+                    conn.Open();
+                    string query = @"SELECT TOP (@limit) MessageID, SenderID, ReceiverID, MessageContent, MessageType, FileName, CreatedAt
+                                     FROM Messages
+                                     WHERE (SenderID = @user1 AND ReceiverID = @user2) 
+                                        OR (SenderID = @user2 AND ReceiverID = @user1)
+                                     ORDER BY CreatedAt DESC";
+                    
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@user1", userID1);
+                        cmd.Parameters.AddWithValue("@user2", userID2);
+                        cmd.Parameters.AddWithValue("@limit", limit);
+                        
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                messages.Add(new MessageData
+                                {
+                                    MessageID = (int)reader["MessageID"],
+                                    SenderID = reader["SenderID"].ToString(),
+                                    ReceiverID = reader["ReceiverID"].ToString(),
+                                    MessageContent = reader["MessageContent"]?.ToString(),
+                                    MessageType = reader["MessageType"]?.ToString() ?? "Text",
+                                    FileName = reader["FileName"]?.ToString(),
+                                    CreatedAt = (DateTime)reader["CreatedAt"]
+                                });
+                            }
+                        }
+                    }
+                    // Đảo ngược để có thứ tự từ cũ đến mới
+                    messages.Reverse();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Lỗi lấy lịch sử chat", ex);
+                }
+            }
+            return messages;
+        }
+
+        // Lấy danh sách các user mà userID đã từng nhắn tin (dạng Username + DisplayName)
+        public List<UserStatus> GetContacts(string userID)
+        {
+            var contacts = new List<UserStatus>();
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                try
+                {
+                    conn.Open();
+                    // Lấy danh sách distinct partner IDs từ Messages
+                    string query = @"
+                        SELECT DISTINCT CASE WHEN SenderID = @u THEN ReceiverID ELSE SenderID END AS ContactID
+                        FROM Messages
+                        WHERE SenderID = @u OR ReceiverID = @u
+                    ";
+
+                    var contactIds = new List<string>();
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@u", userID);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                var id = reader["ContactID"]?.ToString();
+                                if (!string.IsNullOrEmpty(id)) contactIds.Add(id);
+                            }
+                        }
+                    }
+
+                    if (contactIds.Count == 0) return contacts;
+
+                    // Lấy DisplayName từ bảng Users cho các ContactID
+                    // Dùng IN clause
+                    string inClause = string.Join(",", contactIds.ConvertAll(id => "'" + id.Replace("'", "''") + "'"));
+                    string query2 = $@"
+                        SELECT Username, DisplayName FROM Users WHERE Username IN ({inClause})
+                    ";
+
+                    using (SqlCommand cmd2 = new SqlCommand(query2, conn))
+                    {
+                        using (SqlDataReader reader = cmd2.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string id = reader["Username"]?.ToString() ?? "";
+                                string display = reader["DisplayName"]?.ToString() ?? id;
+                                contacts.Add(new UserStatus { UserID = id, UserName = display, IsOnline = false });
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Lỗi lấy danh sách contacts", ex);
+                }
+            }
+            return contacts;
         }
     }
 
@@ -160,5 +441,17 @@ namespace ChatAppServer
     {
         public string? Username { get; set; }
         public string? DisplayName { get; set; }
+    }
+
+    // Class để chứa dữ liệu tin nhắn
+    public class MessageData
+    {
+        public int MessageID { get; set; }
+        public string? SenderID { get; set; }
+        public string? ReceiverID { get; set; }
+        public string? MessageContent { get; set; }
+        public string MessageType { get; set; } = "Text";
+        public string? FileName { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 }
