@@ -30,8 +30,10 @@ namespace ChatAppClient.UserControls
         private int _messageId = 0;
 
         public event EventHandler<bool>? OnResponse; // bool: accepted
+        public event EventHandler? OnReinvite; // Event khi người dùng muốn mời lại
         public int MessageID { get; set; }
         public GameInviteStatus Status => _status;
+        public GameType CurrentGameType => _gameType;
 
         public GameInviteBubble()
         {
@@ -90,6 +92,7 @@ namespace ChatAppClient.UserControls
                         btnAccept.Visible = true;
                         btnDecline.Visible = true;
                     }
+                    btnReinvite.Visible = false;
                     break;
                 case GameInviteStatus.Accepted:
                     if (_type == MessageType.Outgoing)
@@ -104,17 +107,20 @@ namespace ChatAppClient.UserControls
                     }
                     btnAccept.Visible = false;
                     btnDecline.Visible = false;
+                    btnReinvite.Visible = false;
                     break;
                 case GameInviteStatus.Declined:
                     if (_type == MessageType.Outgoing)
                     {
                         lblMessage.Text = $"Bạn đã mời {_senderName} chơi {gameName}";
                         lblStatus.Text = "✗ Đã từ chối";
+                        btnReinvite.Visible = true; // Hiển thị nút mời lại cho người gửi
                     }
                     else
                     {
                         lblMessage.Text = $"{_senderName} mời bạn chơi {gameName}";
                         lblStatus.Text = "✗ Bạn đã từ chối";
+                        btnReinvite.Visible = false;
                     }
                     btnAccept.Visible = false;
                     btnDecline.Visible = false;
@@ -137,6 +143,18 @@ namespace ChatAppClient.UserControls
             if (_status == GameInviteStatus.Pending && _type == MessageType.Incoming)
             {
                 OnResponse?.Invoke(this, false);
+            }
+        }
+
+        private void BtnReinvite_Click(object sender, EventArgs e)
+        {
+            if (_status == GameInviteStatus.Declined && _type == MessageType.Outgoing)
+            {
+                // Ẩn nút mời lại và cập nhật trạng thái thành đang chờ
+                btnReinvite.Visible = false;
+                _status = GameInviteStatus.Pending;
+                UpdateUI();
+                OnReinvite?.Invoke(this, EventArgs.Empty);
             }
         }
 

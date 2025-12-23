@@ -9,7 +9,13 @@ namespace ChatAppServer
     /// </summary>
     public class PasswordMigrationTool
     {
-        private readonly string _connectionString = @"Data Source=localhost;Initial Catalog=ChatAppDB;Integrated Security=True";
+        // Connection string được đọc từ file appsettings.json
+        private readonly string _connectionString;
+
+        public PasswordMigrationTool()
+        {
+            _connectionString = AppConfig.GetConnectionString("ChatAppDB");
+        }
 
         /// <summary>
         /// Hash lại tất cả password trong database (từ plain text sang hashed)
