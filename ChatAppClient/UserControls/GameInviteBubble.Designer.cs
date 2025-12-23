@@ -21,6 +21,7 @@ namespace ChatAppClient.UserControls
             this.lblStatus = new System.Windows.Forms.Label();
             this.btnAccept = new System.Windows.Forms.Button();
             this.btnDecline = new System.Windows.Forms.Button();
+            this.btnReinvite = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // lblMessage
@@ -82,12 +83,30 @@ namespace ChatAppClient.UserControls
             this.btnDecline.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnDecline.Click += new System.EventHandler(this.BtnDecline_Click);
             // 
+            // btnReinvite
+            // 
+            this.btnReinvite.BackColor = System.Drawing.Color.FromArgb(33, 150, 243);
+            this.btnReinvite.FlatAppearance.BorderSize = 0;
+            this.btnReinvite.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnReinvite.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold);
+            this.btnReinvite.ForeColor = System.Drawing.Color.White;
+            this.btnReinvite.Location = new System.Drawing.Point(12, 70);
+            this.btnReinvite.Name = "btnReinvite";
+            this.btnReinvite.Size = new System.Drawing.Size(100, 32);
+            this.btnReinvite.TabIndex = 4;
+            this.btnReinvite.Text = "🔄 Mời lại";
+            this.btnReinvite.UseVisualStyleBackColor = false;
+            this.btnReinvite.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnReinvite.Visible = false;
+            this.btnReinvite.Click += new System.EventHandler(this.BtnReinvite_Click);
+            // 
             // GameInviteBubble
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.AutoSize = true;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.BackColor = System.Drawing.Color.Transparent;
+            this.Controls.Add(this.btnReinvite);
             this.Controls.Add(this.btnDecline);
             this.Controls.Add(this.btnAccept);
             this.Controls.Add(this.lblStatus);
@@ -106,6 +125,7 @@ namespace ChatAppClient.UserControls
         private System.Windows.Forms.Label lblStatus;
         private System.Windows.Forms.Button btnAccept;
         private System.Windows.Forms.Button btnDecline;
+        private System.Windows.Forms.Button btnReinvite;
     }
 }
 

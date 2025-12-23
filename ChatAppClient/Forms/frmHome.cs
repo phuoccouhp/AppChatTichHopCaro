@@ -566,9 +566,10 @@ namespace ChatAppClient.Forms
         {
             if (this.InvokeRequired) { this.Invoke(new Action(() => HandleTankResponse(packet))); return; }
             
-            // Tìm chat control của người nhận lời mời (người gửi response)
-            // packet.SenderID là người phản hồi, packet.ReceiverID là người gửi lời mời
-            if (openChatControls.TryGetValue(packet.ReceiverID, out var chatControl))
+            // packet.SenderID là người phản hồi (invitee), packet.ReceiverID là người đã gửi lời mời (inviter)
+            // Tại client của inviter, cần tìm chat control theo ID của người trả lời (senderID) vì chat controls được key bởi friend ID
+            string chatKey = packet.SenderID; // responder ID - giống như HandleGameResponse
+            if (openChatControls.TryGetValue(chatKey, out var chatControl))
             {
                 // Cập nhật game invite bubble trong chat
                 chatControl.UpdateGameInviteStatus(packet.SenderID, packet.Accepted, GameType.Tank);
@@ -581,6 +582,14 @@ namespace ChatAppClient.Forms
                 {
                     // Nếu chấp nhận, reset button để chờ TankStartPacket
                     chatControl.ResetGameButton();
+                }
+            }
+            else
+            {
+                // Nếu chat control chưa mở, vẫn có thể notify
+                if (!packet.Accepted)
+                {
+                    MessageBox.Show($"Lời mời Tank Game của bạn đã bị từ chối bởi {packet.SenderID}.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
         }

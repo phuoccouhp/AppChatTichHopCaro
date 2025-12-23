@@ -8,6 +8,9 @@ namespace ChatAppServer
         [STAThread]
         static void Main()
         {
+            // Khởi tạo cấu hình từ file appsettings.json
+            AppConfig.Initialize();
+            
             Application.SetHighDpiMode(HighDpiMode.SystemAware);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);

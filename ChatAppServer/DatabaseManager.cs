@@ -7,15 +7,22 @@ namespace ChatAppServer
 {
     public class DatabaseManager
     {
-        // CHUỖI KẾT NỐI (CONNECTION STRING)
-        // Bạn cần sửa lại cho đúng với máy của bạn
-        // Server=Tên_Máy_Của_Bạn; Database=ChatAppDB; Trusted_Connection=True; (Nếu dùng Windows Auth)
-        // Hoặc: Server=...; User Id=sa; Password=...; (Nếu dùng SQL Auth)
-        private readonly string _connectionString = @"Data Source=localhost;Initial Catalog=ChatAppDB;Integrated Security=True";
+        // Connection string được đọc từ file appsettings.json
+        // Mỗi máy chỉ cần thay đổi file appsettings.json mà không cần sửa code
+        // Ví dụ các Data Source phổ biến:
+        //   - localhost                    (SQL Server mặc định)
+        //   - localhost\SQLEXPRESS         (SQL Server Express)
+        //   - (localdb)\MSSQLLocalDB       (LocalDB)
+        //   - .\SQLEXPRESS                 (Cách viết khác của Express)
+        //   - TÊN_MÁY\INSTANCE_NAME        (Named instance)
+        private readonly string _connectionString;
         private static DatabaseManager? _instance;
         public static DatabaseManager Instance => _instance ??= new DatabaseManager();
 
-        private DatabaseManager() { }
+        private DatabaseManager() 
+        { 
+            _connectionString = AppConfig.GetConnectionString("ChatAppDB");
+        }
 
         // Hàm kiểm tra đăng nhập (hỗ trợ cả username và email) - với password hashing
         public UserData? Login(string usernameOrEmail, string password, bool useEmail = false)

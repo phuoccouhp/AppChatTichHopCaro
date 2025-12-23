@@ -138,6 +138,14 @@ namespace ChatAppClient.UserControls
                                     bubble.UpdateStatus(accepted ? GameInviteStatus.Accepted : GameInviteStatus.Declined);
                                 };
                             }
+                            else if (isOutgoing)
+                            {
+                                // Cho phép mời lại nếu đã bị từ chối
+                                bubble.OnReinvite += (s, e) =>
+                                {
+                                    HandleReinvite(bubble.CurrentGameType);
+                                };
+                            }
                             
                             flpMessages.Controls.Add(bubble);
                         }
@@ -517,6 +525,13 @@ namespace ChatAppClient.UserControls
                     bubble.UpdateStatus(accepted ? GameInviteStatus.Accepted : GameInviteStatus.Declined);
                 };
             }
+            else // Outgoing - thêm xử lý mời lại
+            {
+                bubble.OnReinvite += (s, e) =>
+                {
+                    HandleReinvite(bubble.CurrentGameType);
+                };
+            }
 
             flpMessages.Controls.Add(bubble);
             ScrollToBottom(bubble);
@@ -530,27 +545,94 @@ namespace ChatAppClient.UserControls
                 return;
             }
 
-            Logger.Info($"[ChatViewControl] UpdateGameInviteStatus called for senderID={senderID}, accepted={accepted}");
+            Logger.Info($"[ChatViewControl] UpdateGameInviteStatus called for senderID={senderID}, accepted={accepted}, friendId={_friendId}");
+            Logger.Info($"[ChatViewControl] Dictionary keys: [{string.Join(", ", _gameInviteBubbles.Keys)}]");
 
-            // Tìm bubble tương ứng
+            bool found = false;
+
+            // Thử tìm theo senderID (khi senderID = friendID = người phản hồi)
             if (_gameInviteBubbles.TryGetValue(senderID, out var bubble))
             {
                 Logger.Info($"[ChatViewControl] Found invite bubble by key={senderID}");
                 bubble.UpdateStatus(accepted ? GameInviteStatus.Accepted : GameInviteStatus.Declined);
+                found = true;
             }
-            else
+            // Thử tìm theo _friendId (đây là key được dùng khi tạo outgoing bubble)
+            else if (_gameInviteBubbles.TryGetValue(_friendId, out var bubbleByFriend))
             {
-                Logger.Info($"[ChatViewControl] Invite bubble not found by key={senderID}, searching all controls...");
-                // Nếu không tìm thấy, tìm trong tất cả các controls
-                foreach (Control ctrl in flpMessages.Controls)
+                Logger.Info($"[ChatViewControl] Found invite bubble by friendId key={_friendId}");
+                bubbleByFriend.UpdateStatus(accepted ? GameInviteStatus.Accepted : GameInviteStatus.Declined);
+                found = true;
+            }
+            
+            if (!found)
+            {
+                Logger.Info($"[ChatViewControl] Invite bubble not found in dictionary, searching all controls...");
+                // Fallback: tìm bubble outgoing có status Pending (từ cuối lên đầu để tìm cái mới nhất)
+                for (int i = flpMessages.Controls.Count - 1; i >= 0; i--)
                 {
-                    if (ctrl is GameInviteBubble gameBubble)
+                    if (flpMessages.Controls[i] is GameInviteBubble gameBubble && gameBubble.Status == GameInviteStatus.Pending)
                     {
-                        Logger.Info($"[ChatViewControl] Found invite bubble in controls, updating status");
+                        Logger.Info($"[ChatViewControl] Found pending invite bubble in controls, updating status");
                         gameBubble.UpdateStatus(accepted ? GameInviteStatus.Accepted : GameInviteStatus.Declined);
+                        found = true;
                         break;
                     }
                 }
+            }
+
+            if (!found)
+            {
+                Logger.Warning($"[ChatViewControl] Could not find any invite bubble to update!");
+            }
+        }
+
+        private void HandleReinvite(GameType gameType)
+        {
+            if (string.IsNullOrEmpty(_myId))
+            {
+                _myId = NetworkManager.Instance.UserID ?? "";
+                if (string.IsNullOrEmpty(_myId))
+                {
+                    MessageBox.Show("Bạn chưa đăng nhập. Vui lòng đăng nhập trước khi gửi lời mời chơi game.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+
+            string? senderName = NetworkManager.Instance.UserName ?? "User";
+
+            try
+            {
+                if (gameType == GameType.Caro)
+                {
+                    var invite = new GameInvitePacket { SenderID = _myId, SenderName = senderName, ReceiverID = _friendId };
+                    if (NetworkManager.Instance.SendPacket(invite))
+                    {
+                        btnStartGame.Enabled = false;
+                        btnStartGame.Text = "...";
+                    }
+                    else
+                    {
+                        MessageBox.Show("Không thể gửi lời mời. Vui lòng kiểm tra kết nối.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                else
+                {
+                    var invite = new TankInvitePacket { SenderID = _myId, SenderName = senderName, ReceiverID = _friendId };
+                    if (NetworkManager.Instance.SendPacket(invite))
+                    {
+                        btnStartGame.Enabled = false;
+                        btnStartGame.Text = "...";
+                    }
+                    else
+                    {
+                        MessageBox.Show("Không thể gửi lời mời. Vui lòng kiểm tra kết nối.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi gửi lời mời lại: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -561,8 +643,13 @@ namespace ChatAppClient.UserControls
         public void HandleGameInviteDeclined()
         {
             if (this.InvokeRequired) { this.Invoke(new Action(HandleGameInviteDeclined)); return; }
-            MessageBox.Show($"{_friendName} đã từ chối lời mời.", "Tiếc quá!");
+            
+            // Reset game button để có thể mời lại
             ResetGameButtonInternal();
+            
+            // Bubble đã hiển thị thông báo "✗ Đã từ chối" nên không cần MessageBox
+            // Người dùng có thể nhấn nút "Mời lại" trên bubble
+            Logger.Info($"[ChatViewControl] {_friendName} đã từ chối lời mời game. Button đã được reset.");
         }
 
         public void ResetGameButton()
