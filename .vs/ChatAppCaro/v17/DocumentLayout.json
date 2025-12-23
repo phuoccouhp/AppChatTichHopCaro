@@ -3,16 +3,24 @@
   "WorkspaceRootPath": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|c:\\users\\admin\\source\\repos\\appchattichhopcaro\\chatappserver\\clienthandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|solutionrelative:chatappserver\\clienthandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|c:\\users\\admin\\source\\repos\\appchattichhopcaro\\chatappserver\\frmserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|solutionrelative:chatappserver\\frmserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\chatappserver\\frmserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|solutionrelative:chatappserver\\frmserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|c:\\users\\admin\\source\\repos\\appchattichhopcaro\\chatappserver\\firewallhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|solutionrelative:chatappserver\\firewallhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{CB660E21-0DDC-4841-8C1F-F0221C293F47}|ChatAppClient\\ChatAppClient.csproj|c:\\users\\admin\\source\\repos\\appchattichhopcaro\\chatappclient\\networkmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{CB660E21-0DDC-4841-8C1F-F0221C293F47}|ChatAppClient\\ChatAppClient.csproj|solutionrelative:chatappclient\\networkmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|c:\\users\\admin\\source\\repos\\appchattichhopcaro\\chatappserver\\firewallhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|solutionrelative:chatappserver\\firewallhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|c:\\users\\admin\\source\\repos\\appchattichhopcaro\\chatappserver\\clienthandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|solutionrelative:chatappserver\\clienthandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|c:\\users\\admin\\source\\repos\\appchattichhopcaro\\chatappserver\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
@@ -29,10 +37,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{CB660E21-0DDC-4841-8C1F-F0221C293F47}|ChatAppClient\\ChatAppClient.csproj|C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\chatappclient\\forms\\frmlogin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
       "RelativeMoniker": "D:0:0:{CB660E21-0DDC-4841-8C1F-F0221C293F47}|ChatAppClient\\ChatAppClient.csproj|solutionrelative:chatappclient\\forms\\frmlogin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\chatappserver\\frmserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
-      "RelativeMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|solutionrelative:chatappserver\\frmserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     },
     {
       "AbsoluteMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|c:\\users\\admin\\source\\repos\\appchattichhopcaro\\chatappserver\\frmserver.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -159,10 +163,6 @@
       "RelativeMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|solutionrelative:chatappserver\\server.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|c:\\users\\admin\\source\\repos\\appchattichhopcaro\\chatappserver\\frmserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|solutionrelative:chatappserver\\frmserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{CB660E21-0DDC-4841-8C1F-F0221C293F47}|ChatAppClient\\ChatAppClient.csproj|c:\\users\\admin\\source\\repos\\appchattichhopcaro\\chatappclient\\forms\\frmlogin.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{CB660E21-0DDC-4841-8C1F-F0221C293F47}|ChatAppClient\\ChatAppClient.csproj|solutionrelative:chatappclient\\forms\\frmlogin.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -230,7 +230,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 15,
+          "SelectedChildIndex": 16,
           "Children": [
             {
               "$type": "Bookmark",
@@ -296,14 +296,68 @@
               "RelativeDocumentMoniker": "ChatAppServer\\FirewallHelper.cs",
               "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\FirewallHelper.cs",
               "RelativeToolTip": "ChatAppServer\\FirewallHelper.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAEYBAABDAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-12-23T05:48:03.859Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "NetworkManager.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\NetworkManager.cs",
+              "RelativeDocumentMoniker": "ChatAppClient\\NetworkManager.cs",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\NetworkManager.cs",
+              "RelativeToolTip": "ChatAppClient\\NetworkManager.cs",
+              "ViewState": "AgIAAFIAAAAAAAAAAAD4v2EAAAAUAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-30T15:40:38.627Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "frmServer.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\frmServer.cs",
+              "RelativeDocumentMoniker": "ChatAppServer\\frmServer.cs",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\frmServer.cs",
+              "RelativeToolTip": "ChatAppServer\\frmServer.cs",
+              "ViewState": "AgIAAAIBAAAAAAAAAAAWwCEBAABXAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-02T07:59:12.269Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "frmServer.cs [Design]",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\frmServer.cs",
+              "RelativeDocumentMoniker": "ChatAppServer\\frmServer.cs",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\frmServer.cs [Design]",
+              "RelativeToolTip": "ChatAppServer\\frmServer.cs [Design]",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-02T07:59:10.678Z",
+              "EditorCaption": " [Design]"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{74946827-37a0-11d2-a273-00c04f8ef4ff}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{b1e99781-ab81-11d0-b683-00aa00a3ee26}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{56df62a4-05a3-4e5b-aa1a-99371ccfb997}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c64b9c2-e352-428e-a56d-0ace190b99a6}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
               "Title": "ClientHandler.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\ClientHandler.cs",
               "RelativeDocumentMoniker": "ChatAppServer\\ClientHandler.cs",
@@ -315,37 +369,8 @@
               "EditorCaption": ""
             },
             {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{1c64b9c2-e352-428e-a56d-0ace190b99a6}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{56df62a4-05a3-4e5b-aa1a-99371ccfb997}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{74946827-37a0-11d2-a273-00c04f8ef4ff}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{b1e99781-ab81-11d0-b683-00aa00a3ee26}"
-            },
-            {
               "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "NetworkManager.cs",
-              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\NetworkManager.cs",
-              "RelativeDocumentMoniker": "ChatAppClient\\NetworkManager.cs",
-              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\NetworkManager.cs",
-              "RelativeToolTip": "ChatAppClient\\NetworkManager.cs",
-              "ViewState": "AgIAAKAAAAAAAAAAAAAMwNMAAAAVAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-30T15:40:38.627Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 5,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\appsettings.json",
               "RelativeDocumentMoniker": "ChatAppServer\\appsettings.json",
@@ -358,7 +383,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 6,
               "Title": "DatabaseManager.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\DatabaseManager.cs",
               "RelativeDocumentMoniker": "ChatAppServer\\DatabaseManager.cs",
@@ -371,7 +396,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 11,
               "Title": "frmCaroGame.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\Forms\\frmCaroGame.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\Forms\\frmCaroGame.cs",
@@ -383,7 +408,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 7,
               "Title": "frmLogin.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\Forms\\frmLogin.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\Forms\\frmLogin.cs",
@@ -396,7 +421,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 10,
               "Title": "TankGameManager.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\TankGameManager.cs",
               "RelativeDocumentMoniker": "ChatAppServer\\TankGameManager.cs",
@@ -408,7 +433,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 12,
               "Title": "frmTankGame.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\Forms\\frmTankGame.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\Forms\\frmTankGame.cs",
@@ -421,7 +446,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 14,
               "Title": "frmTankGame.Designer.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\Forms\\frmTankGame.Designer.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\Forms\\frmTankGame.Designer.cs",
@@ -433,7 +458,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 15,
               "Title": "frmHome.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\Forms\\frmHome.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\Forms\\frmHome.cs",
@@ -445,7 +470,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 9,
               "Title": "frmServer.Designer.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\frmServer.Designer.cs",
               "RelativeDocumentMoniker": "ChatAppServer\\frmServer.Designer.cs",
@@ -453,11 +478,12 @@
               "RelativeToolTip": "ChatAppServer\\frmServer.Designer.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-22T11:02:09.851Z"
+              "WhenOpened": "2025-12-22T11:02:09.851Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 17,
               "Title": "TankResponseAndStartPackets.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\TankResponseAndStartPackets.cs",
               "RelativeDocumentMoniker": "ChatApp.Shared\\TankResponseAndStartPackets.cs",
@@ -469,7 +495,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 16,
               "Title": "TankStartPacket.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\TankStartPacket.cs",
               "RelativeDocumentMoniker": "ChatApp.Shared\\TankStartPacket.cs",
@@ -481,7 +507,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 18,
               "Title": "TankInvitePacket.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\TankInvitePacket.cs",
               "RelativeDocumentMoniker": "ChatApp.Shared\\TankInvitePacket.cs",
@@ -493,7 +519,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 19,
               "Title": "TankHitPacket.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\TankHitPacket.cs",
               "RelativeDocumentMoniker": "ChatApp.Shared\\TankHitPacket.cs",
@@ -505,7 +531,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 20,
               "Title": "TankActionPacket.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\TankActionPacket.cs",
               "RelativeDocumentMoniker": "ChatApp.Shared\\TankActionPacket.cs",
@@ -517,7 +543,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 21,
               "Title": "ChatAppClient.csproj",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj",
               "RelativeDocumentMoniker": "ChatAppClient\\ChatAppClient.csproj",
@@ -529,7 +555,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 23,
+              "DocumentIndex": 24,
               "Title": "ChatViewControl.Designer.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\UserControls\\ChatViewControl.Designer.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\UserControls\\ChatViewControl.Designer.cs",
@@ -541,7 +567,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 25,
+              "DocumentIndex": 26,
               "Title": "ChatMessageBubble.Designer.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\UserControls\\ChatMessageBubble.Designer.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\UserControls\\ChatMessageBubble.Designer.cs",
@@ -553,7 +579,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
+              "DocumentIndex": 22,
               "Title": "ChatViewControl.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\UserControls\\ChatViewControl.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\UserControls\\ChatViewControl.cs",
@@ -566,7 +592,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 26,
+              "DocumentIndex": 27,
               "Title": "FriendListItem.Designer.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\UserControls\\FriendListItem.Designer.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\UserControls\\FriendListItem.Designer.cs",
@@ -578,7 +604,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 27,
+              "DocumentIndex": 28,
               "Title": "FriendListItem.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\UserControls\\FriendListItem.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\UserControls\\FriendListItem.cs",
@@ -591,7 +617,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 30,
+              "DocumentIndex": 31,
               "Title": "frmHome.Designer.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\Forms\\frmHome.Designer.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\Forms\\frmHome.Designer.cs",
@@ -603,7 +629,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 29,
+              "DocumentIndex": 30,
               "Title": "frmSignup.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\Forms\\frmSignup.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\Forms\\frmSignup.cs",
@@ -616,7 +642,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 31,
+              "DocumentIndex": 32,
               "Title": "frmForgotPass.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\Forms\\frmForgotPass.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\Forms\\frmForgotPass.cs",
@@ -629,7 +655,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 33,
+              "DocumentIndex": 34,
               "Title": "frmForgotPass.Designer.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\Forms\\frmForgotPass.Designer.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\Forms\\frmForgotPass.Designer.cs",
@@ -641,7 +667,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 34,
+              "DocumentIndex": 35,
               "Title": "EmailHelper.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\EmailHelper.cs",
               "RelativeDocumentMoniker": "ChatAppServer\\EmailHelper.cs",
@@ -653,7 +679,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 35,
+              "DocumentIndex": 36,
               "Title": "ForgotPasswordResultPacket.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\ForgotPasswordResultPacket.cs",
               "RelativeDocumentMoniker": "ChatApp.Shared\\ForgotPasswordResultPacket.cs",
@@ -665,7 +691,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 36,
+              "DocumentIndex": 37,
               "Title": "ResetPasswordPacket.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\ResetPasswordPacket.cs",
               "RelativeDocumentMoniker": "ChatApp.Shared\\ResetPasswordPacket.cs",
@@ -677,7 +703,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 37,
+              "DocumentIndex": 38,
               "Title": "ForgotPasswordPacket.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\ForgotPasswordPacket.cs",
               "RelativeDocumentMoniker": "ChatApp.Shared\\ForgotPasswordPacket.cs",
@@ -713,7 +739,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 38,
+              "DocumentIndex": 39,
               "Title": "Server.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\Server.cs",
               "RelativeDocumentMoniker": "ChatAppServer\\Server.cs",
@@ -746,19 +772,6 @@
               "ViewState": "AQIAAG4AAAAAAAAAAAAgwIUAAAA2AAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-30T15:52:11.681Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 39,
-              "Title": "frmServer.cs",
-              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\frmServer.cs",
-              "RelativeDocumentMoniker": "ChatAppServer\\frmServer.cs",
-              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\frmServer.cs",
-              "RelativeToolTip": "ChatAppServer\\frmServer.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAABMAAABMAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-02T07:59:12.269Z",
-              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -869,7 +882,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 8,
               "Title": "frmLogin.cs [Design]",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\Forms\\frmLogin.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\Forms\\frmLogin.cs",
@@ -880,18 +893,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "frmServer.cs [Design]",
-              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\frmServer.cs",
-              "RelativeDocumentMoniker": "ChatAppServer\\frmServer.cs",
-              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\frmServer.cs [Design]",
-              "RelativeToolTip": "ChatAppServer\\frmServer.cs [Design]",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-02T07:59:10.678Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 13,
               "Title": "frmTankGame.cs [Design]",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\Forms\\frmTankGame.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\Forms\\frmTankGame.cs",
@@ -902,7 +904,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 23,
               "Title": "ChatViewControl.cs [Design]",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\UserControls\\ChatViewControl.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\UserControls\\ChatViewControl.cs",
@@ -913,7 +915,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 24,
+              "DocumentIndex": 25,
               "Title": "ChatMessageBubble.cs [Design]",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\UserControls\\ChatMessageBubble.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\UserControls\\ChatMessageBubble.cs",
@@ -924,7 +926,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 28,
+              "DocumentIndex": 29,
               "Title": "FriendListItem.cs [Design]",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\UserControls\\FriendListItem.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\UserControls\\FriendListItem.cs",
@@ -935,7 +937,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 32,
+              "DocumentIndex": 33,
               "Title": "frmForgotPass.cs [Design]",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\Forms\\frmForgotPass.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\Forms\\frmForgotPass.cs",

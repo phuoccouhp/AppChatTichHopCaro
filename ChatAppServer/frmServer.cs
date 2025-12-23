@@ -285,9 +285,10 @@ namespace ChatAppServer
                     // Đợi một chút để rule được tạo và commit vào firewall
                     System.Threading.Thread.Sleep(2000); // Tăng lên 2 giây để đảm bảo
                     
-                    // Kiểm tra lại xem rule đã được tạo chưa
-                    bool ruleExists = FirewallHelper.IsPortOpen(PORT, "ChatAppServer");
-                    Logger.Info($"Kiểm tra rule: success={success}, ruleExists={ruleExists}");
+                    // Kiểm tra lại xem rule đã được tạo chưa (với retry mechanism)
+                    Logger.Info($"Đang kiểm tra lại firewall rule sau khi tạo...");
+                    bool ruleExists = FirewallHelper.IsPortOpen(PORT, "ChatAppServer", retryCount: 5, delayMs: 500);
+                    Logger.Info($"Kết quả kiểm tra: success={success}, ruleExists={ruleExists}");
                     
                     if (success && ruleExists)
                     {
