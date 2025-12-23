@@ -285,9 +285,10 @@ namespace ChatAppServer
                     // Đợi một chút để rule được tạo và commit vào firewall
                     System.Threading.Thread.Sleep(2000); // Tăng lên 2 giây để đảm bảo
                     
-                    // Kiểm tra lại xem rule đã được tạo chưa
-                    bool ruleExists = FirewallHelper.IsPortOpen(PORT, "ChatAppServer");
-                    Logger.Info($"Kiểm tra rule: success={success}, ruleExists={ruleExists}");
+                    // Kiểm tra lại xem rule đã được tạo chưa (với retry mechanism)
+                    Logger.Info($"Đang kiểm tra lại firewall rule sau khi tạo...");
+                    bool ruleExists = FirewallHelper.IsPortOpen(PORT, "ChatAppServer", retryCount: 5, delayMs: 500);
+                    Logger.Info($"Kết quả kiểm tra: success={success}, ruleExists={ruleExists}");
                     
                     if (success && ruleExists)
                     {
@@ -481,28 +482,47 @@ namespace ChatAppServer
         {
             Logger.Info("=== KIỂM TRA TRẠNG THÁI PORT 9000 ===");
             
-            // 1. Kiểm tra port có đang được sử dụng
-            bool portInUse = FirewallHelper.IsPortInUse(PORT);
-            if (portInUse)
-            {
-                Logger.Warning($"⚠ Port {PORT} đang được sử dụng bởi process khác");
-                Logger.Info("Để xem process nào đang dùng port, mở CMD và chạy:");
-                Logger.Info($"  netstat -ano | findstr :{PORT}");
-            }
-            else
-            {
-                Logger.Success($"✓ Port {PORT} không được sử dụng (có thể start server)");
-            }
-            
-            // 2. Kiểm tra port có đang lắng nghe
+            // KIỂM TRA PORT ĐANG LẮNG NGHE TRƯỚC (để biết server có đang chạy không)
             bool portListening = FirewallHelper.IsPortListening(PORT);
+            
+            // 1. Kiểm tra port có đang được sử dụng bởi process khác
+            // CHỈ check nếu server KHÔNG đang chạy (vì nếu server đang chạy thì port rõ ràng đang được sử dụng)
+            bool portInUse = false;
+            string status1;
+            
             if (portListening)
             {
-                Logger.Success($"✓ Port {PORT} đang lắng nghe (Server đang chạy)");
+                // Server đang chạy, port rõ ràng đang được sử dụng bởi server này
+                Logger.Success($"✓ Port {PORT} đang được sử dụng bởi SERVER (đang chạy)");
+                status1 = "✓ ĐANG ĐƯỢC SỬ DỤNG (bởi Server đang chạy)";
             }
             else
             {
-                Logger.Warning($"⚠ Port {PORT} KHÔNG lắng nghe (Server chưa start hoặc có lỗi)");
+                // Server không chạy, kiểm tra xem có process khác đang dùng port không
+                portInUse = FirewallHelper.IsPortInUse(PORT);
+                if (portInUse)
+                {
+                    Logger.Warning($"⚠ Port {PORT} đang được sử dụng bởi process KHÁC");
+                    Logger.Warning("⚠ KHÔNG THỂ START SERVER - Port đã bị chiếm!");
+                    Logger.Info("Để xem process nào đang dùng port, mở CMD và chạy:");
+                    Logger.Info($"  netstat -ano | findstr :{PORT}");
+                    status1 = "⚠ ĐANG BỊ SỬ DỤNG (bởi process khác - KHÔNG thể start server)";
+                }
+                else
+                {
+                    Logger.Success($"✓ Port {PORT} sẵn sàng (không bị process khác sử dụng)");
+                    status1 = "✓ SẴN SÀNG (có thể start server)";
+                }
+            }
+            
+            // 2. Hiển thị trạng thái server
+            if (portListening)
+            {
+                Logger.Success($"✓ Port {PORT} đang lắng nghe - SERVER ĐANG CHẠY");
+            }
+            else
+            {
+                Logger.Info($"ℹ Port {PORT} không lắng nghe (Server chưa start hoặc đã dừng)");
             }
             
             // 3. Kiểm tra firewall
@@ -518,13 +538,25 @@ namespace ChatAppServer
             
             Logger.Info("=== KẾT THÚC KIỂM TRA ===");
             
-            string summary = $"TRẠNG THÁI PORT {PORT}:\n\n" +
-                $"1. Port đang được sử dụng: {(portInUse ? "⚠ CÓ" : "✓ KHÔNG")}\n" +
-                $"2. Port đang lắng nghe: {(portListening ? "✓ CÓ (Server đang chạy)" : "⚠ KHÔNG")}\n" +
-                $"3. Firewall rule: {(firewallOpen ? "✓ Đã mở" : "⚠ Chưa mở")}";
+            string status2 = portListening 
+                ? "✓ ĐANG LẮNG NGHE (Server đang chạy)" 
+                : "ℹ KHÔNG LẮNG NGHE (Server chưa start)";
             
-            MessageBox.Show(summary, "Kiểm Tra Port", MessageBoxButtons.OK,
-                portListening ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+            string status3 = firewallOpen 
+                ? "✓ Đã mở" 
+                : "⚠ Chưa mở";
+            
+            string summary = $"TRẠNG THÁI PORT {PORT}:\n\n" +
+                $"1. Port có sẵn: {status1}\n" +
+                $"2. Server đang chạy: {status2}\n" +
+                $"3. Firewall rule: {status3}";
+            
+            // Chỉ hiển thị warning nếu có vấn đề (port bị chiếm bởi process khác, hoặc server không chạy khi đáng lý phải chạy)
+            MessageBoxIcon icon = (portInUse && !portListening) || (!portListening && btnStart.Enabled == false)
+                ? MessageBoxIcon.Warning 
+                : MessageBoxIcon.Information;
+            
+            MessageBox.Show(summary, "Kiểm Tra Port", MessageBoxButtons.OK, icon);
         }
 
         private void btnTestConnection_Click(object sender, EventArgs e)

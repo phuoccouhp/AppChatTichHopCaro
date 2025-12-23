@@ -15,10 +15,14 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
 <<<<<<< HEAD
+<<<<<<< HEAD
 [assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c718d15f063b016b08fecf0be3999650ff9cadc4")]
 =======
 [assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+495f90c179a1fe70b88306a1abf4a8b0e23c7bbe")]
 >>>>>>> 54cef9a7783bbc13f32596d0525de1396be22714
+=======
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+54cef9a7783bbc13f32596d0525de1396be22714")]
+>>>>>>> 2306d4ff8607175fe37f458d62cda6a086df55c5
 [assembly: System.Reflection.AssemblyProductAttribute("ChatApp.Shared")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ChatApp.Shared")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
