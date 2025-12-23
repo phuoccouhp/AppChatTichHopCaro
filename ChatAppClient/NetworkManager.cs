@@ -128,14 +128,41 @@ namespace ChatAppClient.Forms
                     object? receivedPacket = null;
                     try
                     {
-                        // Deserialize trực tiếp, Task.Run để tránh block UI thread
+                        // KHÔNG dùng Task.Run vì NetworkStream không thread-safe
+                        // Deserialize sẽ block thread nhưng đó là hành vi mong muốn
+                        // Sử dụng Task.Run chỉ khi thực sự cần CPU-bound work
                         receivedPacket = await Task.Run(() =>
                         {
-                            try { return _formatter.Deserialize(_stream); }
-                            catch { return null; }
+                            if (_stream == null) return null;
+                            return _formatter.Deserialize(_stream);
                         }, cancellationToken);
                     }
-                    catch { break; }
+                    catch (System.Runtime.Serialization.SerializationException serEx)
+                    {
+                        // SerializationException xảy ra khi stream bị đóng hoặc dữ liệu không đúng format
+                        // Đây là tình huống bình thường khi connection đóng hoặc dữ liệu corrupt
+                        if (serEx.Message.Contains("End of Stream") || 
+                            serEx.Message.Contains("parsing was completed") ||
+                            serEx.Message.Contains("does not contain a valid BinaryHeader"))
+                        {
+                            Logger.Info($"Server đã đóng kết nối hoặc dữ liệu không hợp lệ: {serEx.Message}");
+                        }
+                        else
+                        {
+                            Logger.Warning($"Serialization error: {serEx.Message}");
+                        }
+                        break; // Break để đóng connection gracefully
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Cancellation được yêu cầu, break normally
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning($"Lỗi khi deserialize: {ex.GetType().Name} - {ex.Message}");
+                        break;
+                    }
 
                     if (receivedPacket != null)
                     {
@@ -143,15 +170,21 @@ namespace ChatAppClient.Forms
                     }
                     else
                     {
-                        // Nếu Deserialize trả về null hoặc throw exception -> Ngắt kết nối
+                        // Nếu Deserialize trả về null -> Ngắt kết nối
+                        Logger.Warning("Deserialize trả về null, ngắt kết nối");
                         break;
                     }
                 }
             }
+            catch (OperationCanceledException)
+            {
+                // Cancellation requested - normal exit
+                Logger.Info("Listening cancelled");
+            }
             catch (Exception ex)
             {
                 if (!cancellationToken.IsCancellationRequested)
-                    Logger.Warning($"Ngắt kết nối khi đang lắng nghe: {ex.Message}");
+                    Logger.Warning($"Ngắt kết nối khi đang lắng nghe: {ex.GetType().Name} - {ex.Message}");
             }
             finally
             {
