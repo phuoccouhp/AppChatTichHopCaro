@@ -38,9 +38,14 @@ namespace ChatAppServer
             try
             {
                 // Đảm bảo server có thể nhận kết nối từ cả localhost và IP mạng
-                // Bằng cách set SocketOption trước khi Start
+                // Set các socket options để tối ưu kết nối
                 _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                _listener.Start();
+                _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                _listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, 30000);
+                _listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, 1000);
+                
+                // Bắt đầu lắng nghe
+                _listener.Start(10); // Backlog = 10 clients có thể đợi
                 
                 // Log thông tin chi tiết về địa chỉ server đang lắng nghe
                 var localEndpoint = _listener.LocalEndpoint as IPEndPoint;
@@ -49,11 +54,25 @@ namespace ChatAppServer
                     Logger.Success($"Server đang lắng nghe tại {localEndpoint.Address}:{localEndpoint.Port}");
                     if (localEndpoint.Address.Equals(IPAddress.Any) || localEndpoint.Address.Equals(IPAddress.IPv6Any))
                     {
-                        Logger.Info("Server lắng nghe trên TẤT CẢ interfaces (bao gồm 127.0.0.1 và IP mạng)");
+                        Logger.Info("✓ Server lắng nghe trên TẤT CẢ network interfaces");
                         Logger.Info($"✓ Có thể kết nối qua 127.0.0.1:{_port} (localhost)");
-                        Logger.Info($"✓ Có thể kết nối qua IP mạng WiFi:{_port}");
+                        
+                        // Lấy IP thực tế của WiFi adapter
+                        try
+                        {
+                            string? wifiIP = GetWiFiIPAddress();
+                            if (!string.IsNullOrEmpty(wifiIP))
+                            {
+                                Logger.Info($"✓ Clients có thể kết nối qua {wifiIP}:{_port}");
+                            }
+                        }
+                        catch { }
                     }
                 }
+                
+                // Kiểm tra firewall
+                Logger.Info("⚠ QUAN TRỌNG: Đảm bảo Firewall đã mở port 9000!");
+                Logger.Info("  → Click nút 'Mở Firewall' nếu chưa mở");
             }
             catch (Exception ex)
             {
@@ -82,6 +101,26 @@ namespace ChatAppServer
                     Logger.Error($"Lỗi khi chấp nhận client", ex);
                     await Task.Delay(1000); // Đợi 1 chút trước khi thử lại
                 }
+            }
+        }
+
+        /// <summary>
+        /// Lấy IP thực tế của WiFi adapter (interface đang active)
+        /// </summary>
+        private string? GetWiFiIPAddress()
+        {
+            try
+            {
+                using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+                {
+                    socket.Connect("8.8.8.8", 65530);
+                    var endPoint = socket.LocalEndPoint as IPEndPoint;
+                    return endPoint?.Address.ToString();
+                }
+            }
+            catch
+            {
+                return null;
             }
         }
 

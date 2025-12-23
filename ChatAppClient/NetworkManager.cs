@@ -60,6 +60,12 @@ namespace ChatAppClient.Forms
             try
             {
                 _client = new TcpClient();
+                
+                // Set socket options để tối ưu kết nối
+                _client.NoDelay = true; // Tắt Nagle algorithm để gửi ngay lập tức
+                _client.ReceiveTimeout = 30000; // 30 giây
+                _client.SendTimeout = 30000; // 30 giây
+                
                 Logger.Info($"Đang kết nối đến {ipAddress}:{port}...");
 
                 // Tăng timeout lên 10 giây để đảm bảo đủ thời gian kết nối
@@ -76,7 +82,8 @@ namespace ChatAppClient.Forms
                     }
                     catch (SocketException sockEx)
                     {
-                        Logger.Error($"Lỗi kết nối Socket: {sockEx.Message} (ErrorCode: {sockEx.ErrorCode})");
+                        string errorDetail = GetSocketErrorDetail(sockEx);
+                        Logger.Error($"Lỗi kết nối Socket: {errorDetail}");
                         DisconnectInternal(false);
                         return false;
                     }
@@ -126,7 +133,8 @@ namespace ChatAppClient.Forms
             }
             catch (SocketException sockEx)
             {
-                Logger.Error($"Lỗi Socket khi kết nối đến {ipAddress}:{port}: {sockEx.Message} (ErrorCode: {sockEx.ErrorCode})", sockEx);
+                string errorDetail = GetSocketErrorDetail(sockEx);
+                Logger.Error($"Lỗi Socket khi kết nối đến {ipAddress}:{port}: {errorDetail}", sockEx);
                 DisconnectInternal(false);
                 return false;
             }
@@ -471,6 +479,32 @@ namespace ChatAppClient.Forms
         public void Disconnect()
         {
             DisconnectInternal(true);
+        }
+
+        /// <summary>
+        /// Lấy thông tin chi tiết về lỗi Socket để debug
+        /// </summary>
+        private string GetSocketErrorDetail(SocketException ex)
+        {
+            string detail = $"ErrorCode: {ex.SocketErrorCode} ({ex.ErrorCode})";
+            
+            switch (ex.SocketErrorCode)
+            {
+                case System.Net.Sockets.SocketError.ConnectionRefused:
+                    return $"{detail} - Server từ chối kết nối. Kiểm tra: Server đã Start chưa? Firewall Server đã mở chưa?";
+                case System.Net.Sockets.SocketError.TimedOut:
+                    return $"{detail} - Kết nối timeout. Kiểm tra: Hai máy cùng mạng? Firewall chặn?";
+                case System.Net.Sockets.SocketError.HostUnreachable:
+                    return $"{detail} - Không thể đến host. Kiểm tra: IP có đúng? Hai máy cùng mạng?";
+                case System.Net.Sockets.SocketError.NetworkUnreachable:
+                    return $"{detail} - Mạng không thể truy cập. Kiểm tra: WiFi đã kết nối?";
+                case System.Net.Sockets.SocketError.ConnectionReset:
+                    return $"{detail} - Kết nối bị reset. Có thể do Server đóng đột ngột hoặc Firewall chặn";
+                case System.Net.Sockets.SocketError.AccessDenied:
+                    return $"{detail} - Truy cập bị từ chối. Cần mở Firewall trên máy Client!";
+                default:
+                    return $"{detail} - {ex.Message}";
+            }
         }
 
         private void DisconnectInternal(bool showMessage)

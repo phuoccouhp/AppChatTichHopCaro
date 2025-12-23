@@ -232,6 +232,137 @@ namespace ChatAppServer
 
         #endregion
 
+        private void btnTestConnection_Click(object sender, EventArgs e)
+        {
+            // Hiển thị dialog để nhập IP test
+            string testIP = ShowInputDialog(
+                "Nhập địa chỉ IP cần test kết nối:\n\n" +
+                "Ví dụ: Nếu bạn của bạn có IP 10.45.210.103,\n" +
+                "hãy nhập IP đó để kiểm tra xem có thể kết nối được không.",
+                "Test Kết Nối Mạng");
+
+            if (string.IsNullOrWhiteSpace(testIP)) return;
+
+            Logger.Info($"=== BẮT ĐẦU TEST KẾT NỐI ĐẾN {testIP} ===");
+
+            // 1. Ping test
+            Logger.Info("[1/3] Đang ping...");
+            var pingResult = FirewallHelper.Ping(testIP);
+            if (pingResult.success)
+            {
+                Logger.Success($"✓ Ping thành công: {pingResult.message}");
+            }
+            else
+            {
+                Logger.Error($"✗ Ping thất bại: {pingResult.message}");
+            }
+
+            // 2. Test port 9000 trên máy đó
+            Logger.Info("[2/3] Đang test port 9000 trên máy đích...");
+            var portResult = FirewallHelper.TestConnection(testIP, PORT);
+            if (portResult.success)
+            {
+                Logger.Success($"✓ Port test thành công: {portResult.message} ({portResult.latencyMs}ms)");
+            }
+            else
+            {
+                Logger.Warning($"⚠ Port test: {portResult.message}");
+            }
+
+            // 3. Kiểm tra firewall local
+            Logger.Info("[3/3] Đang kiểm tra Firewall local...");
+            bool firewallOpen = FirewallHelper.IsPortOpen(PORT);
+            if (firewallOpen)
+            {
+                Logger.Success($"✓ Firewall rule 'ChatAppServer' đã được tạo");
+            }
+            else
+            {
+                Logger.Warning($"⚠ Firewall rule 'ChatAppServer' chưa được tạo - Hãy click 'Mở Firewall'");
+            }
+
+            // 4. Hiển thị tất cả IP của máy này
+            Logger.Info("--- Tất cả IP của máy này ---");
+            var allIPs = FirewallHelper.GetAllLocalIPs();
+            foreach (var ip in allIPs)
+            {
+                Logger.Info($"  • {ip}");
+            }
+
+            Logger.Info($"=== KẾT THÚC TEST ===");
+
+            // Tổng kết
+            string summary = $"KẾT QUẢ TEST ĐẾN {testIP}:\n\n" +
+                $"1. Ping: {(pingResult.success ? "✓ OK" : "✗ FAIL")}\n" +
+                $"2. Port 9000: {(portResult.success ? "✓ OK" : "✗ FAIL")}\n" +
+                $"3. Firewall local: {(firewallOpen ? "✓ Đã mở" : "✗ Chưa mở")}\n\n";
+
+            if (!pingResult.success)
+            {
+                summary += "⚠ PING THẤT BẠI:\n" +
+                    "- Kiểm tra hai máy có cùng mạng WiFi không\n" +
+                    "- Kiểm tra IP có đúng không\n" +
+                    "- Một số mạng có AP Isolation (ngăn thiết bị giao tiếp)\n\n";
+            }
+
+            if (!portResult.success && pingResult.success)
+            {
+                summary += "⚠ PORT 9000 KHÔNG KẾT NỐI ĐƯỢC:\n" +
+                    "- Chạy file OpenFirewall.bat với quyền Admin trên CẢ HAI máy\n" +
+                    "- Hoặc tắt Windows Firewall tạm thời để test\n\n";
+            }
+
+            MessageBox.Show(summary, "Kết Quả Test", MessageBoxButtons.OK,
+                pingResult.success && portResult.success ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+        }
+
+        private void btnShowHelp_Click(object sender, EventArgs e)
+        {
+            string helpText = @"HƯỚNG DẪN KẾT NỐI GIỮA HAI MÁY
+
+═══════════════════════════════════════
+BƯỚC 1: TRÊN MÁY SERVER (máy này)
+═══════════════════════════════════════
+1. Click 'Mở Firewall' → Đồng ý UAC
+2. Click 'Start Server'
+3. Ghi lại IP hiển thị (vd: 10.45.100.45)
+
+═══════════════════════════════════════
+BƯỚC 2: TRÊN MÁY CLIENT (máy khác)
+═══════════════════════════════════════
+1. Chạy file 'OpenFirewall.bat' với quyền Admin
+2. Mở ChatAppClient
+3. Nhập IP của máy Server (vd: 10.45.100.45)
+4. Đăng nhập
+
+═══════════════════════════════════════
+NẾU VẪN KHÔNG KẾT NỐI ĐƯỢC:
+═══════════════════════════════════════
+1. Mở CMD trên máy Client, gõ:
+   ping <IP máy Server>
+   
+   - Nếu 'Request timed out' → Hai máy không cùng mạng
+   - Nếu 'Reply from...' → Mạng OK, kiểm tra Firewall
+
+2. Tạm tắt Windows Firewall trên CẢ HAI máy:
+   - Mở Windows Security → Firewall & network protection
+   - Tắt firewall cho 'Private network'
+
+3. Kiểm tra IP:
+   - Mở CMD, gõ: ipconfig
+   - Xem 'IPv4 Address' trong phần WiFi
+
+═══════════════════════════════════════
+LƯU Ý QUAN TRỌNG:
+═══════════════════════════════════════
+• Hai máy PHẢI cùng một mạng WiFi
+• IP 127.0.0.1 chỉ dùng khi Client và Server CÙNG MÁY
+• Một số mạng công ty/trường học chặn kết nối P2P
+";
+
+            MessageBox.Show(helpText, "Trợ Giúp Kết Nối", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
         #region Lấy địa chỉ IP Local
 
         /// <summary>
@@ -290,6 +421,37 @@ namespace ChatAppServer
             {
                 return "127.0.0.1";
             }
+        }
+
+        /// <summary>
+        /// Hiển thị dialog nhập liệu đơn giản
+        /// </summary>
+        private string ShowInputDialog(string prompt, string title)
+        {
+            Form inputForm = new Form
+            {
+                Width = 450,
+                Height = 200,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                Text = title,
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+
+            Label promptLabel = new Label { Left = 20, Top = 20, Width = 400, Height = 80, Text = prompt };
+            TextBox textBox = new TextBox { Left = 20, Top = 110, Width = 400 };
+            Button okButton = new Button { Text = "OK", Left = 260, Width = 75, Top = 140, DialogResult = DialogResult.OK };
+            Button cancelButton = new Button { Text = "Cancel", Left = 345, Width = 75, Top = 140, DialogResult = DialogResult.Cancel };
+
+            inputForm.Controls.Add(promptLabel);
+            inputForm.Controls.Add(textBox);
+            inputForm.Controls.Add(okButton);
+            inputForm.Controls.Add(cancelButton);
+            inputForm.AcceptButton = okButton;
+            inputForm.CancelButton = cancelButton;
+
+            return inputForm.ShowDialog() == DialogResult.OK ? textBox.Text : "";
         }
 
         #endregion

@@ -63,13 +63,41 @@
             this.btnOpenFirewall.BackColor = System.Drawing.Color.Orange;
             this.btnOpenFirewall.ForeColor = System.Drawing.Color.White;
             this.btnOpenFirewall.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Bold);
-            this.btnOpenFirewall.Location = new System.Drawing.Point(460, 12);
+            this.btnOpenFirewall.Location = new System.Drawing.Point(230, 12);
             this.btnOpenFirewall.Name = "btnOpenFirewall";
-            this.btnOpenFirewall.Size = new System.Drawing.Size(130, 55);
+            this.btnOpenFirewall.Size = new System.Drawing.Size(110, 55);
             this.btnOpenFirewall.TabIndex = 6;
             this.btnOpenFirewall.Text = "🔓 Mở Firewall";
             this.btnOpenFirewall.UseVisualStyleBackColor = false;
             this.btnOpenFirewall.Click += new System.EventHandler(this.btnOpenFirewall_Click);
+            // 
+            // btnTestConnection
+            // 
+            this.btnTestConnection = new System.Windows.Forms.Button();
+            this.btnTestConnection.BackColor = System.Drawing.Color.DodgerBlue;
+            this.btnTestConnection.ForeColor = System.Drawing.Color.White;
+            this.btnTestConnection.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Bold);
+            this.btnTestConnection.Location = new System.Drawing.Point(346, 12);
+            this.btnTestConnection.Name = "btnTestConnection";
+            this.btnTestConnection.Size = new System.Drawing.Size(110, 55);
+            this.btnTestConnection.TabIndex = 7;
+            this.btnTestConnection.Text = "🔍 Test Kết Nối";
+            this.btnTestConnection.UseVisualStyleBackColor = false;
+            this.btnTestConnection.Click += new System.EventHandler(this.btnTestConnection_Click);
+            // 
+            // btnShowHelp
+            // 
+            this.btnShowHelp = new System.Windows.Forms.Button();
+            this.btnShowHelp.BackColor = System.Drawing.Color.Gray;
+            this.btnShowHelp.ForeColor = System.Drawing.Color.White;
+            this.btnShowHelp.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Bold);
+            this.btnShowHelp.Location = new System.Drawing.Point(462, 12);
+            this.btnShowHelp.Name = "btnShowHelp";
+            this.btnShowHelp.Size = new System.Drawing.Size(110, 55);
+            this.btnShowHelp.TabIndex = 8;
+            this.btnShowHelp.Text = "❓ Trợ giúp";
+            this.btnShowHelp.UseVisualStyleBackColor = false;
+            this.btnShowHelp.Click += new System.EventHandler(this.btnShowHelp_Click);
             // 
             // rtbLog
             // 
@@ -120,6 +148,8 @@
             this.Controls.Add(this.btnStart);
             this.Controls.Add(this.btnStop);
             this.Controls.Add(this.btnOpenFirewall);
+            this.Controls.Add(this.btnTestConnection);
+            this.Controls.Add(this.btnShowHelp);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.lblServerIP);
             this.Controls.Add(this.rtbLog);
@@ -137,6 +167,8 @@
         private System.Windows.Forms.Button btnStart;
         private System.Windows.Forms.Button btnStop;
         private System.Windows.Forms.Button btnOpenFirewall;
+        private System.Windows.Forms.Button btnTestConnection;
+        private System.Windows.Forms.Button btnShowHelp;
         private System.Windows.Forms.RichTextBox rtbLog;
         private System.Windows.Forms.ListBox lstUsers;
         private System.Windows.Forms.Label lblStatus;

@@ -99,12 +99,31 @@ namespace ChatAppClient.Forms
 
                 if (!connected)
                 {
-                    throw new Exception($"Không thể kết nối đến server tại {serverIp}:9000.\n\n" +
-                        "Vui lòng kiểm tra:\n" +
-                        "1. Địa chỉ IP có đúng không?\n" +
-                        "2. Server đã khởi động chưa?\n" +
-                        "3. Cả hai máy có cùng mạng không?\n" +
-                        "4. Firewall có chặn port 9000 không?");
+                    string helpText = $"Không thể kết nối đến server tại {serverIp}:9000\n\n" +
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                        "KIỂM TRA TRÊN MÁY SERVER:\n" +
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                        "□ Server đã Start chưa? (Phải thấy 'Server: Running...')\n" +
+                        "□ Đã mở Firewall chưa? (Click '🔓 Mở Firewall' hoặc chạy OpenFirewall.bat)\n" +
+                        "□ IP hiển thị trên Server là gì? (Copy chính xác IP đó)\n\n" +
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                        "KIỂM TRA TRÊN MÁY CLIENT (MÁY NÀY):\n" +
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                        "□ Đã mở Firewall chưa? (Chạy OpenFirewall.bat với quyền Admin)\n" +
+                        "□ Đã ping được Server chưa?\n" +
+                        "  → Mở CMD: ping " + serverIp + "\n" +
+                        "  → Nếu 'Request timed out' = KHÔNG CÙNG MẠNG\n" +
+                        "  → Nếu 'Reply from...' = Mạng OK, kiểm tra Firewall\n\n" +
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                        "KIỂM TRA MẠNG:\n" +
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                        "□ Hai máy có cùng tên WiFi không?\n" +
+                        "□ IP có cùng subnet không? (3 số đầu giống nhau)\n" +
+                        "  Ví dụ: 10.215.204.194 và 10.215.204.110 = OK ✓\n" +
+                        "         10.215.204.194 và 10.215.210.103 = SAI ✗\n\n" +
+                        "Xem file CHECKLIST_KET_NOI.md để kiểm tra chi tiết!";
+                    
+                    throw new Exception(helpText);
                 }
 
                 // 4. Gửi gói tin Login
