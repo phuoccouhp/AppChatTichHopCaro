@@ -432,12 +432,12 @@ exit /b 0
                 stopwatch.Stop();
                 string errorMsg = ex.SocketErrorCode switch
                 {
-                    SocketError.ConnectionRefused => "Port closed or no service listening",
-                    SocketError.TimedOut => "Connection timeout - firewall may be blocking",
-                    SocketError.NetworkUnreachable => "Network unreachable",
-                    SocketError.HostUnreachable => "Host unreachable - check IP",
-                    SocketError.HostNotFound => "Host not found",
-                    _ => $"Socket error: {ex.SocketErrorCode}"
+                    SocketError.ConnectionRefused => "Không thể kết nối - Server đích chưa chạy hoặc port chưa mở",
+                    SocketError.TimedOut => "Kết nối timeout - Firewall có thể đang chặn hoặc mạng chậm",
+                    SocketError.NetworkUnreachable => "Không thể đến mạng đích - Kiểm tra kết nối mạng",
+                    SocketError.HostUnreachable => "Không thể đến host - Kiểm tra IP có đúng không",
+                    SocketError.HostNotFound => "Không tìm thấy host - IP không hợp lệ",
+                    _ => $"Lỗi socket: {ex.SocketErrorCode}"
                 };
                 return (false, errorMsg, (int)stopwatch.ElapsedMilliseconds);
             }

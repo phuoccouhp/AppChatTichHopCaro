@@ -83,21 +83,46 @@ namespace ChatAppClient.Forms
                 catch (Exception ex)
                 {
                     // Lỗi xảy ra trong quá trình ConnectAsync
-                    throw ex;
+                    Logger.Error($"Lỗi trong quá trình kết nối: {ex.GetType().Name} - {ex.Message}");
+                    DisconnectInternal(false);
+                    throw;
                 }
 
-                if (_client.Connected)
+                // Kiểm tra _client không null và đã kết nối thành công
+                if (_client != null && _client.Connected)
                 {
-                    _stream = _client.GetStream();
-                    _listeningCts = new CancellationTokenSource();
-                    // Bắt đầu lắng nghe gói tin từ Server
-                    _ = StartListeningAsync(_listeningCts.Token);
+                    try
+                    {
+                        _stream = _client.GetStream();
+                        if (_stream == null)
+                        {
+                            Logger.Error("Không thể lấy NetworkStream từ TcpClient");
+                            DisconnectInternal(false);
+                            return false;
+                        }
 
-                    CurrentServerIP = ipAddress;
-                    CurrentServerPort = port;
+                        _listeningCts = new CancellationTokenSource();
+                        // Bắt đầu lắng nghe gói tin từ Server
+                        _ = StartListeningAsync(_listeningCts.Token);
 
-                    Logger.Success($"Kết nối THÀNH CÔNG đến {ipAddress}:{port}!");
-                    return true;
+                        CurrentServerIP = ipAddress;
+                        CurrentServerPort = port;
+
+                        Logger.Success($"Kết nối THÀNH CÔNG đến {ipAddress}:{port}!");
+                        return true;
+                    }
+                    catch (Exception streamEx)
+                    {
+                        Logger.Error($"Lỗi khi khởi tạo stream: {streamEx.GetType().Name} - {streamEx.Message}");
+                        DisconnectInternal(false);
+                        return false;
+                    }
+                }
+                else
+                {
+                    Logger.Error("Kết nối không thành công - Client không connected");
+                    DisconnectInternal(false);
+                    return false;
                 }
             }
             catch (SocketException sockEx)
@@ -112,7 +137,7 @@ namespace ChatAppClient.Forms
             }
             catch (Exception ex)
             {
-                Logger.Error($"Lỗi kết nối chung: {ex.Message}");
+                Logger.Error($"Lỗi kết nối chung: {ex.GetType().Name} - {ex.Message}");
             }
 
             DisconnectInternal(false);
