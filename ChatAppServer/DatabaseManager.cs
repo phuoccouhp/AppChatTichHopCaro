@@ -27,7 +27,7 @@ namespace ChatAppServer
             // ==================================================================================
 
             string myServerName = "."; // <--- HÃY SỬA DÒNG NÀY (Ví dụ: @".\SQL2019" hoặc @"DESKTOP-ABC")
-            string targetDB = "ChatDB";
+            string targetDB = "ChatAppDB"; // ✅ Sử dụng database đã có sẵn
 
             // ==================================================================================
 
