@@ -213,10 +213,8 @@ namespace ChatAppServer
                             MessageBox.Show("Không thể mở Firewall tự động.\n\n" +
                                 "Nguyên nhân có thể:\n" +
                                 "1. Bạn đã từ chối quyền Admin (UAC).\n" +
-                                "2. Antivirus chặn script.\n" +
-                                "3. Windows Firewall bị tắt.\n\n" +
-                                "Hãy mở thủ công: Windows Defender Firewall > Advanced Settings > Inbound Rules > New Rule > Port > TCP > 9000 > Allow > All profiles.\n" +
-                                "Làm tương tự cho Outbound Rules.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                "2. Antivirus chặn script.\n\n" +
+                                "Hãy mở thủ công trong Windows Defender Firewall.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }
                     }));
                 });
@@ -244,7 +242,6 @@ namespace ChatAppServer
 
             // 3. Kiểm tra IP
             statusMsg += $"3. IP Máy Chủ: {ip}\n";
-            statusMsg += $"4. Network Profile: Kiểm tra trong Windows Defender Firewall > Advanced Settings xem profile nào đang active (Domain/Private/Public).\n";
 
             // 4. Lời khuyên
             statusMsg += "\n=== LỜI KHUYÊN NẾU CLIENT KHÔNG KẾT NỐI ĐƯỢC ===\n";

@@ -30,15 +30,11 @@ namespace ChatAppServer
                     $"dir=in action=allow protocol=TCP localport={port} " +
                     $"profile=any enable=yes");
 
-                Logger.Info($"Inbound rule creation result: {inboundResult}");
-
                 // Tạo Outbound Rule (Cho phép mình trả lời lại)
                 string outboundResult = RunNetshCommand(
                     $"advfirewall firewall add rule name=\"{ruleName} (Out)\" " +
                     $"dir=out action=allow protocol=TCP localport={port} " +
                     $"profile=any enable=yes");
-
-                Logger.Info($"Outbound rule creation result: {outboundResult}");
 
                 Logger.Success($"Đã gửi lệnh mở port {port} tới Firewall.");
                 return true;
@@ -73,13 +69,11 @@ namespace ChatAppServer
 
                     // Inbound check
                     bool inboundExists = !string.IsNullOrEmpty(inboundResult) &&
-                        (inboundResult.Contains("Rule Name") || inboundResult.Contains("Tên quy tắc")) &&
-                        inboundResult.Contains("Enabled: Yes");
+                        (inboundResult.Contains("Rule Name") || inboundResult.Contains("Tên quy tắc"));
 
                     // Outbound check
                     bool outboundExists = !string.IsNullOrEmpty(outboundResult) &&
-                        (outboundResult.Contains("Rule Name") || outboundResult.Contains("Tên quy tắc")) &&
-                        outboundResult.Contains("Enabled: Yes");
+                        (outboundResult.Contains("Rule Name") || outboundResult.Contains("Tên quy tắc"));
 
                     // Debug log chi tiết hơn để biết tại sao fail
                     if (!inboundExists || !outboundExists)
@@ -147,9 +141,6 @@ namespace ChatAppServer
                         Logger.Info($"[Netsh Output] {output.Trim()}");
                     }
 
-                    // Ghi lại toàn bộ output để debug
-                    Logger.Info($"[Netsh Command] {arguments} \n[Output] {output.Trim()} \n[Error] {error.Trim()}");
-
                     return output;
                 }
             }
@@ -184,7 +175,7 @@ netsh advfirewall firewall add rule name=""{ruleName}"" dir=in action=allow prot
 if !errorlevel! neq 0 echo ERROR Inbound: !errorlevel!
 
 echo [3/4] Adding outbound rule...
-netsh advfirewall firewall add rule name=""{ruleName} (Out)"" dir=out action=allow protocol=TCP localport={port} profile=any enable=yes
+netsh advfirewall firewall add rule name=""{ruleName} (Out)"" dir=out action=allow protocol=TCP localport={port} profile=private,domain,public enable=yes
 if !errorlevel! neq 0 echo ERROR Outbound: !errorlevel!
 
 echo [4/4] Verifying...

@@ -30,15 +30,11 @@ namespace ChatAppServer
                     $"dir=in action=allow protocol=TCP localport={port} " +
                     $"profile=any enable=yes");
 
-                Logger.Info($"Inbound rule creation result: {inboundResult}");
-
                 // Tạo Outbound Rule (Cho phép mình trả lời lại)
                 string outboundResult = RunNetshCommand(
                     $"advfirewall firewall add rule name=\"{ruleName} (Out)\" " +
                     $"dir=out action=allow protocol=TCP localport={port} " +
                     $"profile=any enable=yes");
-
-                Logger.Info($"Outbound rule creation result: {outboundResult}");
 
                 Logger.Success($"Đã gửi lệnh mở port {port} tới Firewall.");
                 return true;
@@ -73,13 +69,11 @@ namespace ChatAppServer
 
                     // Inbound check
                     bool inboundExists = !string.IsNullOrEmpty(inboundResult) &&
-                        (inboundResult.Contains("Rule Name") || inboundResult.Contains("Tên quy tắc")) &&
-                        inboundResult.Contains("Enabled: Yes");
+                        (inboundResult.Contains("Rule Name") || inboundResult.Contains("Tên quy tắc"));
 
                     // Outbound check
                     bool outboundExists = !string.IsNullOrEmpty(outboundResult) &&
-                        (outboundResult.Contains("Rule Name") || outboundResult.Contains("Tên quy tắc")) &&
-                        outboundResult.Contains("Enabled: Yes");
+                        (outboundResult.Contains("Rule Name") || outboundResult.Contains("Tên quy tắc"));
 
                     // Debug log chi tiết hơn để biết tại sao fail
                     if (!inboundExists || !outboundExists)

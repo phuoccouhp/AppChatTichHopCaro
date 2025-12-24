@@ -73,13 +73,11 @@ namespace ChatAppServer
 
                     // Inbound check
                     bool inboundExists = !string.IsNullOrEmpty(inboundResult) &&
-                        (inboundResult.Contains("Rule Name") || inboundResult.Contains("Tên quy tắc")) &&
-                        inboundResult.Contains("Enabled: Yes");
+                        (inboundResult.Contains("Rule Name") || inboundResult.Contains("Tên quy tắc"));
 
                     // Outbound check
                     bool outboundExists = !string.IsNullOrEmpty(outboundResult) &&
-                        (outboundResult.Contains("Rule Name") || outboundResult.Contains("Tên quy tắc")) &&
-                        outboundResult.Contains("Enabled: Yes");
+                        (outboundResult.Contains("Rule Name") || outboundResult.Contains("Tên quy tắc"));
 
                     // Debug log chi tiết hơn để biết tại sao fail
                     if (!inboundExists || !outboundExists)

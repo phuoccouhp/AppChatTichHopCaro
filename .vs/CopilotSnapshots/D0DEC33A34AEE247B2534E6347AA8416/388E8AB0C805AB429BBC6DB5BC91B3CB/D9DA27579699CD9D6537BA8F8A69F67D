@@ -244,7 +244,6 @@ namespace ChatAppServer
 
             // 3. Kiểm tra IP
             statusMsg += $"3. IP Máy Chủ: {ip}\n";
-            statusMsg += $"4. Network Profile: Kiểm tra trong Windows Defender Firewall > Advanced Settings xem profile nào đang active (Domain/Private/Public).\n";
 
             // 4. Lời khuyên
             statusMsg += "\n=== LỜI KHUYÊN NẾU CLIENT KHÔNG KẾT NỐI ĐƯỢC ===\n";
