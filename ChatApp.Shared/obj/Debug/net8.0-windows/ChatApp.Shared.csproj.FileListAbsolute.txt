@@ -10,3 +10,15 @@ C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-w
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\refint\ChatApp.Shared.dll
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.pdb
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ref\ChatApp.Shared.dll
+E:\GitHub\AppChatTichHopCaro\ChatApp.Shared\bin\Debug\net8.0-windows\ChatApp.Shared.deps.json
+E:\GitHub\AppChatTichHopCaro\ChatApp.Shared\bin\Debug\net8.0-windows\ChatApp.Shared.dll
+E:\GitHub\AppChatTichHopCaro\ChatApp.Shared\bin\Debug\net8.0-windows\ChatApp.Shared.pdb
+E:\GitHub\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.GeneratedMSBuildEditorConfig.editorconfig
+E:\GitHub\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.AssemblyInfoInputs.cache
+E:\GitHub\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.AssemblyInfo.cs
+E:\GitHub\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.csproj.CoreCompileInputs.cache
+E:\GitHub\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.sourcelink.json
+E:\GitHub\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.dll
+E:\GitHub\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\refint\ChatApp.Shared.dll
+E:\GitHub\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.pdb
+E:\GitHub\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ref\ChatApp.Shared.dll

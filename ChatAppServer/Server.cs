@@ -13,7 +13,8 @@ namespace ChatAppServer
         private TcpListener? _listener;
         private readonly int _port;
         // Dùng Dictionary để quản lý client (Key = UserID, Value = ClientHandler)
-        private readonly Dictionary<string, ClientHandler> _clients = new Dictionary<string, ClientHandler>();
+        // Use case-insensitive keys to avoid username case mismatch
+        private readonly Dictionary<string, ClientHandler> _clients = new Dictionary<string, ClientHandler>(StringComparer.OrdinalIgnoreCase);
         // Quản lý các ván game đang diễn ra (Key = GameID)
         private readonly Dictionary<string, GameSession> _gameSessions = new Dictionary<string, GameSession>();
         // Quản lý Tank Game
@@ -281,6 +282,48 @@ namespace ChatAppServer
             {
                 _clients[userID] = handler;
             }
+
+            // Persist online status to DB (best-effort, asynchronous)
+            try
+            {
+                DatabaseManager.Instance.UpdateUserOnlineStatus(userID, true);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"[RegisterClient] Could not update online status for {userID}: {ex.Message}");
+            }
+
+            Logger.Info($"[RegisterClient] {userID} registered. Current online users: {string.Join(",", GetOnlineUserIDs())}");
+
+            // === FIX #2: Notify ALL online users (not just contacts) that this user is now online ===
+            // This ensures bi-directional visibility: when User A goes online, ALL users see A as online
+            var statusPacket = new UserStatusPacket
+            {
+                UserID = userID,
+                UserName = handler.UserName,
+                IsOnline = true
+            };
+
+            lock (_clients)
+            {
+                foreach (var onlineClient in _clients.Values.ToList())
+                {
+                    // Skip sending to the user themselves
+                    if (string.Equals(onlineClient.UserID, userID, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    try
+                    {
+                        onlineClient.SendPacket(statusPacket);
+                        Logger.Info($"[RegisterClient] Sent online status {userID} to {onlineClient.UserID}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning($"[RegisterClient] Failed to send online status to {onlineClient.UserID}: {ex.Message}");
+                    }
+                }
+            }
+
             NotifyUserListChanged();
         }
 
@@ -293,17 +336,55 @@ namespace ChatAppServer
                 _clients.Remove(userID);
             }
 
+            // Persist offline status and last seen (asynchronous)
+            try
+            {
+                DatabaseManager.Instance.UpdateUserOnlineStatus(userID, false);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"[RemoveClient] Could not update offline status for {userID}: {ex.Message}");
+            }
+
+            Logger.Info($"[RemoveClient] {userID} disconnected. Remaining online users: {string.Join(",", GetOnlineUserIDs())}");
+
+            // === FIX #2: Notify ALL online users that this user is now offline ===
             var statusPacket = new UserStatusPacket
             {
                 UserID = userID,
                 IsOnline = false
             };
-            BroadcastPacket(statusPacket, null);
+
+            lock (_clients)
+            {
+                foreach (var onlineClient in _clients.Values.ToList())
+                {
+                    try
+                    {
+                        onlineClient.SendPacket(statusPacket);
+                        Logger.Info($"[RemoveClient] Sent offline status {userID} to {onlineClient.UserID}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning($"[RemoveClient] Failed to send offline status to {onlineClient.UserID}: {ex.Message}");
+                    }
+                }
+            }
 
             Logger.Warning($"[Disconnect] User '{userID}' đã ngắt kết nối.");
             NotifyUserListChanged();
         }
 
+        /// <summary>
+        /// Helper: Get list of currently online user IDs for logging
+        /// </summary>
+        private List<string> GetOnlineUserIDs()
+        {
+            lock (_clients)
+            {
+                return _clients.Keys.ToList();
+            }
+        }
         public void KickUser(string userID)
         {
             lock (_clients)
@@ -322,12 +403,20 @@ namespace ChatAppServer
             {
                 if (_clients.TryGetValue(userID, out ClientHandler client))
                 {
-                    TimeSpan duration = DateTime.Now - client.LoginTime;
-                    return $"ID: {client.UserID}\n" +
-                           $"Name: {client.UserName}\n" +
-                           $"IP: {client.ClientIP}\n" +
-                           $"Login At: {client.LoginTime:HH:mm:ss}\n" +
-                           $"Online: {duration.Hours}h {duration.Minutes}m {duration.Seconds}s";
+                    try
+                    {
+                        TimeSpan duration = DateTime.Now - client.LoginTime;
+                        return $"ID: {client.UserID}\n" +
+                               $"Name: {client.UserName}\n" +
+                               $"IP: {client.ClientIP}\n" +
+                               $"Login At: {client.LoginTime:HH:mm:ss}\n" +
+                               $"Online: {duration.Hours}h {duration.Minutes}m {duration.Seconds}s";
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning($"Lỗi lấy user info: {ex.Message}");
+                        return "Không thể lấy thông tin user.";
+                    }
                 }
             }
             return "Người dùng không tồn tại hoặc đã thoát.";
@@ -390,9 +479,15 @@ namespace ChatAppServer
             {
                 foreach (var client in _clients.Values.ToList())
                 {
-                    if (client.UserID != excludeUserID)
+                    try
                     {
+                        if (string.IsNullOrEmpty(client.UserID) || string.Equals(client.UserID, excludeUserID, StringComparison.OrdinalIgnoreCase))
+                            continue;
                         client.SendPacket(packet);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning($"[Broadcast] Error sending to {client.UserID ?? client.ClientIP}: {ex.Message}");
                     }
                 }
             }
@@ -400,6 +495,12 @@ namespace ChatAppServer
 
         public void RelayPrivatePacket(string receiverID, object packet)
         {
+            if (string.IsNullOrEmpty(receiverID))
+            {
+                Logger.Warning("[RelayPrivatePacket] receiverID is null or empty");
+                return;
+            }
+
             lock (_clients)
             {
                 if (_clients.TryGetValue(receiverID, out ClientHandler receiver))
@@ -408,7 +509,9 @@ namespace ChatAppServer
                 }
                 else
                 {
-                    Logger.Warning($"[Warning] Không tìm thấy client '{receiverID}' để chuyển tin.");
+                    // Log current online users for debugging
+                    var keys = _clients.Keys.ToList();
+                    Logger.Warning($"[Warning] Không tìm thấy client '{receiverID}' để chuyển tin. Online keys: {string.Join(",", keys)}");
                 }
             }
         }
@@ -441,46 +544,132 @@ namespace ChatAppServer
 
         public void ProcessGameResponse(GameResponsePacket response)
         {
+            Logger.Info($"[ProcessGameResponse] Received response from {response.SenderID} to {response.ReceiverID}: Accepted={response.Accepted}");
+
             int messageId = GetAndRemoveGameInviteMessageId(response.SenderID, response.ReceiverID);
             if (messageId > 0)
             {
                 string statusText = response.Accepted ? "✓ Đã chấp nhận" : "✗ Đã từ chối";
-                var messages = DatabaseManager.Instance.GetChatHistory(response.ReceiverID, response.SenderID, 100);
-                var message = messages.FirstOrDefault(m => m.MessageID == messageId);
-                if (message != null)
+                try
                 {
-                    DatabaseManager.Instance.UpdateMessage(messageId, message.MessageContent + " - " + statusText);
+                    var messages = DatabaseManager.Instance.GetChatHistory(response.ReceiverID, response.SenderID, 100);
+                    var message = messages.FirstOrDefault(m => m.MessageID == messageId);
+                    if (message != null)
+                    {
+                        DatabaseManager.Instance.UpdateMessage(messageId, message.MessageContent + " - " + statusText);
+                        Logger.Info($"[ProcessGameResponse] Updated message {messageId} with status: {statusText}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning($"[ProcessGameResponse] Failed to update message status: {ex.Message}");
                 }
             }
 
             if (!response.Accepted)
             {
+                Logger.Info($"[ProcessGameResponse] Game invite declined by {response.SenderID}");
                 RelayPrivatePacket(response.ReceiverID, response);
                 return;
             }
 
-            string player1_ID = response.ReceiverID;
-            string player2_ID = response.SenderID;
+            // === Game accepted - Start game ===
+            string player1_ID = response.ReceiverID;  // người gửi lời mời
+            string player2_ID = response.SenderID;    // người nhận & chấp nhận
             string gameID = Guid.NewGuid().ToString("N").Substring(0, 10);
 
-            GameSession newGame = new GameSession(gameID, player1_ID, player2_ID, GameType.Caro);
-            lock (_gameSessions) { _gameSessions.Add(gameID, newGame); }
+            Logger.Info($"[ProcessGameResponse] Starting Caro game {gameID}: Player1={player1_ID} vs Player2={player2_ID}");
 
-            ClientHandler player1_Handler, player2_Handler;
+            GameSession newGame = new GameSession(gameID, player1_ID, player2_ID, GameType.Caro);
+            lock (_gameSessions) 
+            { 
+                _gameSessions.Add(gameID, newGame);
+                Logger.Info($"[ProcessGameResponse] Game session created. Total sessions: {_gameSessions.Count}");
+            }
+
+            ClientHandler? player1_Handler = null;
+            ClientHandler? player2_Handler = null;
+            
             lock (_clients)
             {
-                _clients.TryGetValue(player1_ID, out player1_Handler);
-                _clients.TryGetValue(player2_ID, out player2_Handler);
+                bool found1 = _clients.TryGetValue(player1_ID, out player1_Handler);
+                bool found2 = _clients.TryGetValue(player2_ID, out player2_Handler);
+                
+                Logger.Info($"[ProcessGameResponse] Looking for players - Player1({player1_ID}): {(found1 ? "FOUND" : "NOT FOUND")}, Player2({player2_ID}): {(found2 ? "FOUND" : "NOT FOUND")}");
+                Logger.Info($"[ProcessGameResponse] Online players: {string.Join(",", _clients.Keys)}");
             }
 
             if (player1_Handler == null || player2_Handler == null)
             {
+                Logger.Error($"[ProcessGameResponse] Cannot start game {gameID}: Player1={player1_Handler}, Player2={player2_Handler}");
                 lock (_gameSessions) _gameSessions.Remove(gameID);
+                
+                // Notify one player that the other disconnected
+                if (player1_Handler != null)
+                {
+                    try
+                    {
+                        player1_Handler.SendPacket(new GameResponsePacket 
+                        { 
+                            SenderID = player2_ID, 
+                            ReceiverID = player1_ID, 
+                            Accepted = false 
+                        });
+                    }
+                    catch { }
+                }
+                if (player2_Handler != null)
+                {
+                    try
+                    {
+                        player2_Handler.SendPacket(new GameResponsePacket 
+                        { 
+                            SenderID = player1_ID, 
+                            ReceiverID = player2_ID, 
+                            Accepted = false 
+                        });
+                    }
+                    catch { }
+                }
                 return;
             }
 
-            player1_Handler.SendPacket(new GameStartPacket { GameID = gameID, OpponentID = player2_Handler.UserID, OpponentName = player2_Handler.UserName, StartsFirst = true });
-            player2_Handler.SendPacket(new GameStartPacket { GameID = gameID, OpponentID = player1_Handler.UserID, OpponentName = player1_Handler.UserName, StartsFirst = false });
+            // Both players found - Send GameStartPacket
+            try
+            {
+                var startPacket1 = new GameStartPacket 
+                { 
+                    GameID = gameID, 
+                    OpponentID = player2_Handler.UserID, 
+                    OpponentName = player2_Handler.UserName, 
+                    StartsFirst = true 
+                };
+                player1_Handler.SendPacket(startPacket1);
+                Logger.Info($"[ProcessGameResponse] Sent GameStartPacket to Player1({player1_ID})");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[ProcessGameResponse] Failed to send GameStartPacket to Player1({player1_ID}): {ex.Message}");
+            }
+
+            try
+            {
+                var startPacket2 = new GameStartPacket 
+                { 
+                    GameID = gameID, 
+                    OpponentID = player1_Handler.UserID, 
+                    OpponentName = player1_Handler.UserName, 
+                    StartsFirst = false 
+                };
+                player2_Handler.SendPacket(startPacket2);
+                Logger.Info($"[ProcessGameResponse] Sent GameStartPacket to Player2({player2_ID})");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[ProcessGameResponse] Failed to send GameStartPacket to Player2({player2_ID}): {ex.Message}");
+            }
+
+            Logger.Success($"[ProcessGameResponse] Caro game {gameID} started successfully!");
         }
 
         public void ProcessGameMove(GameMovePacket move)
@@ -549,43 +738,145 @@ namespace ChatAppServer
 
         public void ProcessTankResponse(TankResponsePacket response)
         {
+            Logger.Info($"[ProcessTankResponse] Received response from {response.SenderID} to {response.ReceiverID}: Accepted={response.Accepted}");
+
             int messageId = GetAndRemoveGameInviteMessageId(response.ReceiverID, response.SenderID);
             if (messageId > 0)
             {
                 string statusText = response.Accepted ? "✓ Đã chấp nhận" : "✗ Đã từ chối";
-                var messages = DatabaseManager.Instance.GetChatHistory(response.ReceiverID, response.SenderID, 100);
-                var message = messages.FirstOrDefault(m => m.MessageID == messageId);
-                if (message != null) DatabaseManager.Instance.UpdateMessage(messageId, message.MessageContent + " - " + statusText);
+                try
+                {
+                    var messages = DatabaseManager.Instance.GetChatHistory(response.ReceiverID, response.SenderID, 100);
+                    var message = messages.FirstOrDefault(m => m.MessageID == messageId);
+                    if (message != null)
+                    {
+                        DatabaseManager.Instance.UpdateMessage(messageId, message.MessageContent + " - " + statusText);
+                        Logger.Info($"[ProcessTankResponse] Updated message {messageId} with status: {statusText}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning($"[ProcessTankResponse] Failed to update message status: {ex.Message}");
+                }
             }
 
             if (!response.Accepted)
             {
+                Logger.Info($"[ProcessTankResponse] Tank game invite declined by {response.SenderID}");
                 RelayPrivatePacket(response.ReceiverID, response);
                 return;
             }
 
-            string player1_ID = response.ReceiverID;
-            string player2_ID = response.SenderID;
+            // === Tank Game accepted - Start game ===
+            string player1_ID = response.ReceiverID;  // người gửi lời mời
+            string player2_ID = response.SenderID;    // người nhận & chấp nhận
             string gameID = Guid.NewGuid().ToString("N").Substring(0, 10);
-            GameSession newGame = new GameSession(gameID, player1_ID, player2_ID, GameType.Tank);
-            lock (_gameSessions) { _gameSessions.Add(gameID, newGame); }
 
-            ClientHandler player1_Handler, player2_Handler;
+            Logger.Info($"[ProcessTankResponse] Starting Tank game {gameID}: Player1={player1_ID} vs Player2={player2_ID}");
+
+            GameSession newGame = new GameSession(gameID, player1_ID, player2_ID, GameType.Tank);
+            lock (_gameSessions) 
+            { 
+                _gameSessions.Add(gameID, newGame);
+                Logger.Info($"[ProcessTankResponse] Game session created. Total sessions: {_gameSessions.Count}");
+            }
+
+            ClientHandler? player1_Handler = null;
+            ClientHandler? player2_Handler = null;
+            
             lock (_clients)
             {
-                _clients.TryGetValue(player1_ID, out player1_Handler);
-                _clients.TryGetValue(player2_ID, out player2_Handler);
+                bool found1 = _clients.TryGetValue(player1_ID, out player1_Handler);
+                bool found2 = _clients.TryGetValue(player2_ID, out player2_Handler);
+                
+                Logger.Info($"[ProcessTankResponse] Looking for players - Player1({player1_ID}): {(found1 ? "FOUND" : "NOT FOUND")}, Player2({player2_ID}): {(found2 ? "FOUND" : "NOT FOUND")}");
+                Logger.Info($"[ProcessTankResponse] Online players: {string.Join(",", _clients.Keys)}");
             }
 
             if (player1_Handler == null || player2_Handler == null)
             {
+                Logger.Error($"[ProcessTankResponse] Cannot start game {gameID}: Player1={player1_Handler}, Player2={player2_Handler}");
+                lock (_gameSessions) _gameSessions.Remove(gameID);
+                
+                // Notify one player that the other disconnected
+                if (player1_Handler != null)
+                {
+                    try
+                    {
+                        player1_Handler.SendPacket(new TankResponsePacket 
+                        { 
+                            SenderID = player2_ID, 
+                            ReceiverID = player1_ID, 
+                            Accepted = false 
+                        });
+                    }
+                    catch { }
+                }
+                if (player2_Handler != null)
+                {
+                    try
+                    {
+                        player2_Handler.SendPacket(new TankResponsePacket 
+                        { 
+                            SenderID = player1_ID, 
+                            ReceiverID = player2_ID, 
+                            Accepted = false 
+                        });
+                    }
+                    catch { }
+                }
+                return;
+            }
+
+            // Both players found - Initialize Tank game and send TankStartPacket
+            try
+            {
+                this.TankGameManager.StartGame(gameID, player1_ID, player2_ID);
+                Logger.Info($"[ProcessTankResponse] TankGameManager.StartGame() called for {gameID}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[ProcessTankResponse] Failed to start tank game in manager: {ex.Message}");
                 lock (_gameSessions) _gameSessions.Remove(gameID);
                 return;
             }
 
-            this.TankGameManager.StartGame(gameID, player1_ID, player2_ID);
-            player1_Handler.SendPacket(new TankStartPacket { GameID = gameID, OpponentID = player2_Handler.UserID, OpponentName = player2_Handler.UserName, StartsFirst = true });
-            player2_Handler.SendPacket(new TankStartPacket { GameID = gameID, OpponentID = player1_Handler.UserID, OpponentName = player1_Handler.UserName, StartsFirst = false });
+            // Send TankStartPacket to both players
+            try
+            {
+                var startPacket1 = new TankStartPacket 
+                { 
+                    GameID = gameID, 
+                    OpponentID = player2_Handler.UserID, 
+                    OpponentName = player2_Handler.UserName, 
+                    StartsFirst = true 
+                };
+                player1_Handler.SendPacket(startPacket1);
+                Logger.Info($"[ProcessTankResponse] Sent TankStartPacket to Player1({player1_ID})");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[ProcessTankResponse] Failed to send TankStartPacket to Player1({player1_ID}): {ex.Message}");
+            }
+
+            try
+            {
+                var startPacket2 = new TankStartPacket 
+                { 
+                    GameID = gameID, 
+                    OpponentID = player1_Handler.UserID, 
+                    OpponentName = player1_Handler.UserName, 
+                    StartsFirst = false 
+                };
+                player2_Handler.SendPacket(startPacket2);
+                Logger.Info($"[ProcessTankResponse] Sent TankStartPacket to Player2({player2_ID})");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[ProcessTankResponse] Failed to send TankStartPacket to Player2({player2_ID}): {ex.Message}");
+            }
+
+            Logger.Success($"[ProcessTankResponse] Tank game {gameID} started successfully!");
         }
 
         public void ProcessTankAction(TankActionPacket action)

@@ -8,12 +8,12 @@ using System.Net.Sockets;
 namespace ChatAppServer
 {
     /// <summary>
-    /// Helper class để mở port trên Windows Firewall và kiểm tra kết nối mạng
+    /// Helper class ?? m? port tr�n Windows Firewall v� ki?m tra k?t n?i m?ng
     /// </summary>
     public static class FirewallHelper
     {
         /// <summary>
-        /// Mở port trên Windows Firewall cho cả Inbound và Outbound
+        /// M? port tr�n Windows Firewall cho c? Inbound v� Outbound
         /// </summary>
         public static bool OpenPort(int port, string ruleName = "ChatAppServer")
         {
@@ -31,18 +31,18 @@ namespace ChatAppServer
                     $"dir=out action=allow protocol=TCP localport={port} " +
                     $"profile=any enable=yes");
 
-                Logger.Success($"Đã mở port {port} trên Windows Firewall");
+                Logger.Success($"?� m? port {port} tr�n Windows Firewall");
                 return true;
             }
             catch (Exception ex)
             {
-                Logger.Error($"Lỗi khi mở port {port} trên Firewall", ex);
+                Logger.Error($"L?i khi m? port {port} tr�n Firewall", ex);
                 return false;
             }
         }
 
         /// <summary>
-        /// Kiểm tra xem rule đã tồn tại chưa
+        /// Ki?m tra xem rule ?� t?n t?i ch?a
         /// </summary>
         public static bool IsPortOpen(int port, string ruleName = "ChatAppServer", int retryCount = 1, int delayMs = 0)
         {
@@ -50,43 +50,43 @@ namespace ChatAppServer
             {
                 try
                 {
-                    // Kiểm tra inbound rule
+                    // Ki?m tra inbound rule
                     string inboundResult = RunNetshCommand($"advfirewall firewall show rule name=\"{ruleName}\" dir=in");
 
-                    // Kiểm tra outbound rule
+                    // Ki?m tra outbound rule
                     string outboundRuleName = $"{ruleName} (Out)";
-                    // Thử cả với và không có dấu ngoặc kép
+                    // Th? c? v?i v� kh�ng c� d?u ngo?c k�p
                     string outboundResult = RunNetshCommand($"advfirewall firewall show rule name=\"{outboundRuleName}\" dir=out");
-                    if (string.IsNullOrEmpty(outboundResult) || (!outboundResult.Contains("Rule Name") && !outboundResult.Contains("Tên quy tắc")))
+                    if (string.IsNullOrEmpty(outboundResult) || (!outboundResult.Contains("Rule Name") && !outboundResult.Contains("T�n quy t?c")))
                     {
-                        // Thử lại không có dấu ngoặc kép
+                        // Th? l?i kh�ng c� d?u ngo?c k�p
                         outboundResult = RunNetshCommand($"advfirewall firewall show rule name={outboundRuleName} dir=out");
                     }
 
-                    // Inbound rule phải tồn tại (có Rule Name) - kiểm tra Enabled nếu có
+                    // Inbound rule ph?i t?n t?i (c� Rule Name) - ki?m tra Enabled n?u c�
                     bool inboundExists = !string.IsNullOrEmpty(inboundResult) &&
-                        (inboundResult.Contains("Rule Name") || inboundResult.Contains("Tên quy tắc"));
+                        (inboundResult.Contains("Rule Name") || inboundResult.Contains("T�n quy t?c"));
                     
-                    // Nếu rule tồn tại, kiểm tra Enabled (nhưng không bắt buộc)
+                    // N?u rule t?n t?i, ki?m tra Enabled (nh?ng kh�ng b?t bu?c)
                     if (inboundExists)
                     {
                         bool enabled = inboundResult.Contains("Enabled") && 
-                            (inboundResult.Contains("Yes") || inboundResult.Contains("Có") || inboundResult.Contains("Đã bật"));
+                            (inboundResult.Contains("Yes") || inboundResult.Contains("C�") || inboundResult.Contains("?� b?t"));
                         if (!enabled && inboundResult.Contains("Enabled"))
                         {
                             Logger.Warning($"[IsPortOpen] Inbound rule exists but may be disabled");
                         }
                     }
 
-                    // Outbound rule phải tồn tại (có Rule Name) - kiểm tra Enabled nếu có
+                    // Outbound rule ph?i t?n t?i (c� Rule Name) - ki?m tra Enabled n?u c�
                     bool outboundExists = !string.IsNullOrEmpty(outboundResult) &&
-                        (outboundResult.Contains("Rule Name") || outboundResult.Contains("Tên quy tắc"));
+                        (outboundResult.Contains("Rule Name") || outboundResult.Contains("T�n quy t?c"));
                     
-                    // Nếu rule tồn tại, kiểm tra Enabled (nhưng không bắt buộc)
+                    // N?u rule t?n t?i, ki?m tra Enabled (nh?ng kh�ng b?t bu?c)
                     if (outboundExists)
                     {
                         bool enabled = outboundResult.Contains("Enabled") && 
-                            (outboundResult.Contains("Yes") || outboundResult.Contains("Có") || outboundResult.Contains("Đã bật"));
+                            (outboundResult.Contains("Yes") || outboundResult.Contains("C�") || outboundResult.Contains("?� b?t"));
                         if (!enabled && outboundResult.Contains("Enabled"))
                         {
                             Logger.Warning($"[IsPortOpen] Outbound rule exists but may be disabled");
@@ -94,7 +94,7 @@ namespace ChatAppServer
                     }
                     else
                     {
-                        // Debug: log một phần output để xem tại sao không tìm thấy
+                        // Debug: log m?t ph?n output ?? xem t?i sao kh�ng t�m th?y
                         if (!string.IsNullOrEmpty(outboundResult))
                         {
                             string preview = outboundResult.Length > 200 ? outboundResult.Substring(0, 200) : outboundResult;
@@ -108,18 +108,18 @@ namespace ChatAppServer
 
                     Logger.Info($"[IsPortOpen] Attempt {attempt + 1}/{retryCount}: Inbound={inboundExists}, Outbound={outboundExists}");
 
-                    // Đối với server, Inbound rule là quan trọng nhất (cho phép clients kết nối đến)
-                    // Outbound rule cũng tốt nhưng không bắt buộc (chủ yếu cho traffic đi ra)
+                    // ??i v?i server, Inbound rule l� quan tr?ng nh?t (cho ph�p clients k?t n?i ??n)
+                    // Outbound rule c?ng t?t nh?ng kh�ng b?t bu?c (ch? y?u cho traffic ?i ra)
                     if (inboundExists)
                     {
                         if (!outboundExists)
                         {
-                            Logger.Warning($"[IsPortOpen] Inbound rule tồn tại nhưng Outbound rule không tìm thấy. Inbound rule là đủ cho server.");
+                            Logger.Warning($"[IsPortOpen] Inbound rule t?n t?i nh?ng Outbound rule kh�ng t�m th?y. Inbound rule l� ?? cho server.");
                         }
-                        return true; // Inbound rule đủ để server hoạt động
+                        return true; // Inbound rule ?? ?? server ho?t ??ng
                     }
 
-                    // Nếu chưa tìm thấy và còn lần thử, đợi rồi thử lại
+                    // N?u ch?a t�m th?y v� c�n l?n th?, ??i r?i th? l?i
                     if (attempt < retryCount - 1 && delayMs > 0)
                     {
                         System.Threading.Thread.Sleep(delayMs);
@@ -127,7 +127,7 @@ namespace ChatAppServer
                 }
                 catch (Exception ex)
                 {
-                    Logger.Warning($"Lỗi khi kiểm tra firewall rule (attempt {attempt + 1}/{retryCount}): {ex.Message}");
+                    Logger.Warning($"L?i khi ki?m tra firewall rule (attempt {attempt + 1}/{retryCount}): {ex.Message}");
                     if (attempt < retryCount - 1 && delayMs > 0)
                     {
                         System.Threading.Thread.Sleep(delayMs);
@@ -139,7 +139,7 @@ namespace ChatAppServer
         }
 
         /// <summary>
-        /// Chạy lệnh netsh
+        /// Ch?y l?nh netsh
         /// </summary>
         private static string RunNetshCommand(string arguments)
         {
@@ -164,7 +164,7 @@ namespace ChatAppServer
                     string output = process.StandardOutput.ReadToEnd();
                     string error = process.StandardError.ReadToEnd();
 
-                    bool finished = process.WaitForExit(5000); // Timeout 5 giây
+                    bool finished = process.WaitForExit(5000); // Timeout 5 gi�y
 
                     if (!finished)
                     {
@@ -183,20 +183,20 @@ namespace ChatAppServer
             }
             catch (Exception ex)
             {
-                Logger.Warning($"Lỗi khi chạy netsh command: {ex.Message}");
+                Logger.Warning($"L?i khi ch?y netsh command: {ex.Message}");
                 return "";
             }
         }
 
         /// <summary>
-        /// Mở port với quyền Administrator bằng cách chạy file batch
+        /// M? port v?i quy?n Administrator b?ng c�ch ch?y file batch
         /// </summary>
         public static bool OpenPortAsAdmin(int port, string ruleName = "ChatAppServer")
         {
             string tempBatchFile = null;
             try
             {
-                // Tạo file batch tạm thời - MỞ CHO TẤT CẢ PROFILE
+                // T?o file batch t?m th?i - M? CHO T?T C? PROFILE
                 string batchContent = $@"@echo off
 setlocal enabledelayedexpansion
 
@@ -205,14 +205,14 @@ echo Opening Firewall Port {port}...
 echo ========================================
 echo.
 
-REM Xóa rule cũ nếu tồn tại
+REM X�a rule c? n?u t?n t?i
 echo [1/4] Deleting old rules (if any)...
 netsh advfirewall firewall delete rule name=""{ruleName}"" >nul 2>&1
 netsh advfirewall firewall delete rule name=""{ruleName} (Out)"" >nul 2>&1
 echo    Done
 echo.
 
-REM Tạo Inbound rule
+REM T?o Inbound rule
 echo [2/4] Adding inbound rule...
 netsh advfirewall firewall add rule name=""{ruleName}"" dir=in action=allow protocol=TCP localport={port} profile=any enable=yes
 if !errorlevel! neq 0 (
@@ -222,7 +222,7 @@ if !errorlevel! neq 0 (
 echo    Success
 echo.
 
-REM Tạo Outbound rule
+REM T?o Outbound rule
 echo [3/4] Adding outbound rule...
 netsh advfirewall firewall add rule name=""{ruleName} (Out)"" dir=out action=allow protocol=TCP localport={port} profile=any enable=yes
 if !errorlevel! neq 0 (
@@ -232,7 +232,7 @@ if !errorlevel! neq 0 (
 echo    Success
 echo.
 
-REM Verify rules - đợi một chút để rule được commit
+REM Verify rules - ??i m?t ch�t ?? rule ???c commit
 echo [4/4] Verifying rules...
 timeout /t 1 /nobreak >nul 2>&1
 netsh advfirewall firewall show rule name=""{ruleName}"" dir=in | findstr /C:""Rule Name"" >nul 2>&1
@@ -253,7 +253,7 @@ echo ========================================
 exit /b 0
 ";
                 tempBatchFile = Path.Combine(Path.GetTempPath(), $"open_firewall_{Guid.NewGuid().ToString("N").Substring(0, 8)}.bat");
-                // Dùng ASCII encoding để đảm bảo batch file hoạt động đúng
+                // D�ng ASCII encoding ?? ??m b?o batch file ho?t ??ng ?�ng
                 File.WriteAllText(tempBatchFile, batchContent, System.Text.Encoding.ASCII);
 
                 Logger.Info($"[OpenPortAsAdmin] Batch file: {tempBatchFile}");
@@ -275,16 +275,16 @@ exit /b 0
                     process = Process.Start(psi);
                     if (process == null)
                     {
-                        Logger.Error("Không thể khởi động process để mở firewall. Có thể do UAC hoặc quyền truy cập.");
+                        Logger.Error("Failed to start process. Possible UAC denial.");
                         return false;
                     }
 
-                    // Đợi process hoàn thành với timeout 30 giây
+                    // ??i process ho�n th�nh v?i timeout 30 gi�y
                     bool finished = process.WaitForExit(30000);
 
                     if (!finished)
                     {
-                        Logger.Warning("Process mở firewall timeout (quá 30 giây). Có thể đang chờ UAC hoặc có vấn đề.");
+                        Logger.Warning("Process m? firewall timeout (qu� 30 gi�y). C� th? ?ang ch? UAC ho?c c� v?n ??.");
                         try 
                         { 
                             if (!process.HasExited)
@@ -294,17 +294,17 @@ exit /b 0
                         } 
                         catch (Exception killEx)
                         {
-                            Logger.Warning($"Không thể kill process: {killEx.Message}");
+                            Logger.Warning($"Kh�ng th? kill process: {killEx.Message}");
                         }
                         return false;
                     }
 
-                    // Đảm bảo process đã thực sự kết thúc
+                    // ??m b?o process ?� th?c s? k?t th�c
                     process.WaitForExit();
                     int exitCode = process.ExitCode;
                     Logger.Info($"[OpenPortAsAdmin] Exit code: {exitCode}");
 
-                    // Xóa file batch tạm
+                    // X�a file batch t?m
                     try 
                     { 
                         System.Threading.Thread.Sleep(200);
@@ -313,47 +313,47 @@ exit /b 0
                     } 
                     catch (Exception delEx)
                     {
-                        Logger.Warning($"Không thể xóa file batch tạm: {delEx.Message}");
+                        Logger.Warning($"Kh�ng th? x�a file batch t?m: {delEx.Message}");
                     }
 
                     if (exitCode == 0)
                     {
-                        Logger.Success($"Firewall rule được tạo thành công (ExitCode: {exitCode})");
+                        Logger.Success($"Firewall rule ???c t?o th�nh c�ng (ExitCode: {exitCode})");
                         
-                        // Đợi một chút để rule được commit vào firewall
+                        // ??i m?t ch�t ?? rule ???c commit v�o firewall
                         System.Threading.Thread.Sleep(1000);
                         
-                        // Verify lại rule đã tồn tại chưa (với retry)
+                        // Verify l?i rule ?� t?n t?i ch?a (v?i retry)
                         bool verified = IsPortOpen(port, ruleName, retryCount: 5, delayMs: 500);
                         if (verified)
                         {
-                            Logger.Success($"Đã xác nhận rule tồn tại trong firewall!");
+                            Logger.Success($"?� x�c nh?n rule t?n t?i trong firewall!");
                             return true;
                         }
                         else
                         {
-                            Logger.Warning($"Process trả về ExitCode=0 nhưng không tìm thấy rule sau khi tạo. Có thể do delay hoặc quyền truy cập.");
-                            // Vẫn return true vì process đã thành công, rule có thể chưa được commit ngay
+                            Logger.Warning($"Process tr? v? ExitCode=0 nh?ng kh�ng t�m th?y rule sau khi t?o. C� th? do delay ho?c quy?n truy c?p.");
+                            // V?n return true v� process ?� th�nh c�ng, rule c� th? ch?a ???c commit ngay
                             return true;
                         }
                     }
                     else if (exitCode == 2)
                     {
-                        Logger.Warning($"Process mở firewall: Rule không được verify ngay sau khi tạo (ExitCode: {exitCode}). Đang thử verify lại...");
-                        // Đợi thêm một chút rồi verify lại
+                        Logger.Warning($"Process m? firewall: Rule kh�ng ???c verify ngay sau khi t?o (ExitCode: {exitCode}). ?ang th? verify l?i...");
+                        // ??i th�m m?t ch�t r?i verify l?i
                         System.Threading.Thread.Sleep(2000);
                         bool verified = IsPortOpen(port, ruleName, retryCount: 5, delayMs: 1000);
                         if (verified)
                         {
-                            Logger.Success($"Đã xác nhận rule tồn tại sau khi verify lại!");
+                            Logger.Success($"?� x�c nh?n rule t?n t?i sau khi verify l?i!");
                             return true;
                         }
-                        Logger.Error($"Vẫn không tìm thấy rule sau khi verify lại.");
+                        Logger.Error($"V?n kh�ng t�m th?y rule sau khi verify l?i.");
                         return false;
                     }
                     else
                     {
-                        Logger.Error($"Process mở firewall trả về mã lỗi: {exitCode}");
+                        Logger.Error($"Process returned error code: {exitCode}");
                         return false;
                     }
                 }
@@ -384,26 +384,26 @@ exit /b 0
             }
             catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
             {
-                Logger.Warning("Người dùng đã từ chối yêu cầu quyền Administrator (UAC bị hủy)");
+                Logger.Warning("Ng??i d�ng ?� t? ch?i y�u c?u quy?n Administrator (UAC b? h?y)");
                 try { if (tempBatchFile != null) File.Delete(tempBatchFile); } catch { }
                 return false;
             }
             catch (System.ComponentModel.Win32Exception ex)
             {
-                Logger.Error($"Lỗi Win32 khi mở firewall: {ex.Message} (NativeErrorCode: {ex.NativeErrorCode})");
+                Logger.Error($"Win32 Error: {ex.Message} (Code: {ex.NativeErrorCode})");
                 try { if (tempBatchFile != null) File.Delete(tempBatchFile); } catch { }
                 return false;
             }
             catch (Exception ex)
             {
-                Logger.Error($"Lỗi khi mở port với quyền Admin: {ex.GetType().Name} - {ex.Message}", ex);
+                Logger.Error($"Error opening port: {ex.GetType().Name} - {ex.Message}", ex);
                 try { if (tempBatchFile != null) File.Delete(tempBatchFile); } catch { }
                 return false;
             }
         }
 
         /// <summary>
-        /// Test kết nối đến một địa chỉ IP:Port
+        /// Test k?t n?i ??n m?t ??a ch? IP:Port
         /// </summary>
         public static (bool success, string message, int latencyMs) TestConnection(string ipAddress, int port, int timeoutMs = 5000)
         {
@@ -432,12 +432,12 @@ exit /b 0
                 stopwatch.Stop();
                 string errorMsg = ex.SocketErrorCode switch
                 {
-                    SocketError.ConnectionRefused => "Không thể kết nối - Server đích chưa chạy hoặc port chưa mở",
-                    SocketError.TimedOut => "Kết nối timeout - Firewall có thể đang chặn hoặc mạng chậm",
-                    SocketError.NetworkUnreachable => "Không thể đến mạng đích - Kiểm tra kết nối mạng",
-                    SocketError.HostUnreachable => "Không thể đến host - Kiểm tra IP có đúng không",
-                    SocketError.HostNotFound => "Không tìm thấy host - IP không hợp lệ",
-                    _ => $"Lỗi socket: {ex.SocketErrorCode}"
+                    SocketError.ConnectionRefused => "Kh�ng th? k?t n?i - Server ?�ch ch?a ch?y ho?c port ch?a m?",
+                    SocketError.TimedOut => "K?t n?i timeout - Firewall c� th? ?ang ch?n ho?c m?ng ch?m",
+                    SocketError.NetworkUnreachable => "Kh�ng th? ??n m?ng ?�ch - Ki?m tra k?t n?i m?ng",
+                    SocketError.HostUnreachable => "Kh�ng th? ??n host - Ki?m tra IP c� ?�ng kh�ng",
+                    SocketError.HostNotFound => "Kh�ng t�m th?y host - IP kh�ng h?p l?",
+                    _ => $"L?i socket: {ex.SocketErrorCode}"
                 };
                 return (false, errorMsg, (int)stopwatch.ElapsedMilliseconds);
             }
@@ -449,7 +449,7 @@ exit /b 0
         }
 
         /// <summary>
-        /// Ping đến một địa chỉ IP
+        /// Ping ??n m?t ??a ch? IP
         /// </summary>
         public static (bool success, string message, int latencyMs) Ping(string ipAddress, int timeoutMs = 3000)
         {
@@ -475,7 +475,7 @@ exit /b 0
         }
 
         /// <summary>
-        /// Lấy tất cả địa chỉ IP của máy
+        /// L?y t?t c? ??a ch? IP c?a m�y
         /// </summary>
         public static List<string> GetAllLocalIPs()
         {
@@ -496,7 +496,7 @@ exit /b 0
         }
 
         /// <summary>
-        /// Kiểm tra xem port có đang được sử dụng không
+        /// Ki?m tra xem port c� ?ang ???c s? d?ng kh�ng
         /// </summary>
         public static bool IsPortInUse(int port)
         {
@@ -516,7 +516,7 @@ exit /b 0
         }
 
         /// <summary>
-        /// Kiểm tra xem port có đang lắng nghe (LISTEN) không
+        /// Ki?m tra xem port c� ?ang l?ng nghe (LISTEN) kh�ng
         /// </summary>
         public static bool IsPortListening(int port)
         {
