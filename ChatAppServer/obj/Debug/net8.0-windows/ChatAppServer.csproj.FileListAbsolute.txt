@@ -110,3 +110,43 @@ E:\project\khoqua\ChatAppServer\bin\Debug\net8.0-windows\System.IO.Pipelines.dll
 E:\project\khoqua\ChatAppServer\bin\Debug\net8.0-windows\System.Text.Encodings.Web.dll
 E:\project\khoqua\ChatAppServer\bin\Debug\net8.0-windows\System.Text.Json.dll
 E:\project\khoqua\ChatAppServer\bin\Debug\net8.0-windows\runtimes\browser\lib\net8.0\System.Text.Encodings.Web.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\appsettings.json
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatAppServer.exe
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatAppServer.deps.json
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatAppServer.runtimeconfig.json
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatAppServer.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatAppServer.pdb
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\Microsoft.Extensions.Configuration.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\Microsoft.Extensions.Configuration.Abstractions.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\Microsoft.Extensions.Configuration.FileExtensions.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\Microsoft.Extensions.Configuration.Json.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\Microsoft.Extensions.FileProviders.Abstractions.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\Microsoft.Extensions.FileProviders.Physical.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\Microsoft.Extensions.FileSystemGlobbing.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\Microsoft.Extensions.Primitives.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\System.Data.SqlClient.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\System.IO.Pipelines.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\System.Text.Encodings.Web.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\System.Text.Json.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\runtimes\win-arm64\native\sni.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\runtimes\win-x64\native\sni.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\runtimes\win-x86\native\sni.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\runtimes\unix\lib\netcoreapp2.1\System.Data.SqlClient.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\runtimes\win\lib\netcoreapp2.1\System.Data.SqlClient.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\runtimes\browser\lib\net8.0\System.Text.Encodings.Web.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatApp.Shared.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatApp.Shared.pdb
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ChatAppServer.csproj.AssemblyReference.cache
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ChatAppServer.frmServer.resources
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ChatAppServer.csproj.GenerateResource.cache
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ChatAppServer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ChatAppServer.AssemblyInfoInputs.cache
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ChatAppServer.AssemblyInfo.cs
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ChatAppServer.csproj.CoreCompileInputs.cache
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ChatAppServer.sourcelink.json
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ChatAppS.4B8A196F.Up2Date
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ChatAppServer.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\refint\ChatAppServer.dll
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ChatAppServer.pdb
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ChatAppServer.genruntimeconfig.cache
+C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ref\ChatAppServer.dll

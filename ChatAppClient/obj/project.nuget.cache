@@ -1,12 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "oxpQm1CEsX8=",
+  "dgSpecHash": "NtyywCVDSDg=",
   "success": true,
-  "projectFilePath": "E:\\project\\khoqua\\ChatAppClient\\ChatAppClient.csproj",
+  "projectFilePath": "C:\\Users\\QUANG HUY\\Source\\Repos\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\Admin\\.nuget\\packages\\system.io.pipelines\\10.0.1\\system.io.pipelines.10.0.1.nupkg.sha512",
-    "C:\\Users\\Admin\\.nuget\\packages\\system.text.encodings.web\\10.0.1\\system.text.encodings.web.10.0.1.nupkg.sha512",
-    "C:\\Users\\Admin\\.nuget\\packages\\system.text.json\\10.0.1\\system.text.json.10.0.1.nupkg.sha512"
+    "C:\\Users\\QUANG HUY\\.nuget\\packages\\system.io.pipelines\\10.0.1\\system.io.pipelines.10.0.1.nupkg.sha512",
+    "C:\\Users\\QUANG HUY\\.nuget\\packages\\system.text.encodings.web\\10.0.1\\system.text.encodings.web.10.0.1.nupkg.sha512",
+    "C:\\Users\\QUANG HUY\\.nuget\\packages\\system.text.json\\10.0.1\\system.text.json.10.0.1.nupkg.sha512"
   ],
   "logs": []
 }

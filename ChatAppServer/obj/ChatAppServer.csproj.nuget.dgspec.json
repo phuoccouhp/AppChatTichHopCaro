@@ -1,24 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "E:\\project\\khoqua\\ChatAppServer\\ChatAppServer.csproj": {}
+    "C:\\Users\\QUANG HUY\\Source\\Repos\\AppChatTichHopCaro\\ChatAppServer\\ChatAppServer.csproj": {}
   },
   "projects": {
-    "E:\\project\\khoqua\\ChatApp.Shared\\ChatApp.Shared.csproj": {
+    "C:\\Users\\QUANG HUY\\Source\\Repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "E:\\project\\khoqua\\ChatApp.Shared\\ChatApp.Shared.csproj",
+        "projectUniqueName": "C:\\Users\\QUANG HUY\\Source\\Repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj",
         "projectName": "ChatApp.Shared",
-        "projectPath": "E:\\project\\khoqua\\ChatApp.Shared\\ChatApp.Shared.csproj",
-        "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
-        "outputPath": "E:\\project\\khoqua\\ChatApp.Shared\\obj\\",
+        "projectPath": "C:\\Users\\QUANG HUY\\Source\\Repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj",
+        "packagesPath": "C:\\Users\\QUANG HUY\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\QUANG HUY\\Source\\Repos\\AppChatTichHopCaro\\ChatApp.Shared\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\Admin\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Users\\QUANG HUY\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -65,25 +61,21 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.308/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.305/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "E:\\project\\khoqua\\ChatAppServer\\ChatAppServer.csproj": {
+    "C:\\Users\\QUANG HUY\\Source\\Repos\\AppChatTichHopCaro\\ChatAppServer\\ChatAppServer.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "E:\\project\\khoqua\\ChatAppServer\\ChatAppServer.csproj",
+        "projectUniqueName": "C:\\Users\\QUANG HUY\\Source\\Repos\\AppChatTichHopCaro\\ChatAppServer\\ChatAppServer.csproj",
         "projectName": "ChatAppServer",
-        "projectPath": "E:\\project\\khoqua\\ChatAppServer\\ChatAppServer.csproj",
-        "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
-        "outputPath": "E:\\project\\khoqua\\ChatAppServer\\obj\\",
+        "projectPath": "C:\\Users\\QUANG HUY\\Source\\Repos\\AppChatTichHopCaro\\ChatAppServer\\ChatAppServer.csproj",
+        "packagesPath": "C:\\Users\\QUANG HUY\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\QUANG HUY\\Source\\Repos\\AppChatTichHopCaro\\ChatAppServer\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\Admin\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Users\\QUANG HUY\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -97,8 +89,8 @@
           "net8.0-windows7.0": {
             "targetAlias": "net8.0-windows",
             "projectReferences": {
-              "E:\\project\\khoqua\\ChatApp.Shared\\ChatApp.Shared.csproj": {
-                "projectPath": "E:\\project\\khoqua\\ChatApp.Shared\\ChatApp.Shared.csproj"
+              "C:\\Users\\QUANG HUY\\Source\\Repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj": {
+                "projectPath": "C:\\Users\\QUANG HUY\\Source\\Repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj"
               }
             }
           }
@@ -155,7 +147,7 @@
               "privateAssets": "none"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.308/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.305/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

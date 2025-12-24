@@ -1,0 +1,9 @@
+﻿{
+  "ConnectionStrings": {
+    "ChatAppDB": "Data Source=localhost\\SQLEXPRESS;Initial Catalog=ChatAppDB;Integrated Security=True"
+  },
+  "AppSettings": {
+    "ServerPort": 9000
+  }
+}
+
