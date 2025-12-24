@@ -305,6 +305,9 @@ namespace ChatAppServer
             {
                 Logger.Warning($"[LOGIN FAIL] Đăng nhập thất bại từ IP {ClientIP} với user: {p.Username ?? p.Email}");
                 SendPacket(new LoginResultPacket { Success = false, Message = "Sai tài khoản hoặc mật khẩu" });
+                
+                // ✅ [FIX] Chờ 500ms để client nhận được gói tin trước khi đóng kết nối
+                System.Threading.Thread.Sleep(500);
                 Close();
             }
         }
