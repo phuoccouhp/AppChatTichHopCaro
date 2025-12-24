@@ -240,6 +240,7 @@ namespace ChatAppClient.Forms
 
             if (result.Success)
             {
+                Logger.Info($"[Client] Login successful for {result.UserID}, online users: {result.OnlineUsers.Count}");
                 // Đăng nhập thành công!
                 NetworkManager.Instance.SetUserCredentials(result.UserID ?? string.Empty, result.UserName ?? string.Empty);
 
@@ -268,6 +269,7 @@ namespace ChatAppClient.Forms
             }
             else
             {
+                Logger.Warning($"[Client] Login failed: {result.Message}");
                 // Đăng nhập thất bại - chỉ hiển thị nếu form vẫn còn visible
                 if (!this.IsDisposed && this.Visible)
                 {

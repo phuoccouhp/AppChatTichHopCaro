@@ -719,5 +719,19 @@ namespace ChatAppClient.Forms
         {
 
         }
+
+        public void HandleOnlineListUpdate(OnlineListPacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleOnlineListUpdate(packet))); return; }
+
+            // Clear current list
+            flpFriendsList.Controls.Clear();
+
+            // Add all online users
+            foreach (var user in packet.OnlineUsers)
+            {
+                AddFriendToList(user.UserID, user.UserName, user.IsOnline ? "Online" : "Offline", user.IsOnline);
+            }
+        }
     }
 }

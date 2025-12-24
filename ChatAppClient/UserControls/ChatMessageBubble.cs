@@ -10,148 +10,96 @@ namespace ChatAppClient.UserControls
 
     public partial class ChatMessageBubble : UserControl
     {
-        private Color _bubbleColor = AppColors.LightGray;
-        private MessageType _type = MessageType.Incoming;
-        private int _borderRadius = 18;
-
-        private int _bubbleWidth = 0;
         private string _messageText = "";
+        private MessageType _type;
+        private DateTime _time;
 
-        public event EventHandler<string>? OnForwardRequested;
+        // Cấu hình giao diện
+        private int _maxWidth = 350; // Chiều rộng tối đa của bubble
+        private int _padding = 12;   // Khoảng cách từ viền đến chữ
+        private int _borderRadius = 15; // Độ bo tròn
+        private Font _font = new Font("Segoe UI", 11F); // Font chữ to rõ
+        private Font _timeFont = new Font("Segoe UI", 8F); // Font giờ
 
         public ChatMessageBubble()
         {
             InitializeComponent();
-            this.DoubleBuffered = true;
-            
-            // Hover events
-            this.MouseEnter += ChatMessageBubble_MouseEnter;
-            this.MouseLeave += ChatMessageBubble_MouseLeave;
-            lblMessage.MouseEnter += ChatMessageBubble_MouseEnter;
-            lblMessage.MouseLeave += ChatMessageBubble_MouseLeave;
-            
-            // Forward button event
-            btnForward.Click += BtnForward_Click;
+            this.DoubleBuffered = true; // Chống nháy hình
+            this.BackColor = Color.Transparent;
+            this.ResizeRedraw = true; // Vẽ lại khi thay đổi kích thước
         }
 
-        private void ChatMessageBubble_MouseEnter(object? sender, EventArgs e)
+        public void SetData(string message, MessageType type, DateTime time)
         {
-            btnForward.Visible = true;
-            btnForward.BringToFront();
-        }
-
-        private void ChatMessageBubble_MouseLeave(object? sender, EventArgs e)
-        {
-            if (!btnForward.ClientRectangle.Contains(btnForward.PointToClient(Control.MousePosition)))
-            {
-                btnForward.Visible = false;
-            }
-        }
-
-        private void BtnForward_Click(object? sender, EventArgs e)
-        {
-            OnForwardRequested?.Invoke(this, _messageText);
-        }
-
-        public void SetMessage(string message, MessageType type, int parentUsableWidth)
-        {
-            _type = type;
             _messageText = message;
-            lblMessage.Text = message;
+            _type = type;
+            _time = time;
 
-            if (type == MessageType.Outgoing)
-            {
-                _bubbleColor = AppColors.Primary;
-                lblMessage.ForeColor = Color.White;
-            }
-            else
-            {
-                _bubbleColor = AppColors.LightGray;
-                lblMessage.ForeColor = AppColors.TextPrimary;
-            }
-
-            // Tính toán kích thước bubble với padding đều
-            int horizontalPadding = 12; // Padding trái và phải
-            int verticalPadding = 8; // Padding trên và dưới
-            
-            this.Size = new Size(lblMessage.Width + (horizontalPadding * 2), lblMessage.Height + (verticalPadding * 2));
-            _bubbleWidth = this.Width;
-            
-            // Căn giữa label theo chiều dọc
-            lblMessage.Location = new Point(horizontalPadding, verticalPadding);
-            
-            // Đặt vị trí button forward
-            if (_type == MessageType.Outgoing)
-            {
-                btnForward.Location = new Point(this.Width - 30, 2);
-            }
-            else
-            {
-                btnForward.Location = new Point(2, 2);
-            }
-            
-            UpdateMargins(parentUsableWidth);
-
-            this.Invalidate();
+            CalculateSize(); // Tính toán kích thước dựa trên nội dung
+            this.Invalidate(); // Vẽ lại
         }
 
-        public void UpdateMargins(int parentUsableWidth)
+        private void CalculateSize()
         {
-            if (_bubbleWidth == 0)
-                _bubbleWidth = this.Width;
+            // Đo kích thước văn bản
+            Size textSize = TextRenderer.MeasureText(_messageText, _font, new Size(_maxWidth - (_padding * 2), 0), TextFormatFlags.WordBreak);
 
-            int remainingSpace = parentUsableWidth - _bubbleWidth;
-            if (remainingSpace < 0)
-                remainingSpace = 0;
+            // Tính toán kích thước Control
+            int width = textSize.Width + (_padding * 2);
+            int height = textSize.Height + (_padding * 2) + 15; // +15 cho dòng thời gian ở dưới
 
-            if (_type == MessageType.Outgoing)
-            {
-                this.Margin = new Padding(remainingSpace, 6, 0, 6);
-            }
-            else
-            {
-                this.Margin = new Padding(0, 6, remainingSpace, 6);
-            }
+            // Đảm bảo không quá nhỏ
+            if (width < 60) width = 60;
+
+            this.Size = new Size(width, height);
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-
-            if (this.Width <= 0 || this.Height <= 0) return;
-
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            Rectangle rect = new Rectangle(0, 0, this.Width - 1, this.Height - 1);
+            // 1. Xác định màu sắc
+            Color bgColor = (_type == MessageType.Outgoing) ? AppColors.Primary : Color.FromArgb(230, 230, 230);
+            Color textColor = (_type == MessageType.Outgoing) ? Color.White : Color.Black;
+            Color timeColor = (_type == MessageType.Outgoing) ? Color.FromArgb(200, 255, 255, 255) : Color.Gray;
 
-            using (GraphicsPath path = DrawingHelper.CreateRoundedRectPath(rect, _borderRadius))
+            // 2. Vẽ Bong bóng (Bubble)
+            // Trừ đi 1 pixel để viền không bị cắt
+            Rectangle rect = new Rectangle(0, 0, this.Width - 1, this.Height - 15);
+            using (GraphicsPath path = CreateRoundedPath(rect, _borderRadius))
+            using (SolidBrush brush = new SolidBrush(bgColor))
             {
-                // Vẽ shadow nhẹ
-                if (_type == MessageType.Outgoing)
-                {
-                    Rectangle shadowRect = new Rectangle(1, 1, rect.Width, rect.Height);
-                    using (GraphicsPath shadowPath = DrawingHelper.CreateRoundedRectPath(shadowRect, _borderRadius))
-                    using (SolidBrush shadowBrush = new SolidBrush(Color.FromArgb(15, 0, 0, 0)))
-                    {
-                        e.Graphics.FillPath(shadowBrush, shadowPath);
-                    }
-                }
-
-                // Vẽ bubble
-                using (SolidBrush brush = new SolidBrush(_bubbleColor))
-                {
-                    e.Graphics.FillPath(brush, path);
-                }
-
-                // Vẽ border nhẹ cho incoming messages
-                if (_type == MessageType.Incoming)
-                {
-                    using (Pen pen = new Pen(Color.FromArgb(220, 220, 220), 0.5f))
-                    {
-                        e.Graphics.DrawPath(pen, path);
-                    }
-                }
+                e.Graphics.FillPath(brush, path);
             }
+
+            // 3. Vẽ Nội dung tin nhắn
+            // Rectangle để vẽ chữ (có padding)
+            Rectangle textRect = new Rectangle(_padding, _padding, this.Width - (_padding * 2), this.Height - (_padding * 2) - 15);
+            TextRenderer.DrawText(e.Graphics, _messageText, _font, textRect, textColor, TextFormatFlags.WordBreak | TextFormatFlags.Left | TextFormatFlags.Top);
+
+            // 4. Vẽ Thời gian (Góc dưới bên phải hoặc trái tùy loại)
+            string timeStr = _time.ToString("HH:mm");
+            Size timeSize = TextRenderer.MeasureText(timeStr, _timeFont);
+            int timeX = (_type == MessageType.Outgoing) ? this.Width - timeSize.Width - 5 : 5;
+            int timeY = this.Height - 15;
+
+            // Vẽ giờ bên ngoài bubble một chút hoặc bên trong đáy
+            TextRenderer.DrawText(e.Graphics, timeStr, _timeFont, new Point(timeX, timeY), Color.Gray);
+        }
+
+        private GraphicsPath CreateRoundedPath(Rectangle rect, int radius)
+        {
+            GraphicsPath path = new GraphicsPath();
+            int d = radius * 2;
+
+            path.AddArc(rect.X, rect.Y, d, d, 180, 90); // Top-Left
+            path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90); // Top-Right
+            path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90); // Bottom-Right
+            path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90); // Bottom-Left
+            path.CloseFigure();
+            return path;
         }
     }
 }

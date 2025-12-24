@@ -1,979 +1,419 @@
-﻿using System;
-using ChatApp.Shared;
+﻿using ChatApp.Shared;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Concurrent;
 
 namespace ChatAppServer
 {
     public class DatabaseManager
     {
-        private readonly string _originalConnectionString;
-        private string _connectionString;
+        private readonly string _connectionString;
         private static DatabaseManager? _instance;
         public static DatabaseManager Instance => _instance ??= new DatabaseManager();
 
-        private bool _messagesTableExists = true; // assume true until checked
-
-        // lightweight in-memory user cache to allow login when DB is temporarily unavailable
+        // Cache user trong RAM
         private readonly ConcurrentDictionary<string, CachedUser> _userCache = new ConcurrentDictionary<string, CachedUser>(StringComparer.OrdinalIgnoreCase);
         private volatile bool _dbAvailable = false;
-        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-
-        // Queue for pending online status updates to avoid blocking during login when DB is slow
-        private readonly ConcurrentQueue<(string Username, bool IsOnline)> _pendingStatusUpdates = new ConcurrentQueue<(string, bool)>();
-        private readonly SemaphoreSlim _pendingStatusSignal = new SemaphoreSlim(0);
-
-        // Cache existence of columns to avoid repeated exceptions
-        private bool? _hasIsOnlineColumn = null;
-        private bool? _hasLastSeenColumn = null;
-        private readonly object _columnLock = new object();
 
         private class CachedUser
         {
             public string Username { get; set; } = string.Empty;
             public string DisplayName { get; set; } = string.Empty;
-            public string Password { get; set; } = string.Empty; // hashed or plain as stored
+            public string Password { get; set; } = string.Empty;
         }
 
         private DatabaseManager()
         {
-            _originalConnectionString = AppConfig.GetConnectionString("ChatAppDB");
-            _connectionString = _originalConnectionString;
-
-            // Configure connection string for fast failure initially and enable MARS/pool
-            try
-            {
-                var builder = new SqlConnectionStringBuilder(_connectionString);
-                // fail fast on connect so server doesn't block long on startup/login
-                if (builder.ConnectTimeout > 5) builder.ConnectTimeout = 5;
-                builder.MultipleActiveResultSets = true;
-                builder.MaxPoolSize = Math.Max(builder.MaxPoolSize, 200);
-                _connectionString = builder.ConnectionString;
-                Logger.Info($"[DatabaseManager] Initialized with fast ConnectTimeout={builder.ConnectTimeout}s, MARS={builder.MultipleActiveResultSets}, MaxPoolSize={builder.MaxPoolSize}");
-            }
-            catch (Exception ex)
-            {
-                Logger.Warning($"[DatabaseManager] Could not adjust connection string: {ex.Message}");
-            }
-
-            // Start background loader to populate user cache and monitor DB availability
-            Task.Run(() => UserCacheLoop(_cts.Token));
-
-            // Start background worker to flush pending status updates
-            Task.Run(() => ProcessPendingStatusUpdates(_cts.Token));
-
-            // Seed fallback test accounts so app can be used while DB is unreachable
-            SeedFallbackTestAccounts();
+            _connectionString = AppConfig.GetConnectionString("ChatAppDB");
+            CheckDatabaseConnection();
         }
 
-        // Seed a small set of test users consistent with provided DB setup
-        private void SeedFallbackTestAccounts()
-        {
-            // Only seed if cache is empty
-            if (_userCache.Count > 0) return;
-
-            var testAccounts = new List<CachedUser>
-            {
-                new CachedUser { Username = "user1", DisplayName = "Bạn Bè A", Password = "123" },
-                new CachedUser { Username = "user2", DisplayName = "Bạn Bè B", Password = "123" },
-                new CachedUser { Username = "user3", DisplayName = "Bạn Bè C", Password = "123" },
-                new CachedUser { Username = "user5", DisplayName = "Bạn Bè D", Password = "123" },
-                new CachedUser { Username = "admin", DisplayName = "Quản Trị Viên", Password = "admin" },
-                new CachedUser { Username = "test1", DisplayName = "Người Dùng Test 1", Password = "test123" },
-                new CachedUser { Username = "test2", DisplayName = "Người Dùng Test 2", Password = "test123" },
-                new CachedUser { Username = "huyphuoc", DisplayName = "Huy Phước", Password = "123" },
-                new CachedUser { Username = "huyphuoc1", DisplayName = "Huy Phước 1", Password = "123123" }
-            };
-
-            foreach (var acc in testAccounts)
-            {
-                _userCache[acc.Username] = acc;
-            }
-
-            Logger.Info($"[DatabaseManager] Seeded {_userCache.Count} fallback test accounts into cache.");
-        }
-
-        private async Task UserCacheLoop(CancellationToken ct)
-        {
-            while (!ct.IsCancellationRequested)
-            {
-                try
-                {
-                    bool loaded = await TryLoadUsersToCacheAsync();
-                    _dbAvailable = loaded;
-
-                    // Refresh column existence cache when DB becomes available
-                    if (loaded)
-                    {
-                        RefreshColumnExistence();
-                    }
-
-                    // if DB available, increase connect timeout for normal ops
-                    if (loaded)
-                    {
-                        try
-                        {
-                            var builder = new SqlConnectionStringBuilder(_originalConnectionString);
-                            if (builder.ConnectTimeout < 30) builder.ConnectTimeout = 30;
-                            builder.MultipleActiveResultSets = true;
-                            builder.MaxPoolSize = Math.Max(builder.MaxPoolSize, 200);
-                            _connectionString = builder.ConnectionString;
-                        }
-                        catch { /* ignore */ }
-
-                        // Wait longer when DB is healthy
-                        await Task.Delay(TimeSpan.FromSeconds(15), ct);
-                    }
-                    else
-                    {
-                        // Retry sooner when DB is down
-                        await Task.Delay(TimeSpan.FromSeconds(5), ct);
-                    }
-                }
-                catch (TaskCanceledException) { break; }
-                catch (Exception ex)
-                {
-                    Logger.Warning($"[DatabaseManager] UserCacheLoop error: {ex.Message}");
-                    await Task.Delay(5000, ct);
-                }
-            }
-        }
-
-        private async Task<bool> TryLoadUsersToCacheAsync()
-        {
-            try
-            {
-                var users = new List<CachedUser>();
-                using (SqlConnection conn = new SqlConnection(_connectionString))
-                {
-                    // short open timeout already set on connection string
-                    await conn.OpenAsync();
-                    using (SqlCommand cmd = new SqlCommand("SELECT Username, DisplayName, Password FROM Users", conn))
-                    {
-                        cmd.CommandTimeout = 10;
-                        using (var reader = await cmd.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                users.Add(new CachedUser
-                                {
-                                    Username = reader["Username"]?.ToString() ?? string.Empty,
-                                    DisplayName = reader["DisplayName"]?.ToString() ?? string.Empty,
-                                    Password = reader["Password"]?.ToString() ?? string.Empty
-                                });
-                            }
-                        }
-                    }
-                }
-
-                // update cache atomically
-                var newCache = new ConcurrentDictionary<string, CachedUser>(StringComparer.OrdinalIgnoreCase);
-                foreach (var u in users)
-                {
-                    if (!string.IsNullOrEmpty(u.Username)) newCache[u.Username] = u;
-                }
-
-                _userCache.Clear();
-                foreach (var kv in newCache) _userCache[kv.Key] = kv.Value;
-
-                Logger.Info($"[DatabaseManager] Loaded {_userCache.Count} users into cache.");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Logger.Warning($"[DatabaseManager] Unable to load users for cache: {ex.Message}");
-                return false;
-            }
-        }
-
-        // Return true if Messages table exists (do not create tables at runtime for production DB)
-        private bool EnsureMessagesTableExists()
+        private void CheckDatabaseConnection()
         {
             try
             {
                 using (SqlConnection conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
-                    string checkSql = "SELECT OBJECT_ID('dbo.Messages','U')";
-                    using (SqlCommand cmd = new SqlCommand(checkSql, conn))
-                    {
-                        object obj = cmd.ExecuteScalar();
-                        return (obj != null && obj != DBNull.Value);
-                    }
+                    _dbAvailable = true;
+                    Logger.Success("[Database] Kết nối SQL Server thành công!");
                 }
             }
             catch (Exception ex)
             {
-                Logger.Warning($"[EnsureMessagesTableExists] Error checking Messages table existence: {ex.Message}");
-                return false;
+                Logger.Error("[Database] Không thể kết nối SQL Server. Chế độ Offline.", ex);
+                _dbAvailable = false;
             }
         }
 
-        // New: update user's online flag and LastSeen
-        public void UpdateUserOnlineStatus(string username, bool isOnline)
+        // --- HÀM QUAN TRỌNG: LẤY DANH SÁCH NGƯỜI ĐÃ TỪNG NHẮN TIN ---
+        public List<UserStatus> GetContacts(string currentUsername)
         {
-            try
-            {
-                // Enqueue request and return immediately so login/register flows are not blocked by slow DB
-                _pendingStatusUpdates.Enqueue((username, isOnline));
-                _pendingStatusSignal.Release();
-            }
-            catch (Exception ex)
-            {
-                Logger.Warning($"[UpdateUserOnlineStatus] Failed to enqueue status for {username}: {ex.Message}");
-            }
+            var list = new List<UserStatus>();
+            if (!_dbAvailable) return list;
 
-            // update cache if present
-            if (_userCache.TryGetValue(username, out var cached))
-            {
-                // nothing to change except maybe last seen not stored in cache
-                _userCache[username] = cached;
-            }
-        }
-
-        // Background worker to process pending status updates with short connect timeout and retries
-        private async Task ProcessPendingStatusUpdates(CancellationToken ct)
-        {
-            while (!ct.IsCancellationRequested)
-            {
-                try
-                {
-                    await _pendingStatusSignal.WaitAsync(ct);
-                }
-                catch (OperationCanceledException) { break; }
-
-                // Dequeue and process all available items
-                while (_pendingStatusUpdates.TryDequeue(out var item))
-                {
-                    string username = item.Username;
-                    bool isOnline = item.IsOnline;
-
-                    // If DB schema lacks both columns, treat update as no-op to avoid infinite retries
-                    bool localHasIsOnline;
-                    bool localHasLastSeen;
-                    lock (_columnLock)
-                    {
-                        localHasIsOnline = _hasIsOnlineColumn ?? false;
-                        localHasLastSeen = _hasLastSeenColumn ?? false;
-                    }
-
-                    if (!_dbAvailable)
-                    {
-                        bool unknown;
-                        lock (_columnLock)
-                        {
-                            unknown = (_hasIsOnlineColumn == null && _hasLastSeenColumn == null);
-                        }
-                        if (unknown)
-                        {
-                            // We don't know yet; try to refresh now using a fast connection probe
-                            RefreshColumnExistence();
-                            lock (_columnLock)
-                            {
-                                localHasIsOnline = _hasIsOnlineColumn ?? false;
-                                localHasLastSeen = _hasLastSeenColumn ?? false;
-                            }
-                        }
-                    }
-
-                    if (!localHasIsOnline && !localHasLastSeen)
-                    {
-                        Logger.Warning($"[ProcessPendingStatusUpdates] DB schema missing IsOnline and LastSeen; skipping status update for {username}");
-                        // treat as success
-                        continue;
-                    }
-
-                    bool success = false;
-                    int attempts = 0;
-
-                    while (!success && attempts < 3 && !ct.IsCancellationRequested)
-                    {
-                        attempts++;
-                        try
-                        {
-                            // Use a very short connect timeout for these opportunistic updates
-                            var builder = new SqlConnectionStringBuilder(_originalConnectionString)
-                            {
-                                ConnectTimeout = 3,
-                                MultipleActiveResultSets = true
-                            };
-                            builder.MaxPoolSize = Math.Max(builder.MaxPoolSize, 200);
-                            string fastConn = builder.ConnectionString;
-
-                            using (SqlConnection conn = new SqlConnection(fastConn))
-                            {
-                                // prefer async open when possible
-                                await conn.OpenAsync(ct).ConfigureAwait(false);
-
-                                string query = null;
-                                if (localHasIsOnline && localHasLastSeen)
-                                {
-                                    query = isOnline
-                                        ? "UPDATE Users SET IsOnline = 1 WHERE Username = @u"
-                                        : "UPDATE Users SET IsOnline = 0, LastSeen = GETDATE() WHERE Username = @u";
-                                }
-                                else if (localHasIsOnline)
-                                {
-                                    query = isOnline
-                                        ? "UPDATE Users SET IsOnline = 1 WHERE Username = @u"
-                                        : "UPDATE Users SET IsOnline = 0 WHERE Username = @u";
-                                }
-                                else // only LastSeen
-                                {
-                                    if (!isOnline)
-                                        query = "UPDATE Users SET LastSeen = GETDATE() WHERE Username = @u";
-                                    else
-                                        query = null; // nothing to do for online without IsOnline
-                                }
-
-                                if (string.IsNullOrEmpty(query))
-                                {
-                                    success = true; // nothing to update
-                                }
-                                else
-                                {
-                                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                                    {
-                                        cmd.Parameters.AddWithValue("@u", username);
-                                        await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
-                                    }
-                                    success = true;
-                                }
-                            }
-
-                            // mark db available on success
-                            _dbAvailable = true;
-                        }
-                        catch (OperationCanceledException) { break; }
-                        catch (SqlException sqlEx)
-                        {
-                            // If column missing errors occur, refresh cache and decide fallback
-                            if (sqlEx.Message != null && sqlEx.Message.Contains("Invalid column name 'IsOnline'"))
-                            {
-                                lock (_columnLock) { _hasIsOnlineColumn = false; }
-                                Logger.Warning($"[ProcessPendingStatusUpdates] Detected missing IsOnline column: {sqlEx.Message}");
-                            }
-                            if (sqlEx.Message != null && sqlEx.Message.Contains("Invalid column name 'LastSeen'"))
-                            {
-                                lock (_columnLock) { _hasLastSeenColumn = false; }
-                                Logger.Warning($"[ProcessPendingStatusUpdates] Detected missing LastSeen column: {sqlEx.Message}");
-                            }
-
-                            Logger.Warning($"[ProcessPendingStatusUpdates] Attempt {attempts} failed for {username}: {sqlEx.Message}");
-
-                            try { await Task.Delay(1000 * attempts, ct).ConfigureAwait(false); } catch { }
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Warning($"[ProcessPendingStatusUpdates] Attempt {attempts} failed for {username}: {ex.Message}");
-                            try { await Task.Delay(1000 * attempts, ct).ConfigureAwait(false); } catch { }
-                        }
-                    }
-
-                    if (!success)
-                    {
-                        // If still failed after retries, re-enqueue for later processing to avoid dropping status permanently
-                        _pendingStatusUpdates.Enqueue((username, isOnline));
-                        // avoid tight loop: delay before next background attempt
-                        try { await Task.Delay(5000, ct).ConfigureAwait(false); } catch { }
-                        // Signal to process again later
-                        _pendingStatusSignal.Release();
-                        // break to allow other work or cancellation to be observed
-                        break;
-                    }
-                }
-            }
-        }
-
-        // helper to refresh cached knowledge of DB columns
-        private void RefreshColumnExistence()
-        {
             try
             {
                 using (SqlConnection conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
-                    using (SqlCommand cmd = new SqlCommand(@"SELECT
-    CASE WHEN COL_LENGTH('dbo.Users','IsOnline') IS NOT NULL THEN 1 ELSE 0 END AS HasIsOnline,
-    CASE WHEN COL_LENGTH('dbo.Users','LastSeen') IS NOT NULL THEN 1 ELSE 0 END AS HasLastSeen", conn))
+
+                    // Logic: Lấy tất cả SenderID và ReceiverID liên quan đến tôi
+                    // Dùng DISTINCT để không trùng lặp
+                    string query = @"
+                        SELECT DISTINCT 
+                            CASE 
+                                WHEN SenderID = @me THEN ReceiverID 
+                                ELSE SenderID 
+                            END AS ContactID
+                        FROM Messages
+                        WHERE SenderID = @me OR ReceiverID = @me";
+
+                    var contactIds = new List<string>();
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
+                        cmd.Parameters.AddWithValue("@me", currentUsername);
                         using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                if (!reader.IsDBNull(0))
+                                    contactIds.Add(reader.GetString(0));
+                            }
+                        }
+                    }
+
+                    // Sau khi có list ID, lấy thông tin chi tiết (DisplayName) từ bảng Users
+                    if (contactIds.Count > 0)
+                    {
+                        // Tạo chuỗi tham số cho câu lệnh IN (...)
+                        // Lưu ý: Parameterize đúng cách để tránh SQL Injection
+                        var parameters = new List<string>();
+                        var cmdParams = new List<SqlParameter>();
+                        for (int i = 0; i < contactIds.Count; i++)
+                        {
+                            string paramName = $"@p{i}";
+                            parameters.Add(paramName);
+                            cmdParams.Add(new SqlParameter(paramName, contactIds[i]));
+                        }
+
+                        string userQuery = $"SELECT Username, DisplayName, IsOnline FROM Users WHERE Username IN ({string.Join(",", parameters)})";
+
+                        using (SqlCommand cmd = new SqlCommand(userQuery, conn))
+                        {
+                            cmd.Parameters.AddRange(cmdParams.ToArray());
+                            using (var reader = cmd.ExecuteReader())
+                            {
+                                while (reader.Read())
+                                {
+                                    list.Add(new UserStatus
+                                    {
+                                        UserID = reader["Username"].ToString(),
+                                        UserName = reader["DisplayName"] != DBNull.Value ? reader["DisplayName"].ToString() : reader["Username"].ToString(),
+                                        IsOnline = false // Mặc định lấy từ DB cứ để false, Server sẽ check lại Socket để set true
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[GetContacts] Lỗi lấy danh sách bạn bè: {ex.Message}");
+            }
+            return list;
+        }
+
+        // --- HÀM QUAN TRỌNG: LƯU TIN NHẮN VÀO DB ---
+        public int SaveMessage(string sender, string receiver, string content, string type = "Text", string fileName = null)
+        {
+            if (!_dbAvailable) return 0;
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    string query = @"
+                        INSERT INTO Messages (SenderID, ReceiverID, MessageContent, MessageType, FileName, CreatedAt) 
+                        OUTPUT INSERTED.MessageID 
+                        VALUES (@s, @r, @c, @t, @f, GETDATE())";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@s", sender);
+                        cmd.Parameters.AddWithValue("@r", receiver);
+                        cmd.Parameters.AddWithValue("@c", content ?? "");
+                        cmd.Parameters.AddWithValue("@t", type);
+                        cmd.Parameters.AddWithValue("@f", (object)fileName ?? DBNull.Value);
+
+                        int newId = (int)cmd.ExecuteScalar();
+                        // Logger.Info($"[DB] Đã lưu tin nhắn ID: {newId}");
+                        return newId;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("[DB] Lỗi lưu tin nhắn", ex);
+                return 0;
+            }
+        }
+
+        // --- Các hàm hỗ trợ khác (Login, Register, UpdateStatus...) ---
+
+        public UserData? Login(string usernameOrEmail, string password, bool useEmail = false)
+        {
+            if (!_dbAvailable) return null;
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    string query = useEmail
+                        ? "SELECT Username, DisplayName, Password FROM Users WHERE Email = @u"
+                        : "SELECT Username, DisplayName, Password FROM Users WHERE Username = @u";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@u", usernameOrEmail);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
                         {
                             if (reader.Read())
                             {
-                                bool hasIs = reader.GetInt32(0) == 1;
-                                bool hasLast = reader.GetInt32(1) == 1;
-                                lock (_columnLock)
+                                string storedPass = reader["Password"].ToString();
+                                string realUser = reader["Username"].ToString();
+                                string display = reader["DisplayName"] != DBNull.Value ? reader["DisplayName"].ToString() : realUser;
+
+                                // Nếu pass chưa hash (code cũ) thì so sánh thường, nếu hash rồi thì Verify
+                                bool isValid = storedPass.Contains(":")
+                                    ? PasswordHelper.VerifyPassword(password, storedPass)
+                                    : storedPass == password;
+
+                                if (isValid)
                                 {
-                                    _hasIsOnlineColumn = hasIs;
-                                    _hasLastSeenColumn = hasLast;
-                                }
-                                Logger.Info($"[DatabaseManager] Column existence: IsOnline={hasIs}, LastSeen={hasLast}");
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Warning($"[RefreshColumnExistence] Could not determine column existence: {ex.Message}");
-                // leave as unknown (null) so future attempts may retry
-            }
-        }
-
-        // Hàm kiểm tra đăng nhập (hỗ trợ cả username và email) - với password hashing
-        public UserData? Login(string usernameOrEmail, string password, bool useEmail = false)
-        {
-            // Try DB login if DB available; otherwise fallback to cache
-            if (_dbAvailable)
-            {
-                try
-                {
-                    using (SqlConnection conn = new SqlConnection(_connectionString))
-                    {
-                        conn.Open();
-                        string query = useEmail ? "SELECT Username, DisplayName, Password FROM Users WHERE Email = @u" : "SELECT Username, DisplayName, Password FROM Users WHERE Username = @u";
-
-                        string? storedPassword = null;
-                        string username = "";
-                        string displayName = "";
-                        bool needToHashPassword = false;
-                        bool passwordValid = false;
-
-                        using (SqlCommand cmd = new SqlCommand(query, conn))
-                        {
-                            cmd.CommandTimeout = 30;
-                            cmd.Parameters.AddWithValue("@u", usernameOrEmail);
-
-                            using (SqlDataReader reader = cmd.ExecuteReader())
-                            {
-                                if (reader.Read())
-                                {
-                                    storedPassword = reader["Password"]?.ToString();
-                                    username = reader["Username"]?.ToString() ?? "";
-                                    displayName = reader["DisplayName"]?.ToString() ?? "";
-
-                                    if (string.IsNullOrEmpty(storedPassword))
+                                    // Nếu pass chưa hash -> tự động hash và update lại
+                                    if (!storedPass.Contains(":"))
                                     {
-                                        Logger.Warning($"[Login] Password trong database rỗng cho user: {username}");
-                                        return null;
+                                        UpdatePasswordInDb(conn, realUser, password);
                                     }
-                                }
-                                else
-                                {
-                                    Logger.Warning($"[Login] Không tìm thấy user: {usernameOrEmail}");
-                                    return null;
+                                    return new UserData { Username = realUser, DisplayName = display };
                                 }
                             }
                         }
-
-                        storedPassword = storedPassword?.Trim();
-                        password = password.Trim();
-
-                        if (storedPassword == null) return null;
-
-                        if (storedPassword.Contains(":"))
-                        {
-                            passwordValid = PasswordHelper.VerifyPassword(password, storedPassword);
-                        }
-                        else
-                        {
-                            passwordValid = storedPassword.Equals(password, StringComparison.Ordinal);
-                            if (passwordValid) needToHashPassword = true;
-                        }
-
-                        if (needToHashPassword && passwordValid)
-                        {
-                            try
-                            {
-                                string hashedPassword = PasswordHelper.HashPassword(password);
-                                UpdatePasswordForUserSeparateConnection(username, hashedPassword);
-                                Logger.Info($"[Migration] Đã tự động hash password cho user: {username}");
-                            }
-                            catch (Exception ex)
-                            {
-                                Logger.Warning($"[Migration] Lỗi khi hash password cho user: {username} - {ex.Message}");
-                            }
-                        }
-
-                        if (passwordValid)
-                        {
-                            // update cache with latest info
-                            _userCache[username] = new CachedUser { Username = username, DisplayName = displayName, Password = storedPassword };
-                            return new UserData { Username = username, DisplayName = displayName };
-                        }
                     }
                 }
-                catch (Exception ex)
-                {
-                    Logger.Warning($"[Login] DB login failed, falling back to cache: {ex.Message}");
-                    _dbAvailable = false;
-                }
             }
-
-            // Fallback: try cache
-            try
-            {
-                if (string.IsNullOrEmpty(usernameOrEmail)) return null;
-
-                // If usernameOrEmail looks like email, try to find by email in DB is required; but cache stores only username keys.
-                // We'll try direct username lookup first.
-                if (_userCache.TryGetValue(usernameOrEmail, out var cached))
-                {
-                    string storedPassword = cached.Password ?? string.Empty;
-                    if (string.IsNullOrEmpty(storedPassword)) return null;
-
-                    if (storedPassword.Contains(":"))
-                    {
-                        if (PasswordHelper.VerifyPassword(password.Trim(), storedPassword.Trim()))
-                            return new UserData { Username = cached.Username, DisplayName = cached.DisplayName };
-                    }
-                    else
-                    {
-                        if (storedPassword.Equals(password.Trim(), StringComparison.Ordinal))
-                            return new UserData { Username = cached.Username, DisplayName = cached.DisplayName };
-                    }
-                }
-
-                // try find by display name or email not supported in cache; return null
-            }
-            catch (Exception ex)
-            {
-                Logger.Warning($"[Login] Cache fallback error: {ex.Message}");
-            }
-
+            catch (Exception ex) { Logger.Error("[Login] Lỗi DB", ex); }
             return null;
         }
 
-        // (Trong class DatabaseManager)
-        public void UpdateDisplayName(string username, string newDisplayName)
+        private void UpdatePasswordInDb(SqlConnection conn, string username, string plainPass)
         {
             try
             {
-                using (SqlConnection conn = new SqlConnection(_connectionString))
+                string hash = PasswordHelper.HashPassword(plainPass);
+                using (SqlCommand cmd = new SqlCommand("UPDATE Users SET Password = @p WHERE Username = @u", conn))
                 {
-                    conn.Open();
-                    string query = "UPDATE Users SET DisplayName = @name WHERE Username = @u";
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@name", newDisplayName);
-                        cmd.Parameters.AddWithValue("@u", username);
-                        cmd.ExecuteNonQuery();
-                    }
-                }
-
-                // update cache
-                if (_userCache.TryGetValue(username, out var cached))
-                {
-                    cached.DisplayName = newDisplayName;
-                    _userCache[username] = cached;
+                    cmd.Parameters.AddWithValue("@p", hash);
+                    cmd.Parameters.AddWithValue("@u", username);
+                    cmd.ExecuteNonQuery();
                 }
             }
-            catch (Exception ex)
-            {
-                Logger.Error("Lỗi cập nhật tên User", ex);
-            }
+            catch { }
         }
-
-        // (Trong DatabaseManager.cs)
 
         public bool RegisterUser(string username, string password, string email)
         {
+            if (!_dbAvailable) return false;
             try
             {
                 using (SqlConnection conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
-                    // Kiểm tra xem user đã tồn tại chưa
-                    string checkQuery = "SELECT COUNT(*) FROM Users WHERE Username = @u";
-                    using (SqlCommand checkCmd = new SqlCommand(checkQuery, conn))
-                    {
-                        checkCmd.Parameters.AddWithValue("@u", username);
-                        int count = (int)checkCmd.ExecuteScalar();
-                        if (count > 0) return false; // Username đã tồn tại
-                    }
-
-                    // Nếu chưa, thêm mới
-                    // Hash password trước khi lưu
-                    string hashedPassword = PasswordHelper.HashPassword(password);
-
-                    // Mặc định Tên hiển thị (DisplayName) sẽ giống Username
-                    string insertQuery = "INSERT INTO Users (Username, Password, DisplayName, Email) VALUES (@u, @p, @d, @e)";
-                    using (SqlCommand cmd = new SqlCommand(insertQuery, conn))
+                    using (SqlCommand cmd = new SqlCommand("SELECT COUNT(*) FROM Users WHERE Username = @u", conn))
                     {
                         cmd.Parameters.AddWithValue("@u", username);
-                        cmd.Parameters.AddWithValue("@p", hashedPassword); // Lưu password đã hash
-                        cmd.Parameters.AddWithValue("@d", username); // DisplayName mặc định
-                        cmd.Parameters.AddWithValue("@e", email);
+                        if ((int)cmd.ExecuteScalar() > 0) return false;
+                    }
+
+                    string hash = PasswordHelper.HashPassword(password);
+                    using (SqlCommand cmd = new SqlCommand("INSERT INTO Users (Username, Password, DisplayName, Email) VALUES (@u, @p, @d, @e)", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@u", username);
+                        cmd.Parameters.AddWithValue("@p", hash);
+                        cmd.Parameters.AddWithValue("@d", username);
+                        cmd.Parameters.AddWithValue("@e", (object)email ?? DBNull.Value);
                         cmd.ExecuteNonQuery();
                     }
+                    return true;
                 }
-
-                // update cache
-                _userCache[username] = new CachedUser { Username = username, DisplayName = username, Password = PasswordHelper.HashPassword(password) };
-                return true;
             }
             catch (Exception ex)
             {
-                Logger.Error("Lỗi Đăng ký User", ex);
+                Logger.Error("[Register] Lỗi DB", ex);
                 return false;
             }
         }
-        // (Trong DatabaseManager.cs)
 
-        // Kiểm tra email có tồn tại không
-        public bool CheckEmailExists(string email)
+        public void UpdateUserOnlineStatus(string username, bool isOnline)
         {
+            if (!_dbAvailable) return;
             try
             {
                 using (SqlConnection conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
-                    string query = "SELECT COUNT(*) FROM Users WHERE Email = @e";
+                    string query = isOnline
+                        ? "UPDATE Users SET IsOnline = 1 WHERE Username = @u"
+                        : "UPDATE Users SET IsOnline = 0, LastSeen = GETDATE() WHERE Username = @u";
+
                     using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@u", username);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch { }
+        }
+
+        public bool CheckEmailExists(string email)
+        {
+            if (!_dbAvailable) return false;
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    using (SqlCommand cmd = new SqlCommand("SELECT COUNT(*) FROM Users WHERE Email = @e", conn))
                     {
                         cmd.Parameters.AddWithValue("@e", email);
                         return (int)cmd.ExecuteScalar() > 0;
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                Logger.Warning($"[CheckEmailExists] DB error: {ex.Message}. Falling back to cache.");
-                // fallback: scan cache
-                foreach (var kv in _userCache.Values)
-                {
-                    // cache does not store email in current implementation
-                }
-                return false;
-            }
+            catch { return false; }
         }
 
-        // Helper method để update password theo username (dùng trong migration)
-        // Sử dụng connection riêng để tránh conflict với reader đang mở
-        private void UpdatePasswordForUserSeparateConnection(string username, string hashedPassword)
-        {
-            using (SqlConnection conn = new SqlConnection(_connectionString))
-            {
-                conn.Open();
-                string query = "UPDATE Users SET Password = @p WHERE Username = @u";
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@p", hashedPassword);
-                    cmd.Parameters.AddWithValue("@u", username);
-                    cmd.ExecuteNonQuery();
-                }
-            }
-
-            if (_userCache.TryGetValue(username, out var cached))
-            {
-                cached.Password = hashedPassword;
-                _userCache[username] = cached;
-            }
-        }
-
-        // Cập nhật mật khẩu mới - với password hashing
         public void UpdatePassword(string email, string newPassword)
         {
+            if (!_dbAvailable) return;
             try
             {
                 using (SqlConnection conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
-                    // Hash password trước khi lưu
-                    string hashedPassword = PasswordHelper.HashPassword(newPassword);
-
-                    string query = "UPDATE Users SET Password = @p WHERE Email = @e";
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    string hash = PasswordHelper.HashPassword(newPassword);
+                    using (SqlCommand cmd = new SqlCommand("UPDATE Users SET Password = @p WHERE Email = @e", conn))
                     {
-                        cmd.Parameters.AddWithValue("@p", hashedPassword);
+                        cmd.Parameters.AddWithValue("@p", hash);
                         cmd.Parameters.AddWithValue("@e", email);
                         cmd.ExecuteNonQuery();
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                Logger.Error("Lỗi cập nhật mật khẩu", ex);
-            }
+            catch (Exception ex) { Logger.Error("Lỗi UpdatePassword", ex); }
         }
 
-        // Lưu tin nhắn vào database và trả về MessageID
-        public int SaveMessage(string senderID, string receiverID, string messageContent, string messageType = "Text", string? fileName = null)
+        public void UpdateDisplayName(string username, string newName)
         {
-            // Ensure MessageContent is NOT NULL to match DB schema
-            if (messageContent == null) messageContent = string.Empty;
-
-            if (!_dbAvailable)
+            if (!_dbAvailable) return;
+            try
             {
-                Logger.Warning("[SaveMessage] DB unavailable, skipping persistent save.");
-                return 0;
-            }
-
-            using (SqlConnection conn = new SqlConnection(_connectionString))
-            {
-                try
+                using (SqlConnection conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
-                    string query = @"INSERT INTO Messages (SenderID, ReceiverID, MessageContent, MessageType, FileName, CreatedAt) 
-                                     OUTPUT INSERTED.MessageID
-                                     VALUES (@sender, @receiver, @content, @type, @fileName, GETDATE())";
-
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    using (SqlCommand cmd = new SqlCommand("UPDATE Users SET DisplayName = @n WHERE Username = @u", conn))
                     {
-                        cmd.Parameters.AddWithValue("@sender", senderID);
-                        cmd.Parameters.AddWithValue("@receiver", receiverID);
-                        cmd.Parameters.AddWithValue("@content", messageContent);
-                        cmd.Parameters.AddWithValue("@type", messageType);
-                        cmd.Parameters.AddWithValue("@fileName", fileName ?? (object)DBNull.Value);
-                        object result = cmd.ExecuteScalar();
-                        return result != null ? Convert.ToInt32(result) : 0;
+                        cmd.Parameters.AddWithValue("@n", newName);
+                        cmd.Parameters.AddWithValue("@u", username);
+                        cmd.ExecuteNonQuery();
                     }
                 }
-                catch (SqlException sqlEx)
-                {
-                    Logger.Error("Lỗi lưu tin nhắn vào database", sqlEx);
-                    return 0;
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error("Lỗi lưu tin nhắn vào database", ex);
-                    return 0;
-                }
             }
+            catch (Exception ex) { Logger.Error("Lỗi UpdateDisplayName", ex); }
         }
 
-        // Cập nhật nội dung tin nhắn
-        public void UpdateMessage(int messageID, string newContent)
+        public void UpdateMessage(int msgId, string newContent)
         {
-            if (!_messagesTableExists)
+            if (!_dbAvailable) return;
+            try
             {
-                try { _messagesTableExists = EnsureMessagesTableExists(); } catch { return; }
+                using (SqlConnection conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    using (SqlCommand cmd = new SqlCommand("UPDATE Messages SET MessageContent = @c WHERE MessageID = @id", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@c", newContent);
+                        cmd.Parameters.AddWithValue("@id", msgId);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
             }
+            catch { }
+        }
+
+        public List<MessageData> GetChatHistory(string u1, string u2, int limit)
+        {
+            var list = new List<MessageData>();
+            if (!_dbAvailable) return list;
 
             try
             {
                 using (SqlConnection conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
-                    string query = @"UPDATE Messages SET MessageContent = @content WHERE MessageID = @id";
-
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@content", newContent);
-                        cmd.Parameters.AddWithValue("@id", messageID);
-                        cmd.ExecuteNonQuery();
-                    }
-                }
-            }
-            catch (SqlException sqlEx)
-            {
-                if (sqlEx.Message.Contains("Invalid object name 'Messages'"))
-                {
-                    _messagesTableExists = false;
-                    try { EnsureMessagesTableExists(); } catch { }
-                }
-                Logger.Error("Lỗi cập nhật tin nhắn trong database", sqlEx);
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Lỗi cập nhật tin nhắn trong database", ex);
-            }
-        }
-
-        // Lấy lịch sử chat giữa 2 người dùng
-        public List<MessageData> GetChatHistory(string userID1, string userID2, int limit = 100)
-        {
-            var messages = new List<MessageData>();
-            if (!_messagesTableExists || !_dbAvailable) return messages;
-
-            using (SqlConnection conn = new SqlConnection(_connectionString))
-            {
-                try
-                {
-                    conn.Open();
-                    string query = @"SELECT TOP (@limit) MessageID, SenderID, ReceiverID, MessageContent, MessageType, FileName, CreatedAt
-                                     FROM Messages
-                                     WHERE (SenderID = @user1 AND ReceiverID = @user2) 
-                                        OR (SenderID = @user2 AND ReceiverID = @user1)
+                    string query = @"SELECT TOP (@l) MessageID, SenderID, ReceiverID, MessageContent, MessageType, FileName, CreatedAt 
+                                     FROM Messages 
+                                     WHERE (SenderID=@u1 AND ReceiverID=@u2) OR (SenderID=@u2 AND ReceiverID=@u1) 
                                      ORDER BY CreatedAt DESC";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
-                        cmd.Parameters.AddWithValue("@user1", userID1);
-                        cmd.Parameters.AddWithValue("@user2", userID2);
-                        cmd.Parameters.AddWithValue("@limit", limit);
-
-                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        cmd.Parameters.AddWithValue("@u1", u1);
+                        cmd.Parameters.AddWithValue("@u2", u2);
+                        cmd.Parameters.AddWithValue("@l", limit);
+                        using (var reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
                             {
-                                messages.Add(new MessageData
+                                list.Add(new MessageData
                                 {
                                     MessageID = (int)reader["MessageID"],
                                     SenderID = reader["SenderID"].ToString(),
                                     ReceiverID = reader["ReceiverID"].ToString(),
                                     MessageContent = reader["MessageContent"]?.ToString(),
-                                    MessageType = reader["MessageType"]?.ToString() ?? "Text",
-                                    FileName = reader["FileName"]?.ToString(),
+                                    MessageType = reader["MessageType"]?.ToString(),
+                                    FileName = reader["FileName"] != DBNull.Value ? reader["FileName"].ToString() : null,
                                     CreatedAt = (DateTime)reader["CreatedAt"]
                                 });
                             }
                         }
                     }
-                    messages.Reverse();
                 }
-                catch (SqlException sqlEx)
-                {
-                    if (sqlEx.Message.Contains("Invalid object name 'Messages'"))
-                    {
-                        _messagesTableExists = false;
-                        try { EnsureMessagesTableExists(); } catch { }
-                        return new List<MessageData>();
-                    }
-                    Logger.Error("Lỗi lấy lịch sử chat", sqlEx);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error("Lỗi lấy lịch sử chat", ex);
-                }
-            }
-            return messages;
-        }
-
-        // Lấy danh sách các user mà userID đã từng nhắn tin (dạng Username + DisplayName)
-        // Fallback: Trả về TẤT CẢ users (không chỉ contacts) để đảm bảo mỗi user thấy tất cả users khác
-        public List<UserStatus> GetContacts(string userID)
-        {
-            var contacts = new List<UserStatus>();
-
-            try
-            {
-                // If DB is available, prefer querying the Messages table for true contact list
-                if (_dbAvailable)
-                {
-                    using (SqlConnection conn = new SqlConnection(_connectionString))
-                    {
-                        conn.Open();
-                        string query = @"
-                        SELECT DISTINCT CASE WHEN SenderID = @u THEN ReceiverID ELSE SenderID END AS ContactID
-                        FROM Messages
-                        WHERE SenderID = @u OR ReceiverID = @u
-                    ";
-
-                        var contactIds = new List<string>();
-                        using (SqlCommand cmd = new SqlCommand(query, conn))
-                        {
-                            cmd.Parameters.AddWithValue("@u", userID);
-                            using (SqlDataReader reader = cmd.ExecuteReader())
-                            {
-                                while (reader.Read())
-                                {
-                                    var id = reader["ContactID"]?.ToString();
-                                    if (!string.IsNullOrEmpty(id)) contactIds.Add(id);
-                                }
-                            }
-                        }
-
-                        // If user has contacts, get them from DB
-                        if (contactIds.Count > 0)
-                        {
-                            string inClause = string.Join(",", contactIds.ConvertAll(id => "'" + id.Replace("'", "''") + "'"));
-                            string query2 = $@"
-                            SELECT Username, DisplayName FROM Users WHERE Username IN ({inClause})
-                        ";
-
-                            using (SqlCommand cmd2 = new SqlCommand(query2, conn))
-                            {
-                                using (SqlDataReader reader = cmd2.ExecuteReader())
-                                {
-                                    while (reader.Read())
-                                    {
-                                        string id = reader["Username"]?.ToString() ?? "";
-                                        string display = reader["DisplayName"]?.ToString() ?? id;
-                                        contacts.Add(new UserStatus { UserID = id, UserName = display, IsOnline = false });
-                                    }
-                                }
-                            }
-                        }
-
-                        // If user has no contacts yet, return empty (will fallback to ALL users below)
-                        if (contacts.Count > 0)
-                            return contacts;
-                    }
-                }
-            }
-            catch (SqlException sqlEx)
-            {
-                if (sqlEx.Message.Contains("Invalid object name 'Messages'"))
-                {
-                    _messagesTableExists = false;
-                    try { EnsureMessagesTableExists(); } catch { }
-                }
-                Logger.Error("Lỗi lấy danh sách contacts từ DB", sqlEx);
+                list.Reverse();
             }
             catch (Exception ex)
             {
-                Logger.Error("Lỗi lấy danh sách contacts từ DB", ex);
+                Logger.Error("Lỗi GetChatHistory", ex);
             }
-
-            // FALLBACK: Return ALL users from in-memory cache (mỗi user thấy tất cả users khác)
-            // Điều này đảm bảo khi DB không sẵn sàng hoặc user chưa chat với ai, 
-            // họ vẫn thấy tất cả users khác (offline state) để có thể bắt đầu chat
-            try
-            {
-                foreach (var kv in _userCache)
-                {
-                    if (string.Equals(kv.Key, userID, StringComparison.OrdinalIgnoreCase)) 
-                        continue; // Không include chính user đó
-
-                    contacts.Add(new UserStatus 
-                    { 
-                        UserID = kv.Value.Username, 
-                        UserName = kv.Value.DisplayName ?? kv.Value.Username, 
-                        IsOnline = false // Mặc định offline, server sẽ update lên online nếu đó là online users
-                    });
-                }
-
-                if (contacts.Count > 0)
-                {
-                    Logger.Info($"[GetContacts] Fallback: Returned {contacts.Count} users from cache for {userID}");
-                    return contacts;
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Warning($"[GetContacts] Fallback cache error: {ex.Message}");
-            }
-
-            // If everything fails, return empty list (better than null)
-            Logger.Warning($"[GetContacts] No contacts found for {userID} (DB and cache both failed or empty)");
-            return new List<UserStatus>();
+            return list;
         }
-
-        // expose DB availability for server logic
-        public bool IsDbAvailable => _dbAvailable;
     }
 
-
-    // Class nhỏ để chứa dữ liệu trả về
-    public class UserData
-    {
-        public string? Username { get; set; }
-        public string? DisplayName { get; set; }
-    }
-
-    // Class để chứa dữ liệu tin nhắn
+    // Helper classes
+    public class UserData { public string Username { get; set; } public string DisplayName { get; set; } }
     public class MessageData
     {
         public int MessageID { get; set; }
-        public string? SenderID { get; set; }
-        public string? ReceiverID { get; set; }
-        public string? MessageContent { get; set; }
-        public string MessageType { get; set; } = "Text";
+        public string SenderID { get; set; }
+        public string ReceiverID { get; set; }
+        public string MessageContent { get; set; }
+        public string MessageType { get; set; }
         public string? FileName { get; set; }
         public DateTime CreatedAt { get; set; }
     }

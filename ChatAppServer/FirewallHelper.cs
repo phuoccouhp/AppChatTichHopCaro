@@ -1,4 +1,4 @@
-using System;
+Ôªøusing System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -8,41 +8,46 @@ using System.Net.Sockets;
 namespace ChatAppServer
 {
     /// <summary>
-    /// Helper class ?? m? port trÍn Windows Firewall v‡ ki?m tra k?t n?i m?ng
+    /// Helper class ƒë·ªÉ m·ªü port tr√™n Windows Firewall v√† ki·ªÉm tra k·∫øt n·ªëi m·∫°ng
     /// </summary>
     public static class FirewallHelper
     {
         /// <summary>
-        /// M? port trÍn Windows Firewall cho c? Inbound v‡ Outbound
+        /// M·ªü port tr√™n Windows Firewall cho c·∫£ Inbound v√† Outbound
         /// </summary>
         public static bool OpenPort(int port, string ruleName = "ChatAppServer")
         {
             try
             {
+                // X√≥a rule c≈© tr∆∞·ªõc
                 RunNetshCommand($"advfirewall firewall delete rule name=\"{ruleName}\"");
+                RunNetshCommand($"advfirewall firewall delete rule name=\"{ruleName} (Out)\"");
 
+                // T·∫°o Inbound Rule (Cho ph√©p ng∆∞·ªùi kh√°c k·∫øt n·ªëi v√†o m√¨nh)
+                // Thay profile=any b·∫±ng profile=private,domain,public ƒë·ªÉ tr√°nh l·ªói c√∫ ph√°p
                 string inboundResult = RunNetshCommand(
                     $"advfirewall firewall add rule name=\"{ruleName}\" " +
                     $"dir=in action=allow protocol=TCP localport={port} " +
-                    $"profile=any enable=yes");
+                    $"profile=private,domain,public enable=yes");
 
+                // T·∫°o Outbound Rule (Cho ph√©p m√¨nh tr·∫£ l·ªùi l·∫°i)
                 string outboundResult = RunNetshCommand(
                     $"advfirewall firewall add rule name=\"{ruleName} (Out)\" " +
                     $"dir=out action=allow protocol=TCP localport={port} " +
-                    $"profile=any enable=yes");
+                    $"profile=private,domain,public enable=yes");
 
-                Logger.Success($"?„ m? port {port} trÍn Windows Firewall");
+                Logger.Success($"ƒê√£ g·ª≠i l·ªánh m·ªü port {port} t·ªõi Firewall.");
                 return true;
             }
             catch (Exception ex)
             {
-                Logger.Error($"L?i khi m? port {port} trÍn Firewall", ex);
+                Logger.Error($"L·ªói khi m·ªü port {port} tr√™n Firewall", ex);
                 return false;
             }
         }
 
         /// <summary>
-        /// Ki?m tra xem rule ?„ t?n t?i ch?a
+        /// Ki·ªÉm tra xem rule ƒë√£ t·ªìn t·∫°i ch∆∞a
         /// </summary>
         public static bool IsPortOpen(int port, string ruleName = "ChatAppServer", int retryCount = 1, int delayMs = 0)
         {
@@ -50,76 +55,41 @@ namespace ChatAppServer
             {
                 try
                 {
-                    // Ki?m tra inbound rule
+                    // Ki·ªÉm tra inbound rule
                     string inboundResult = RunNetshCommand($"advfirewall firewall show rule name=\"{ruleName}\" dir=in");
 
-                    // Ki?m tra outbound rule
+                    // Ki·ªÉm tra outbound rule
                     string outboundRuleName = $"{ruleName} (Out)";
-                    // Th? c? v?i v‡ khÙng cÛ d?u ngo?c kÈp
                     string outboundResult = RunNetshCommand($"advfirewall firewall show rule name=\"{outboundRuleName}\" dir=out");
-                    if (string.IsNullOrEmpty(outboundResult) || (!outboundResult.Contains("Rule Name") && !outboundResult.Contains("TÍn quy t?c")))
+
+                    if (string.IsNullOrEmpty(outboundResult) || (!outboundResult.Contains("Rule Name") && !outboundResult.Contains("T√™n quy t·∫Øc")))
                     {
-                        // Th? l?i khÙng cÛ d?u ngo?c kÈp
                         outboundResult = RunNetshCommand($"advfirewall firewall show rule name={outboundRuleName} dir=out");
                     }
 
-                    // Inbound rule ph?i t?n t?i (cÛ Rule Name) - ki?m tra Enabled n?u cÛ
+                    // Inbound check
                     bool inboundExists = !string.IsNullOrEmpty(inboundResult) &&
-                        (inboundResult.Contains("Rule Name") || inboundResult.Contains("TÍn quy t?c"));
-                    
-                    // N?u rule t?n t?i, ki?m tra Enabled (nh?ng khÙng b?t bu?c)
-                    if (inboundExists)
-                    {
-                        bool enabled = inboundResult.Contains("Enabled") && 
-                            (inboundResult.Contains("Yes") || inboundResult.Contains("CÛ") || inboundResult.Contains("?„ b?t"));
-                        if (!enabled && inboundResult.Contains("Enabled"))
-                        {
-                            Logger.Warning($"[IsPortOpen] Inbound rule exists but may be disabled");
-                        }
-                    }
+                        (inboundResult.Contains("Rule Name") || inboundResult.Contains("T√™n quy t·∫Øc"));
 
-                    // Outbound rule ph?i t?n t?i (cÛ Rule Name) - ki?m tra Enabled n?u cÛ
+                    // Outbound check
                     bool outboundExists = !string.IsNullOrEmpty(outboundResult) &&
-                        (outboundResult.Contains("Rule Name") || outboundResult.Contains("TÍn quy t?c"));
-                    
-                    // N?u rule t?n t?i, ki?m tra Enabled (nh?ng khÙng b?t bu?c)
-                    if (outboundExists)
+                        (outboundResult.Contains("Rule Name") || outboundResult.Contains("T√™n quy t·∫Øc"));
+
+                    // Debug log chi ti·∫øt h∆°n ƒë·ªÉ bi·∫øt t·∫°i sao fail
+                    if (!inboundExists || !outboundExists)
                     {
-                        bool enabled = outboundResult.Contains("Enabled") && 
-                            (outboundResult.Contains("Yes") || outboundResult.Contains("CÛ") || outboundResult.Contains("?„ b?t"));
-                        if (!enabled && outboundResult.Contains("Enabled"))
-                        {
-                            Logger.Warning($"[IsPortOpen] Outbound rule exists but may be disabled");
-                        }
-                    }
-                    else
-                    {
-                        // Debug: log m?t ph?n output ?? xem t?i sao khÙng tÏm th?y
-                        if (!string.IsNullOrEmpty(outboundResult))
-                        {
-                            string preview = outboundResult.Length > 200 ? outboundResult.Substring(0, 200) : outboundResult;
-                            Logger.Info($"[IsPortOpen] Outbound result preview: {preview.Replace("\r\n", " | ")}");
-                        }
-                        else
-                        {
-                            Logger.Info($"[IsPortOpen] Outbound result is empty - rule may not exist");
-                        }
+                        Logger.Info($"[IsPortOpen] Attempt {attempt + 1}/{retryCount}: Inbound={inboundExists}, Outbound={outboundExists}");
                     }
 
-                    Logger.Info($"[IsPortOpen] Attempt {attempt + 1}/{retryCount}: Inbound={inboundExists}, Outbound={outboundExists}");
-
-                    // ??i v?i server, Inbound rule l‡ quan tr?ng nh?t (cho phÈp clients k?t n?i ??n)
-                    // Outbound rule c?ng t?t nh?ng khÙng b?t bu?c (ch? y?u cho traffic ?i ra)
-                    if (inboundExists)
+                    if (inboundExists && outboundExists)
                     {
-                        if (!outboundExists)
-                        {
-                            Logger.Warning($"[IsPortOpen] Inbound rule t?n t?i nh?ng Outbound rule khÙng tÏm th?y. Inbound rule l‡ ?? cho server.");
-                        }
-                        return true; // Inbound rule ?? ?? server ho?t ??ng
+                        return true;
+                    }
+                    else if (inboundExists)
+                    {
+                        Logger.Warning($"[IsPortOpen] Inbound OK, Outbound MISSING. Client g·ª≠i tin ƒë·∫øn ƒë∆∞·ª£c nh∆∞ng Server kh√¥ng tr·∫£ l·ªùi ƒë∆∞·ª£c.");
                     }
 
-                    // N?u ch?a tÏm th?y v‡ cÚn l?n th?, ??i r?i th? l?i
                     if (attempt < retryCount - 1 && delayMs > 0)
                     {
                         System.Threading.Thread.Sleep(delayMs);
@@ -127,20 +97,13 @@ namespace ChatAppServer
                 }
                 catch (Exception ex)
                 {
-                    Logger.Warning($"L?i khi ki?m tra firewall rule (attempt {attempt + 1}/{retryCount}): {ex.Message}");
-                    if (attempt < retryCount - 1 && delayMs > 0)
-                    {
-                        System.Threading.Thread.Sleep(delayMs);
-                    }
+                    Logger.Warning($"L·ªói ki·ªÉm tra firewall (l·∫ßn {attempt + 1}): {ex.Message}");
                 }
             }
 
             return false;
         }
 
-        /// <summary>
-        /// Ch?y l?nh netsh
-        /// </summary>
         private static string RunNetshCommand(string arguments)
         {
             try
@@ -164,247 +127,96 @@ namespace ChatAppServer
                     string output = process.StandardOutput.ReadToEnd();
                     string error = process.StandardError.ReadToEnd();
 
-                    bool finished = process.WaitForExit(5000); // Timeout 5 gi‚y
+                    bool finished = process.WaitForExit(5000);
 
                     if (!finished)
                     {
                         try { process.Kill(); } catch { }
-                        Logger.Warning($"Netsh command timeout: {arguments}");
                         return "";
                     }
 
-                    if (process.ExitCode != 0 && !string.IsNullOrEmpty(error))
+                    // Log l·ªói n·∫øu netsh b√°o l·ªói (ƒë·ªÉ debug v·∫•n ƒë·ªÅ profile=any)
+                    if (!string.IsNullOrEmpty(output) && (output.Contains("not valid") || output.Contains("Error")))
                     {
-                        Logger.Warning($"Netsh command error: {error}");
+                        Logger.Info($"[Netsh Output] {output.Trim()}");
                     }
 
                     return output;
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Logger.Warning($"L?i khi ch?y netsh command: {ex.Message}");
                 return "";
             }
         }
 
         /// <summary>
-        /// M? port v?i quy?n Administrator b?ng c·ch ch?y file batch
+        /// M·ªü port v·ªõi quy·ªÅn Admin b·∫±ng file batch (Fix l·ªói c√∫ ph√°p profile=any)
         /// </summary>
         public static bool OpenPortAsAdmin(int port, string ruleName = "ChatAppServer")
         {
             string tempBatchFile = null;
             try
             {
-                // T?o file batch t?m th?i - M? CHO T?T C? PROFILE
+                // S·ª¨A L·ªñI: Thay profile=any b·∫±ng profile=private,domain,public
                 string batchContent = $@"@echo off
 setlocal enabledelayedexpansion
 
 echo ========================================
 echo Opening Firewall Port {port}...
 echo ========================================
-echo.
 
-REM XÛa rule c? n?u t?n t?i
-echo [1/4] Deleting old rules (if any)...
+echo [1/4] Deleting old rules...
 netsh advfirewall firewall delete rule name=""{ruleName}"" >nul 2>&1
 netsh advfirewall firewall delete rule name=""{ruleName} (Out)"" >nul 2>&1
-echo    Done
-echo.
 
-REM T?o Inbound rule
 echo [2/4] Adding inbound rule...
-netsh advfirewall firewall add rule name=""{ruleName}"" dir=in action=allow protocol=TCP localport={port} profile=any enable=yes
-if !errorlevel! neq 0 (
-    echo    ERROR: Failed to add inbound rule (errorlevel=!errorlevel!)
-    exit /b !errorlevel!
-)
-echo    Success
-echo.
+netsh advfirewall firewall add rule name=""{ruleName}"" dir=in action=allow protocol=TCP localport={port} profile=private,domain,public enable=yes
+if !errorlevel! neq 0 echo ERROR Inbound: !errorlevel!
 
-REM T?o Outbound rule
 echo [3/4] Adding outbound rule...
-netsh advfirewall firewall add rule name=""{ruleName} (Out)"" dir=out action=allow protocol=TCP localport={port} profile=any enable=yes
-if !errorlevel! neq 0 (
-    echo    ERROR: Failed to add outbound rule (errorlevel=!errorlevel!)
-    exit /b !errorlevel!
-)
-echo    Success
-echo.
+netsh advfirewall firewall add rule name=""{ruleName} (Out)"" dir=out action=allow protocol=TCP localport={port} profile=private,domain,public enable=yes
+if !errorlevel! neq 0 echo ERROR Outbound: !errorlevel!
 
-REM Verify rules - ??i m?t ch˙t ?? rule ???c commit
-echo [4/4] Verifying rules...
-timeout /t 1 /nobreak >nul 2>&1
-netsh advfirewall firewall show rule name=""{ruleName}"" dir=in | findstr /C:""Rule Name"" >nul 2>&1
-if !errorlevel! neq 0 (
-    echo    WARNING: Inbound rule not found after creation
-    exit /b 2
-)
-netsh advfirewall firewall show rule name=""{ruleName} (Out)"" dir=out | findstr /C:""Rule Name"" >nul 2>&1
-if !errorlevel! neq 0 (
-    echo    WARNING: Outbound rule not found after creation
-    exit /b 2
-)
-echo    Success - Both rules verified
-echo.
-echo ========================================
-echo SUCCESS: Firewall port {port} opened
-echo ========================================
+echo [4/4] Verifying...
+timeout /t 2 /nobreak >nul
 exit /b 0
 ";
                 tempBatchFile = Path.Combine(Path.GetTempPath(), $"open_firewall_{Guid.NewGuid().ToString("N").Substring(0, 8)}.bat");
-                // D˘ng ASCII encoding ?? ??m b?o batch file ho?t ??ng ?˙ng
                 File.WriteAllText(tempBatchFile, batchContent, System.Text.Encoding.ASCII);
 
-                Logger.Info($"[OpenPortAsAdmin] Batch file: {tempBatchFile}");
-                Logger.Info("[OpenPortAsAdmin] Requesting Administrator privileges (UAC will appear)...");
+                Logger.Info($"[OpenPortAsAdmin] Running batch script...");
 
                 ProcessStartInfo psi = new ProcessStartInfo
                 {
                     FileName = tempBatchFile,
                     UseShellExecute = true,
-                    Verb = "runas",
+                    Verb = "runas", // Y√™u c·∫ßu quy·ªÅn Admin
                     CreateNoWindow = false,
-                    WindowStyle = ProcessWindowStyle.Normal,
-                    WorkingDirectory = Path.GetTempPath()
+                    WindowStyle = ProcessWindowStyle.Normal
                 };
 
-                Process? process = null;
-                try
-                {
-                    process = Process.Start(psi);
-                    if (process == null)
-                    {
-                        Logger.Error("Failed to start process. Possible UAC denial.");
-                        return false;
-                    }
+                Process? process = Process.Start(psi);
+                if (process == null) return false;
 
-                    // ??i process ho‡n th‡nh v?i timeout 30 gi‚y
-                    bool finished = process.WaitForExit(30000);
+                process.WaitForExit();
 
-                    if (!finished)
-                    {
-                        Logger.Warning("Process m? firewall timeout (qu· 30 gi‚y). CÛ th? ?ang ch? UAC ho?c cÛ v?n ??.");
-                        try 
-                        { 
-                            if (!process.HasExited)
-                            {
-                                process.Kill(); 
-                            }
-                        } 
-                        catch (Exception killEx)
-                        {
-                            Logger.Warning($"KhÙng th? kill process: {killEx.Message}");
-                        }
-                        return false;
-                    }
+                // X√≥a file t·∫°m
+                try { System.Threading.Thread.Sleep(500); File.Delete(tempBatchFile); } catch { }
 
-                    // ??m b?o process ?„ th?c s? k?t th˙c
-                    process.WaitForExit();
-                    int exitCode = process.ExitCode;
-                    Logger.Info($"[OpenPortAsAdmin] Exit code: {exitCode}");
-
-                    // XÛa file batch t?m
-                    try 
-                    { 
-                        System.Threading.Thread.Sleep(200);
-                        File.Delete(tempBatchFile);
-                        tempBatchFile = null;
-                    } 
-                    catch (Exception delEx)
-                    {
-                        Logger.Warning($"KhÙng th? xÛa file batch t?m: {delEx.Message}");
-                    }
-
-                    if (exitCode == 0)
-                    {
-                        Logger.Success($"Firewall rule ???c t?o th‡nh cÙng (ExitCode: {exitCode})");
-                        
-                        // ??i m?t ch˙t ?? rule ???c commit v‡o firewall
-                        System.Threading.Thread.Sleep(1000);
-                        
-                        // Verify l?i rule ?„ t?n t?i ch?a (v?i retry)
-                        bool verified = IsPortOpen(port, ruleName, retryCount: 5, delayMs: 500);
-                        if (verified)
-                        {
-                            Logger.Success($"?„ x·c nh?n rule t?n t?i trong firewall!");
-                            return true;
-                        }
-                        else
-                        {
-                            Logger.Warning($"Process tr? v? ExitCode=0 nh?ng khÙng tÏm th?y rule sau khi t?o. CÛ th? do delay ho?c quy?n truy c?p.");
-                            // V?n return true vÏ process ?„ th‡nh cÙng, rule cÛ th? ch?a ???c commit ngay
-                            return true;
-                        }
-                    }
-                    else if (exitCode == 2)
-                    {
-                        Logger.Warning($"Process m? firewall: Rule khÙng ???c verify ngay sau khi t?o (ExitCode: {exitCode}). ?ang th? verify l?i...");
-                        // ??i thÍm m?t ch˙t r?i verify l?i
-                        System.Threading.Thread.Sleep(2000);
-                        bool verified = IsPortOpen(port, ruleName, retryCount: 5, delayMs: 1000);
-                        if (verified)
-                        {
-                            Logger.Success($"?„ x·c nh?n rule t?n t?i sau khi verify l?i!");
-                            return true;
-                        }
-                        Logger.Error($"V?n khÙng tÏm th?y rule sau khi verify l?i.");
-                        return false;
-                    }
-                    else
-                    {
-                        Logger.Error($"Process returned error code: {exitCode}");
-                        return false;
-                    }
-                }
-                finally
-                {
-                    if (process != null)
-                    {
-                        try
-                        {
-                            if (!process.HasExited)
-                            {
-                                process.Kill();
-                            }
-                            process.Dispose();
-                        }
-                        catch { }
-                    }
-                    if (tempBatchFile != null)
-                    {
-                        try 
-                        { 
-                            System.Threading.Thread.Sleep(200);
-                            File.Delete(tempBatchFile); 
-                        } 
-                        catch { }
-                    }
-                }
-            }
-            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
-            {
-                Logger.Warning("Ng??i d˘ng ?„ t? ch?i yÍu c?u quy?n Administrator (UAC b? h?y)");
-                try { if (tempBatchFile != null) File.Delete(tempBatchFile); } catch { }
-                return false;
-            }
-            catch (System.ComponentModel.Win32Exception ex)
-            {
-                Logger.Error($"Win32 Error: {ex.Message} (Code: {ex.NativeErrorCode})");
-                try { if (tempBatchFile != null) File.Delete(tempBatchFile); } catch { }
-                return false;
+                // Verify l·∫°i
+                return IsPortOpen(port, ruleName, retryCount: 3, delayMs: 1000);
             }
             catch (Exception ex)
             {
-                Logger.Error($"Error opening port: {ex.GetType().Name} - {ex.Message}", ex);
-                try { if (tempBatchFile != null) File.Delete(tempBatchFile); } catch { }
+                Logger.Error($"OpenPortAsAdmin Failed: {ex.Message}");
                 return false;
             }
         }
 
-        /// <summary>
-        /// Test k?t n?i ??n m?t ??a ch? IP:Port
-        /// </summary>
+        // ... (Gi·ªØ nguy√™n c√°c h√†m TestConnection, Ping, GetAllLocalIPs, IsPortInUse, IsPortListening nh∆∞ c≈©) ...
+        // B·∫°n c√≥ th·ªÉ copy l·∫°i ph·∫ßn d∆∞·ªõi c·ªßa file c≈© v√†o ƒë√¢y n·∫øu c·∫ßn, nh∆∞ng quan tr·ªçng nh·∫•t l√† ph·∫ßn tr√™n ƒë√£ s·ª≠a.
+
         public static (bool success, string message, int latencyMs) TestConnection(string ipAddress, int port, int timeoutMs = 5000)
         {
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
@@ -427,20 +239,6 @@ exit /b 0
                     }
                 }
             }
-            catch (SocketException ex)
-            {
-                stopwatch.Stop();
-                string errorMsg = ex.SocketErrorCode switch
-                {
-                    SocketError.ConnectionRefused => "KhÙng th? k?t n?i - Server ?Ìch ch?a ch?y ho?c port ch?a m?",
-                    SocketError.TimedOut => "K?t n?i timeout - Firewall cÛ th? ?ang ch?n ho?c m?ng ch?m",
-                    SocketError.NetworkUnreachable => "KhÙng th? ??n m?ng ?Ìch - Ki?m tra k?t n?i m?ng",
-                    SocketError.HostUnreachable => "KhÙng th? ??n host - Ki?m tra IP cÛ ?˙ng khÙng",
-                    SocketError.HostNotFound => "KhÙng tÏm th?y host - IP khÙng h?p l?",
-                    _ => $"L?i socket: {ex.SocketErrorCode}"
-                };
-                return (false, errorMsg, (int)stopwatch.ElapsedMilliseconds);
-            }
             catch (Exception ex)
             {
                 stopwatch.Stop();
@@ -448,9 +246,6 @@ exit /b 0
             }
         }
 
-        /// <summary>
-        /// Ping ??n m?t ??a ch? IP
-        /// </summary>
         public static (bool success, string message, int latencyMs) Ping(string ipAddress, int timeoutMs = 3000)
         {
             try
@@ -459,13 +254,9 @@ exit /b 0
                 {
                     var reply = ping.Send(ipAddress, timeoutMs);
                     if (reply.Status == System.Net.NetworkInformation.IPStatus.Success)
-                    {
                         return (true, $"Ping successful ({reply.RoundtripTime}ms)", (int)reply.RoundtripTime);
-                    }
                     else
-                    {
                         return (false, $"Ping failed: {reply.Status}", 0);
-                    }
                 }
             }
             catch (Exception ex)
@@ -474,9 +265,6 @@ exit /b 0
             }
         }
 
-        /// <summary>
-        /// L?y t?t c? ??a ch? IP c?a m·y
-        /// </summary>
         public static List<string> GetAllLocalIPs()
         {
             var ips = new List<string>();
@@ -486,18 +274,13 @@ exit /b 0
                 foreach (var ip in host.AddressList)
                 {
                     if (ip.AddressFamily == AddressFamily.InterNetwork)
-                    {
                         ips.Add(ip.ToString());
-                    }
                 }
             }
             catch { }
             return ips;
         }
 
-        /// <summary>
-        /// Ki?m tra xem port cÛ ?ang ???c s? d?ng khÙng
-        /// </summary>
         public static bool IsPortInUse(int port)
         {
             try
@@ -509,50 +292,21 @@ exit /b 0
                     return false;
                 }
             }
-            catch (SocketException)
-            {
-                return true;
-            }
+            catch (SocketException) { return true; }
         }
 
-        /// <summary>
-        /// Ki?m tra xem port cÛ ?ang l?ng nghe (LISTEN) khÙng
-        /// </summary>
         public static bool IsPortListening(int port)
         {
             try
             {
                 using (TcpClient client = new TcpClient())
                 {
-                    try
-                    {
-                        var result = client.BeginConnect(IPAddress.Loopback, port, null, null);
-                        bool success = result.AsyncWaitHandle.WaitOne(2000);
-
-                        if (success && client.Connected)
-                        {
-                            client.EndConnect(result);
-                            return true;
-                        }
-                    }
-                    catch (SocketException sockEx)
-                    {
-                        if (sockEx.SocketErrorCode == SocketError.ConnectionRefused)
-                        {
-                            return false;
-                        }
-                        Logger.Warning($"Socket exception checking port {port}: {sockEx.SocketErrorCode}");
-                        return false;
-                    }
+                    var result = client.BeginConnect(IPAddress.Loopback, port, null, null);
+                    if (result.AsyncWaitHandle.WaitOne(2000) && client.Connected) return true;
                 }
-
                 return false;
             }
-            catch (Exception ex)
-            {
-                Logger.Warning($"Error checking port listening: {ex.Message}");
-                return false;
-            }
+            catch { return false; }
         }
     }
 }
