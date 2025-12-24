@@ -27,6 +27,17 @@ namespace ChatAppClient.UserControls
             this.DoubleBuffered = true; // Chống nháy hình
             this.BackColor = Color.Transparent;
             this.ResizeRedraw = true; // Vẽ lại khi thay đổi kích thước
+            
+            // ✅ [FIX] Ẩn Label vì đang dùng custom painting
+            if (lblMessage != null)
+            {
+                lblMessage.Visible = false;
+                lblMessage.Text = ""; // Xóa text mặc định
+            }
+            if (btnForward != null)
+            {
+                btnForward.Visible = false; // Ẩn button forward tạm thời
+            }
         }
 
         public void SetData(string message, MessageType type, DateTime time)
@@ -35,6 +46,13 @@ namespace ChatAppClient.UserControls
             _messageText = message ?? "(Tin nhắn trống)";
             _type = type;
             _time = time;
+
+            // ✅ [FIX] Đảm bảo Label không hiển thị (đang dùng custom painting)
+            if (lblMessage != null)
+            {
+                lblMessage.Visible = false;
+                lblMessage.Text = "";
+            }
 
             CalculateSize(); // Tính toán kích thước dựa trên nội dung
             this.Invalidate(); // Vẽ lại
@@ -58,8 +76,21 @@ namespace ChatAppClient.UserControls
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
+            
+            // ✅ [FIX] Đảm bảo Label không hiển thị
+            if (lblMessage != null && lblMessage.Visible)
+            {
+                lblMessage.Visible = false;
+            }
+            
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
+            // ✅ [FIX] Kiểm tra nếu chưa có dữ liệu thì không vẽ
+            if (string.IsNullOrEmpty(_messageText))
+            {
+                return;
+            }
 
             // 1. Xác định màu sắc
             Color bgColor = (_type == MessageType.Outgoing) ? AppColors.Primary : Color.FromArgb(230, 230, 230);
@@ -78,7 +109,12 @@ namespace ChatAppClient.UserControls
             // 3. Vẽ Nội dung tin nhắn
             // Rectangle để vẽ chữ (có padding)
             Rectangle textRect = new Rectangle(_padding, _padding, this.Width - (_padding * 2), this.Height - (_padding * 2) - 15);
-            TextRenderer.DrawText(e.Graphics, _messageText, _font, textRect, textColor, TextFormatFlags.WordBreak | TextFormatFlags.Left | TextFormatFlags.Top);
+            
+            // ✅ [FIX] Đảm bảo textRect hợp lệ
+            if (textRect.Width > 0 && textRect.Height > 0 && !string.IsNullOrEmpty(_messageText))
+            {
+                TextRenderer.DrawText(e.Graphics, _messageText, _font, textRect, textColor, TextFormatFlags.WordBreak | TextFormatFlags.Left | TextFormatFlags.Top);
+            }
 
             // 4. Vẽ Thời gian (Góc dưới bên phải hoặc trái tùy loại)
             string timeStr = _time.ToString("HH:mm");
