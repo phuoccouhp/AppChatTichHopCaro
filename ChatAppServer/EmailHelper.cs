@@ -6,12 +6,18 @@ namespace ChatAppServer
 {
     public static class EmailHelper
     {
-        // CẤU HÌNH EMAIL CỦA SERVER (NGƯỜI GỬI)
+        // [BẢO MẬT] Hãy thay đổi bằng App Password mới của bạn, không để lộ code này
         private static string _senderEmail = "taonekmay09112005@gmail.com";
-        private static string _appPassword = "npwl hkcy zshj knbx"; 
+        private static string _appPassword = "YOUR_APP_PASSWORD_HERE"; // <--- THAY BẰNG MẬT KHẨU MỚI CỦA BẠN
 
         public static bool SendOTP(string toEmail, string otpCode)
         {
+            if (_appPassword == "YOUR_APP_PASSWORD_HERE")
+            {
+                Logger.Error("Chưa cấu hình mật khẩu Email trong EmailHelper.cs!");
+                return false;
+            }
+
             try
             {
                 var smtpClient = new SmtpClient("smtp.gmail.com")
@@ -35,7 +41,7 @@ namespace ChatAppServer
             }
             catch (Exception ex)
             {
-                Logger.Error($"Lỗi gửi mail đến {toEmail}", ex);
+                Logger.Error($"Lỗi gửi mail: {ex.Message}");
                 return false;
             }
         }

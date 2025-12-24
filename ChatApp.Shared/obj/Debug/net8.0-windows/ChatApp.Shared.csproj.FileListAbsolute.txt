@@ -22,3 +22,15 @@ E:\GitHub\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Sha
 E:\GitHub\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\refint\ChatApp.Shared.dll
 E:\GitHub\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.pdb
 E:\GitHub\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ref\ChatApp.Shared.dll
+E:\project\khoqua\ChatApp.Shared\bin\Debug\net8.0-windows\ChatApp.Shared.deps.json
+E:\project\khoqua\ChatApp.Shared\bin\Debug\net8.0-windows\ChatApp.Shared.dll
+E:\project\khoqua\ChatApp.Shared\bin\Debug\net8.0-windows\ChatApp.Shared.pdb
+E:\project\khoqua\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.GeneratedMSBuildEditorConfig.editorconfig
+E:\project\khoqua\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.AssemblyInfoInputs.cache
+E:\project\khoqua\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.AssemblyInfo.cs
+E:\project\khoqua\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.csproj.CoreCompileInputs.cache
+E:\project\khoqua\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.sourcelink.json
+E:\project\khoqua\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.dll
+E:\project\khoqua\ChatApp.Shared\obj\Debug\net8.0-windows\refint\ChatApp.Shared.dll
+E:\project\khoqua\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.pdb
+E:\project\khoqua\ChatApp.Shared\obj\Debug\net8.0-windows\ref\ChatApp.Shared.dll
