@@ -51,7 +51,21 @@ namespace ChatApp.Shared
             { nameof(TankResponsePacket), typeof(TankResponsePacket) },
             { nameof(TankStartPacket), typeof(TankStartPacket) },
             { nameof(TankActionPacket), typeof(TankActionPacket) },
-            { nameof(TankHitPacket), typeof(TankHitPacket) }
+            { nameof(TankHitPacket), typeof(TankHitPacket) },
+
+            // Group Chat
+            { nameof(CreateGroupPacket), typeof(CreateGroupPacket) },
+            { nameof(CreateGroupResultPacket), typeof(CreateGroupResultPacket) },
+            { nameof(GroupTextPacket), typeof(GroupTextPacket) },
+            { nameof(GroupFilePacket), typeof(GroupFilePacket) },
+            { nameof(GroupInvitePacket), typeof(GroupInvitePacket) },
+            { nameof(GroupInviteNotificationPacket), typeof(GroupInviteNotificationPacket) },
+            { nameof(LeaveGroupPacket), typeof(LeaveGroupPacket) },
+            { nameof(GroupMemberUpdatePacket), typeof(GroupMemberUpdatePacket) },
+            { nameof(RequestGroupListPacket), typeof(RequestGroupListPacket) },
+            { nameof(GroupListPacket), typeof(GroupListPacket) },
+            { nameof(GroupHistoryRequestPacket), typeof(GroupHistoryRequestPacket) },
+            { nameof(GroupHistoryResponsePacket), typeof(GroupHistoryResponsePacket) }
         };
 
         public static Type GetPacketType(string typeName)

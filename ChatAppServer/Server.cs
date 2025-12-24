@@ -131,45 +131,51 @@ namespace ChatAppServer
         }
 
         // === [FIXED] Lấy danh sách kết hợp DB + RAM ===
+        // Chỉ hiển thị: Người đã từng nhắn tin (contacts) + Người đang online (chưa nhắn tin nhưng có thể bắt đầu chat)
         public List<UserStatus> GetOnlineUsers(string excludeUserID)
         {
-            // 1. Lấy danh sách từ Database (History contacts) - Mặc định IsOnline = false
+            // 1. Lấy danh sách từ Database (Người đã từng nhắn tin) - Mặc định IsOnline = false
             var contacts = DatabaseManager.Instance.GetContacts(excludeUserID);
 
             // Dùng Dictionary để tra cứu nhanh
             var contactDict = new Dictionary<string, UserStatus>(StringComparer.OrdinalIgnoreCase);
-            foreach (var c in contacts) contactDict[c.UserID] = c;
+            foreach (var c in contacts) 
+            {
+                // Đảm bảo IsOnline = false ban đầu (sẽ update sau nếu đang online)
+                c.IsOnline = false;
+                contactDict[c.UserID] = c;
+            }
 
             lock (_clients)
             {
                 // 2. Duyệt qua danh sách Client đang kết nối thực tế
                 foreach (var client in _clients.Values)
                 {
-                    if (client.UserID == excludeUserID) continue;
+                    if (string.IsNullOrEmpty(client.UserID) || client.UserID == excludeUserID) continue;
 
                     if (contactDict.ContainsKey(client.UserID))
                     {
-                        // Người này có trong DB -> Cập nhật trạng thái Online
+                        // Người này có trong DB (đã nhắn tin) -> Cập nhật trạng thái Online
                         contactDict[client.UserID].IsOnline = true;
-                        contactDict[client.UserID].UserName = client.UserName; // Cập nhật tên mới nhất
+                        contactDict[client.UserID].UserName = client.UserName ?? contactDict[client.UserID].UserName;
                     }
                     else
                     {
-                        // Người này là người lạ (chưa chat bao giờ) nhưng đang Online -> Thêm vào list
+                        // Người này đang Online nhưng chưa nhắn tin bao giờ -> Vẫn thêm vào để có thể bắt đầu chat mới
                         contactDict[client.UserID] = new UserStatus
                         {
                             UserID = client.UserID,
-                            UserName = client.UserName,
+                            UserName = client.UserName ?? client.UserID,
                             IsOnline = true
                         };
                     }
                 }
             }
 
-            // 3. Trả về danh sách (Ưu tiên Online lên đầu)
+            // 3. Trả về danh sách (Ưu tiên Online lên đầu, sau đó theo tên)
             return contactDict.Values
                 .OrderByDescending(u => u.IsOnline)
-                .ThenBy(u => u.UserName)
+                .ThenBy(u => u.UserName ?? u.UserID)
                 .ToList();
         }
 

@@ -121,12 +121,44 @@ namespace ChatAppServer
                             FileName NVARCHAR(255),
                             CreatedAt DATETIME DEFAULT GETDATE()
                         );
+
+                        -- ✅ BẢNG NHÓM CHAT
+                        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Groups')
+                        CREATE TABLE Groups (
+                            GroupID NVARCHAR(50) PRIMARY KEY,
+                            GroupName NVARCHAR(100) NOT NULL,
+                            CreatorID NVARCHAR(50) NOT NULL,
+                            CreatedAt DATETIME DEFAULT GETDATE()
+                        );
+
+                        -- ✅ BẢNG THÀNH VIÊN NHÓM
+                        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'GroupMembers')
+                        CREATE TABLE GroupMembers (
+                            ID INT PRIMARY KEY IDENTITY(1,1),
+                            GroupID NVARCHAR(50) NOT NULL,
+                            UserID NVARCHAR(50) NOT NULL,
+                            IsAdmin BIT DEFAULT 0,
+                            JoinedAt DATETIME DEFAULT GETDATE(),
+                            UNIQUE(GroupID, UserID)
+                        );
+
+                        -- ✅ BẢNG TIN NHẮN NHÓM
+                        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'GroupMessages')
+                        CREATE TABLE GroupMessages (
+                            MessageID INT PRIMARY KEY IDENTITY(1,1),
+                            GroupID NVARCHAR(50) NOT NULL,
+                            SenderID NVARCHAR(50) NOT NULL,
+                            MessageContent NVARCHAR(MAX),
+                            MessageType NVARCHAR(20) DEFAULT 'Text',
+                            FileName NVARCHAR(255),
+                            CreatedAt DATETIME DEFAULT GETDATE()
+                        );
                     ";
                     using (var cmd = new SqlCommand(script, conn))
                     {
                         cmd.ExecuteNonQuery();
                     }
-                    Logger.Success("[Database] Đã khởi tạo các bảng Users và Messages!");
+                    Logger.Success("[Database] Đã khởi tạo các bảng Users, Messages, Groups, GroupMembers, GroupMessages!");
                 }
             }
             catch (Exception ex)
@@ -234,7 +266,15 @@ namespace ChatAppServer
                 using (var conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
-                    string query = "SELECT Username, DisplayName, IsOnline FROM Users WHERE Username != @uid";
+                    // ✅ [FIX] Chỉ lấy những người đã từng nhắn tin với user hiện tại
+                    string query = @"
+                        SELECT DISTINCT u.Username, u.DisplayName, u.IsOnline
+                        FROM Users u
+                        WHERE u.Username != @uid
+                        AND (
+                            EXISTS (SELECT 1 FROM Messages m WHERE m.SenderID = @uid AND m.ReceiverID = u.Username)
+                            OR EXISTS (SELECT 1 FROM Messages m WHERE m.SenderID = u.Username AND m.ReceiverID = @uid)
+                        )";
                     using (var cmd = new SqlCommand(query, conn))
                     {
                         cmd.Parameters.AddWithValue("@uid", excludeUserID);
@@ -448,6 +488,305 @@ namespace ChatAppServer
                 }
             }
             catch { return false; }
+        }
+
+        // =====================================================
+        // === QUẢN LÝ NHÓM CHAT ===
+        // =====================================================
+
+        public string CreateGroup(string groupName, string creatorId, List<string> memberIds)
+        {
+            if (!_dbAvailable) return null;
+            try
+            {
+                string groupId = Guid.NewGuid().ToString("N").Substring(0, 12);
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    
+                    // Tạo nhóm
+                    using (var cmd = new SqlCommand("INSERT INTO Groups (GroupID, GroupName, CreatorID) VALUES (@gid, @name, @creator)", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@gid", groupId);
+                        cmd.Parameters.AddWithValue("@name", groupName);
+                        cmd.Parameters.AddWithValue("@creator", creatorId);
+                        cmd.ExecuteNonQuery();
+                    }
+                    
+                    // Thêm creator là admin
+                    using (var cmd = new SqlCommand("INSERT INTO GroupMembers (GroupID, UserID, IsAdmin) VALUES (@gid, @uid, 1)", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@gid", groupId);
+                        cmd.Parameters.AddWithValue("@uid", creatorId);
+                        cmd.ExecuteNonQuery();
+                    }
+                    
+                    // Thêm các thành viên khác
+                    foreach (var memberId in memberIds)
+                    {
+                        if (memberId == creatorId) continue;
+                        using (var cmd = new SqlCommand("INSERT INTO GroupMembers (GroupID, UserID, IsAdmin) VALUES (@gid, @uid, 0)", conn))
+                        {
+                            cmd.Parameters.AddWithValue("@gid", groupId);
+                            cmd.Parameters.AddWithValue("@uid", memberId);
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                }
+                Logger.Success($"[Group] Đã tạo nhóm '{groupName}' (ID: {groupId}) với {memberIds.Count + 1} thành viên");
+                return groupId;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[Group] Lỗi tạo nhóm: {ex.Message}");
+                return null;
+            }
+        }
+
+        public List<GroupMemberInfo> GetGroupMembers(string groupId)
+        {
+            var list = new List<GroupMemberInfo>();
+            if (!_dbAvailable) return list;
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    string query = @"SELECT gm.UserID, gm.IsAdmin, u.DisplayName, u.IsOnline 
+                                     FROM GroupMembers gm 
+                                     JOIN Users u ON gm.UserID = u.Username 
+                                     WHERE gm.GroupID = @gid";
+                    using (var cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@gid", groupId);
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                list.Add(new GroupMemberInfo
+                                {
+                                    UserID = reader["UserID"].ToString(),
+                                    UserName = reader["DisplayName"].ToString(),
+                                    IsAdmin = reader["IsAdmin"] != DBNull.Value && (bool)reader["IsAdmin"],
+                                    IsOnline = reader["IsOnline"] != DBNull.Value && (bool)reader["IsOnline"]
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) { Logger.Error($"[Group] Lỗi lấy thành viên: {ex.Message}"); }
+            return list;
+        }
+
+        public List<GroupInfo> GetUserGroups(string userId)
+        {
+            var list = new List<GroupInfo>();
+            if (!_dbAvailable) return list;
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    string query = @"
+                        SELECT g.GroupID, g.GroupName, 
+                               (SELECT COUNT(*) FROM GroupMembers WHERE GroupID = g.GroupID) AS MemberCount,
+                               (SELECT TOP 1 MessageContent FROM GroupMessages WHERE GroupID = g.GroupID ORDER BY CreatedAt DESC) AS LastMessage,
+                               (SELECT TOP 1 CreatedAt FROM GroupMessages WHERE GroupID = g.GroupID ORDER BY CreatedAt DESC) AS LastMessageTime
+                        FROM Groups g
+                        JOIN GroupMembers gm ON g.GroupID = gm.GroupID
+                        WHERE gm.UserID = @uid
+                        ORDER BY LastMessageTime DESC";
+                    using (var cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@uid", userId);
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                list.Add(new GroupInfo
+                                {
+                                    GroupID = reader["GroupID"].ToString(),
+                                    GroupName = reader["GroupName"].ToString(),
+                                    MemberCount = (int)reader["MemberCount"],
+                                    LastMessage = reader["LastMessage"] != DBNull.Value ? reader["LastMessage"].ToString() : null,
+                                    LastMessageTime = reader["LastMessageTime"] != DBNull.Value ? (DateTime?)reader["LastMessageTime"] : null
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) { Logger.Error($"[Group] Lỗi lấy danh sách nhóm: {ex.Message}"); }
+            return list;
+        }
+
+        public int SaveGroupMessage(string groupId, string senderId, string content, string type = "Text", string fileName = null)
+        {
+            if (!_dbAvailable) return 0;
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    string query = @"INSERT INTO GroupMessages (GroupID, SenderID, MessageContent, MessageType, FileName) 
+                                     OUTPUT INSERTED.MessageID
+                                     VALUES (@gid, @sid, @content, @type, @file)";
+                    using (var cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@gid", groupId);
+                        cmd.Parameters.AddWithValue("@sid", senderId);
+                        cmd.Parameters.AddWithValue("@content", content ?? "");
+                        cmd.Parameters.AddWithValue("@type", type);
+                        cmd.Parameters.AddWithValue("@file", (object)fileName ?? DBNull.Value);
+                        return (int)cmd.ExecuteScalar();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[Group] Lỗi lưu tin nhắn: {ex.Message}");
+                return 0;
+            }
+        }
+
+        public List<GroupMessageHistory> GetGroupHistory(string groupId, int limit)
+        {
+            var list = new List<GroupMessageHistory>();
+            if (!_dbAvailable) return list;
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    string query = @"SELECT TOP (@l) gm.MessageID, gm.SenderID, u.DisplayName AS SenderName, 
+                                            gm.MessageContent, gm.MessageType, gm.FileName, gm.CreatedAt
+                                     FROM GroupMessages gm
+                                     JOIN Users u ON gm.SenderID = u.Username
+                                     WHERE gm.GroupID = @gid
+                                     ORDER BY gm.CreatedAt DESC";
+                    using (var cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@gid", groupId);
+                        cmd.Parameters.AddWithValue("@l", limit);
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                list.Add(new GroupMessageHistory
+                                {
+                                    MessageID = (int)reader["MessageID"],
+                                    SenderID = reader["SenderID"].ToString(),
+                                    SenderName = reader["SenderName"].ToString(),
+                                    MessageContent = reader["MessageContent"].ToString(),
+                                    MessageType = reader["MessageType"].ToString(),
+                                    FileName = reader["FileName"] != DBNull.Value ? reader["FileName"].ToString() : null,
+                                    CreatedAt = (DateTime)reader["CreatedAt"]
+                                });
+                            }
+                        }
+                    }
+                }
+                list.Reverse();
+            }
+            catch (Exception ex) { Logger.Error($"[Group] Lỗi lấy lịch sử: {ex.Message}"); }
+            return list;
+        }
+
+        public bool AddGroupMember(string groupId, string userId)
+        {
+            if (!_dbAvailable) return false;
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    using (var cmd = new SqlCommand("INSERT INTO GroupMembers (GroupID, UserID, IsAdmin) VALUES (@gid, @uid, 0)", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@gid", groupId);
+                        cmd.Parameters.AddWithValue("@uid", userId);
+                        cmd.ExecuteNonQuery();
+                        return true;
+                    }
+                }
+            }
+            catch { return false; }
+        }
+
+        public bool RemoveGroupMember(string groupId, string userId)
+        {
+            if (!_dbAvailable) return false;
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    using (var cmd = new SqlCommand("DELETE FROM GroupMembers WHERE GroupID = @gid AND UserID = @uid", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@gid", groupId);
+                        cmd.Parameters.AddWithValue("@uid", userId);
+                        cmd.ExecuteNonQuery();
+                        return true;
+                    }
+                }
+            }
+            catch { return false; }
+        }
+
+        public bool IsGroupMember(string groupId, string userId)
+        {
+            if (!_dbAvailable) return false;
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    using (var cmd = new SqlCommand("SELECT COUNT(*) FROM GroupMembers WHERE GroupID = @gid AND UserID = @uid", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@gid", groupId);
+                        cmd.Parameters.AddWithValue("@uid", userId);
+                        return (int)cmd.ExecuteScalar() > 0;
+                    }
+                }
+            }
+            catch { return false; }
+        }
+
+        public string GetGroupName(string groupId)
+        {
+            if (!_dbAvailable) return null;
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    using (var cmd = new SqlCommand("SELECT GroupName FROM Groups WHERE GroupID = @gid", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@gid", groupId);
+                        return cmd.ExecuteScalar()?.ToString();
+                    }
+                }
+            }
+            catch { return null; }
+        }
+
+        public string GetDisplayName(string userId)
+        {
+            if (!_dbAvailable) return userId;
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    using (var cmd = new SqlCommand("SELECT DisplayName FROM Users WHERE Username = @uid", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@uid", userId);
+                        var result = cmd.ExecuteScalar();
+                        return result?.ToString() ?? userId;
+                    }
+                }
+            }
+            catch { return userId; }
         }
     }
 }

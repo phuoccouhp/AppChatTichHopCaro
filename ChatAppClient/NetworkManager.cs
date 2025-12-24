@@ -50,7 +50,10 @@ namespace ChatAppClient.Forms
                 var packet = _pendingStatusPackets.Dequeue();
                 SafeInvokeHomeForm(() => _homeForm.HandleUserStatusUpdate(packet));
             }
+            // Yêu cầu danh sách bạn bè (contacts + online)
             SendPacket(new RequestOnlineListPacket());
+            // Yêu cầu danh sách nhóm chat
+            SendPacket(new RequestGroupListPacket { UserID = UserID });
         }
 
         private void SafeInvokeHomeForm(Action action)
@@ -374,6 +377,16 @@ namespace ChatAppClient.Forms
                 TankActionPacket p => () => _homeForm.HandleTankAction(p),
                 TankHitPacket p => () => _homeForm.HandleTankHit(p),
                 OnlineListPacket p => () => _homeForm.HandleOnlineListUpdate(p),
+                
+                // === GROUP CHAT ===
+                CreateGroupResultPacket p => () => _homeForm.HandleCreateGroupResult(p),
+                GroupTextPacket p => () => _homeForm.HandleGroupText(p),
+                GroupFilePacket p => () => _homeForm.HandleGroupFile(p),
+                GroupInviteNotificationPacket p => () => _homeForm.HandleGroupInviteNotification(p),
+                GroupMemberUpdatePacket p => () => _homeForm.HandleGroupMemberUpdate(p),
+                GroupListPacket p => () => _homeForm.HandleGroupList(p),
+                GroupHistoryResponsePacket p => () => _homeForm.HandleGroupHistoryResponse(p),
+                
                 _ => null
             };
             if (action != null) SafeInvokeHomeForm(action);

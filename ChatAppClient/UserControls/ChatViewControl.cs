@@ -103,7 +103,12 @@ namespace ChatAppClient.UserControls
                         }
                         else if (msg.MessageType == "Text")
                         {
-                            AddMessageBubble(msg.MessageContent ?? "", type, msg.CreatedAt);
+                            // ✅ [FIX] Đảm bảo nội dung tin nhắn không rỗng
+                            string content = msg.MessageContent;
+                            if (!string.IsNullOrWhiteSpace(content))
+                            {
+                                AddMessageBubble(content, type, msg.CreatedAt);
+                            }
                         }
                         else if (msg.MessageType == "File" || msg.MessageType == "Image")
                         {

@@ -74,6 +74,20 @@ namespace ChatAppClient.Forms
             lblFriendsTitle.Dock = DockStyle.Top;
             lblFriendsTitle.TextAlign = ContentAlignment.MiddleLeft; // Căn giữa dọc, trái ngang
             pnlSidebar.Controls.Add(lblFriendsTitle);
+
+            // ✅ Thêm nút Tạo Nhóm
+            Button btnCreateGroup = new Button();
+            btnCreateGroup.Text = "+ Nhóm";
+            btnCreateGroup.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            btnCreateGroup.Size = new Size(70, 30);
+            btnCreateGroup.Location = new Point(200, 10);
+            btnCreateGroup.BackColor = Color.FromArgb(88, 101, 242);
+            btnCreateGroup.ForeColor = Color.White;
+            btnCreateGroup.FlatStyle = FlatStyle.Flat;
+            btnCreateGroup.FlatAppearance.BorderSize = 0;
+            btnCreateGroup.Cursor = Cursors.Hand;
+            btnCreateGroup.Click += (s, e) => CreateNewGroup();
+            lblFriendsTitle.Controls.Add(btnCreateGroup);
         }
 
         private void frmHome_Load(object sender, EventArgs e)
@@ -322,9 +336,10 @@ namespace ChatAppClient.Forms
             if (this.InvokeRequired) { this.Invoke(new Action(() => HandleIncomingTextMessage(packet))); return; }
 
             ChatViewControl chatControl;
+            string senderName = packet.SenderID;
+            
             if (!openChatControls.TryGetValue(packet.SenderID, out chatControl))
             {
-                string senderName = packet.SenderID;
                 FriendListItem friendItem = null;
                 foreach (Control ctrl in flpFriendsList.Controls) { if (ctrl is FriendListItem item && item.FriendID == packet.SenderID) { senderName = item.FriendName; friendItem = item; break; } }
 
@@ -332,15 +347,125 @@ namespace ChatAppClient.Forms
                 openChatControls.Add(packet.SenderID, chatControl);
                 pnlMain.Controls.Add(chatControl);
             }
+            else
+            {
+                // Get sender name from friend list
+                foreach (Control ctrl in flpFriendsList.Controls) { if (ctrl is FriendListItem item && item.FriendID == packet.SenderID) { senderName = item.FriendName; break; } }
+            }
+            
             chatControl.ReceiveMessage(packet.MessageContent);
 
+            // ✅ THÔNG BÁO TIN NHẮN ĐẾN nếu không đang xem chat này
             if (_currentChatControl == null || _currentChatControl.Name != packet.SenderID)
             {
                 FriendListItem itemToAlert = null;
                 foreach (Control ctrl in flpFriendsList.Controls) { if (ctrl is FriendListItem item && item.FriendID == packet.SenderID) { itemToAlert = item; break; } }
                 itemToAlert?.SetNewMessageAlert(true);
+                
+                // ✅ Hiện thông báo Toast/Popup
+                ShowMessageNotification(senderName, packet.MessageContent);
             }
         }
+
+        // ✅ Hiện thông báo tin nhắn mới với Toast popup
+        private void ShowMessageNotification(string senderName, string message)
+        {
+            try
+            {
+                // Truncate message if too long
+                string displayMessage = message?.Length > 50 ? message.Substring(0, 47) + "..." : (message ?? "");
+                
+                // Play sound
+                System.Media.SystemSounds.Asterisk.Play();
+                
+                // Flash taskbar
+                FlashWindow(this.Handle, true);
+                
+                // ✅ Hiện Toast notification popup
+                ShowToastNotification(senderName, displayMessage);
+            }
+            catch { }
+        }
+        
+        // ✅ Toast notification popup
+        private Form _toastForm;
+        private System.Windows.Forms.Timer _toastTimer;
+        
+        private void ShowToastNotification(string title, string message)
+        {
+            // Đóng toast cũ nếu có
+            if (_toastForm != null && !_toastForm.IsDisposed)
+            {
+                _toastForm.Close();
+            }
+            
+            _toastForm = new Form();
+            _toastForm.FormBorderStyle = FormBorderStyle.None;
+            _toastForm.StartPosition = FormStartPosition.Manual;
+            _toastForm.ShowInTaskbar = false;
+            _toastForm.TopMost = true;
+            _toastForm.BackColor = Color.FromArgb(45, 48, 60);
+            _toastForm.Size = new Size(300, 80);
+            
+            // Vị trí góc dưới phải màn hình
+            var screen = Screen.PrimaryScreen.WorkingArea;
+            _toastForm.Location = new Point(screen.Right - _toastForm.Width - 20, screen.Bottom - _toastForm.Height - 20);
+            
+            // Border bo tròn
+            var path = Helpers.DrawingHelper.CreateRoundedRectPath(new Rectangle(0, 0, _toastForm.Width, _toastForm.Height), 10);
+            _toastForm.Region = new Region(path);
+            
+            // Icon tin nhắn
+            Label lblIcon = new Label();
+            lblIcon.Text = "💬";
+            lblIcon.Font = new Font("Segoe UI Emoji", 20);
+            lblIcon.AutoSize = true;
+            lblIcon.Location = new Point(10, 15);
+            _toastForm.Controls.Add(lblIcon);
+            
+            // Tên người gửi
+            Label lblTitle = new Label();
+            lblTitle.Text = title;
+            lblTitle.Font = new Font("Segoe UI Semibold", 11);
+            lblTitle.ForeColor = Color.White;
+            lblTitle.AutoSize = true;
+            lblTitle.Location = new Point(55, 10);
+            _toastForm.Controls.Add(lblTitle);
+            
+            // Nội dung tin nhắn
+            Label lblMessage = new Label();
+            lblMessage.Text = message;
+            lblMessage.Font = new Font("Segoe UI", 9);
+            lblMessage.ForeColor = Color.LightGray;
+            lblMessage.AutoSize = false;
+            lblMessage.Size = new Size(230, 35);
+            lblMessage.Location = new Point(55, 35);
+            _toastForm.Controls.Add(lblMessage);
+            
+            // Click để đóng
+            _toastForm.Click += (s, e) => _toastForm.Close();
+            foreach (Control ctrl in _toastForm.Controls)
+            {
+                ctrl.Click += (s, e) => _toastForm.Close();
+            }
+            
+            _toastForm.Show();
+            
+            // Tự đóng sau 4 giây
+            _toastTimer = new System.Windows.Forms.Timer();
+            _toastTimer.Interval = 4000;
+            _toastTimer.Tick += (s, e) =>
+            {
+                _toastTimer.Stop();
+                if (_toastForm != null && !_toastForm.IsDisposed)
+                    _toastForm.Close();
+            };
+            _toastTimer.Start();
+        }
+        
+        // Win32 API để flash taskbar
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool FlashWindow(IntPtr hwnd, bool bInvert);
 
         public void HandleIncomingFileMessage(FilePacket packet)
         {
@@ -678,5 +803,229 @@ namespace ChatAppClient.Forms
                 AddFriendToList(user.UserID, user.UserName, user.IsOnline ? "Online" : "Offline", user.IsOnline);
             }
         }
+
+        #region === XỬ LÝ NHÓM CHAT ===
+
+        private Dictionary<string, GroupChatViewControl> openGroupChatControls = new Dictionary<string, GroupChatViewControl>();
+        private GroupChatViewControl? _currentGroupChatControl = null;
+
+        public void HandleCreateGroupResult(CreateGroupResultPacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleCreateGroupResult(packet))); return; }
+
+            if (packet.Success)
+            {
+                MessageBox.Show($"Đã tạo nhóm '{packet.GroupName}' thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                
+                // Add group to list and open chat
+                AddGroupToList(packet.GroupID, packet.GroupName, packet.Members.Count);
+                OpenGroupChat(packet.GroupID, packet.GroupName, packet.Members);
+            }
+            else
+            {
+                MessageBox.Show(packet.Message ?? "Không thể tạo nhóm", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        public void HandleGroupText(GroupTextPacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleGroupText(packet))); return; }
+
+            bool isCurrentChat = _currentGroupChatControl != null && 
+                                 _currentGroupChatControl.Name == "group_" + packet.GroupID &&
+                                 _currentGroupChatControl.Visible;
+
+            if (openGroupChatControls.TryGetValue(packet.GroupID, out var chatControl))
+            {
+                chatControl.ReceiveMessage(packet);
+            }
+            
+            // Hiển thị thông báo nếu không đang xem chat nhóm này
+            if (!isCurrentChat)
+            {
+                SetGroupNewMessageAlert(packet.GroupID, true);
+                
+                // ✅ Hiện thông báo Toast cho tin nhắn nhóm
+                string groupName = GetGroupName(packet.GroupID);
+                ShowMessageNotification($"[{groupName}] {packet.SenderName}", packet.MessageContent ?? "");
+            }
+        }
+        
+        private string GetGroupName(string groupId)
+        {
+            foreach (Control ctrl in flpFriendsList.Controls)
+            {
+                if (ctrl is GroupListItem item && item.GroupID == groupId)
+                {
+                    return item.GroupName;
+                }
+            }
+            return "Nhóm";
+        }
+
+        public void HandleGroupFile(GroupFilePacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleGroupFile(packet))); return; }
+
+            if (openGroupChatControls.TryGetValue(packet.GroupID, out var chatControl))
+            {
+                chatControl.ReceiveFile(packet);
+            }
+            else
+            {
+                SetGroupNewMessageAlert(packet.GroupID, true);
+            }
+        }
+
+        public void HandleGroupInviteNotification(GroupInviteNotificationPacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleGroupInviteNotification(packet))); return; }
+
+            // Add group to list
+            AddGroupToList(packet.GroupID, packet.GroupName, packet.Members.Count);
+            
+            // Show notification
+            MessageBox.Show($"Bạn đã được {packet.InviterName} mời vào nhóm '{packet.GroupName}'!", 
+                "Nhóm mới", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        public void HandleGroupMemberUpdate(GroupMemberUpdatePacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleGroupMemberUpdate(packet))); return; }
+
+            if (openGroupChatControls.TryGetValue(packet.GroupID, out var chatControl))
+            {
+                if (packet.Joined)
+                    chatControl.OnMemberJoined(packet.UserName);
+                else
+                    chatControl.OnMemberLeft(packet.UserName);
+            }
+        }
+
+        public void HandleGroupList(GroupListPacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleGroupList(packet))); return; }
+
+            // Add all groups to sidebar
+            foreach (var group in packet.Groups)
+            {
+                AddGroupToList(group.GroupID, group.GroupName, group.MemberCount, group.LastMessage);
+            }
+        }
+
+        public void HandleGroupHistoryResponse(GroupHistoryResponsePacket packet)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => HandleGroupHistoryResponse(packet))); return; }
+
+            if (packet.Success && openGroupChatControls.TryGetValue(packet.GroupID, out var chatControl))
+            {
+                chatControl.LoadHistory(packet.Messages);
+            }
+        }
+
+        private void AddGroupToList(string groupId, string groupName, int memberCount, string lastMessage = null)
+        {
+            // Check if already exists
+            foreach (Control ctrl in flpFriendsList.Controls)
+            {
+                if (ctrl is GroupListItem item && item.GroupID == groupId)
+                {
+                    item.SetData(groupId, groupName, memberCount, lastMessage);
+                    return;
+                }
+            }
+
+            var groupItem = new GroupListItem();
+            groupItem.SetData(groupId, groupName, memberCount, lastMessage);
+            groupItem.Click += (s, e) => GroupItem_Click(groupItem);
+            foreach (Control ctrl in groupItem.Controls)
+            {
+                ctrl.Click += (s, e) => GroupItem_Click(groupItem);
+            }
+            
+            // Insert groups at the top
+            flpFriendsList.Controls.Add(groupItem);
+            flpFriendsList.Controls.SetChildIndex(groupItem, 0);
+        }
+
+        private void GroupItem_Click(GroupListItem item)
+        {
+            item.SetNewMessageAlert(false);
+            lblMainWelcome.Visible = false;
+
+            // Hide current chat
+            if (_currentChatControl != null) _currentChatControl.Visible = false;
+            if (_currentGroupChatControl != null) _currentGroupChatControl.Visible = false;
+
+            OpenGroupChat(item.GroupID, item.GroupName, null);
+        }
+
+        private void OpenGroupChat(string groupId, string groupName, List<GroupMemberInfo> members)
+        {
+            GroupChatViewControl chatControl;
+            
+            if (openGroupChatControls.ContainsKey(groupId))
+            {
+                chatControl = openGroupChatControls[groupId];
+                chatControl.Visible = true;
+            }
+            else
+            {
+                chatControl = new GroupChatViewControl(groupId, groupName, members ?? new List<GroupMemberInfo>());
+                chatControl.Name = "group_" + groupId;
+                chatControl.Dock = DockStyle.Fill;
+                openGroupChatControls.Add(groupId, chatControl);
+                pnlMain.Controls.Add(chatControl);
+            }
+
+            _currentGroupChatControl = chatControl;
+            _currentChatControl = null;
+            chatControl.BringToFront();
+        }
+
+        private void SetGroupNewMessageAlert(string groupId, bool hasNewMessage)
+        {
+            foreach (Control ctrl in flpFriendsList.Controls)
+            {
+                if (ctrl is GroupListItem item && item.GroupID == groupId)
+                {
+                    item.SetNewMessageAlert(hasNewMessage);
+                    break;
+                }
+            }
+        }
+
+        // Hàm để tạo nhóm mới - gọi từ UI
+        public void CreateNewGroup()
+        {
+            // Get online users for selection
+            var availableUsers = new List<UserStatus>();
+            foreach (Control ctrl in flpFriendsList.Controls)
+            {
+                if (ctrl is FriendListItem item)
+                {
+                    availableUsers.Add(new UserStatus 
+                    { 
+                        UserID = item.FriendID, 
+                        UserName = item.FriendName,
+                        IsOnline = item.FriendStatus == "Online"
+                    });
+                }
+            }
+
+            if (availableUsers.Count == 0)
+            {
+                MessageBox.Show("Không có người dùng nào để thêm vào nhóm!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var form = new frmCreateGroup(availableUsers);
+            if (form.ShowDialog() == DialogResult.OK && form.Result != null)
+            {
+                NetworkManager.Instance.SendPacket(form.Result);
+            }
+        }
+
+        #endregion
     }
 }

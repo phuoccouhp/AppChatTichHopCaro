@@ -31,7 +31,8 @@ namespace ChatAppClient.UserControls
 
         public void SetData(string message, MessageType type, DateTime time)
         {
-            _messageText = message;
+            // ✅ [FIX] Đảm bảo message không bao giờ null
+            _messageText = message ?? "(Tin nhắn trống)";
             _type = type;
             _time = time;
 

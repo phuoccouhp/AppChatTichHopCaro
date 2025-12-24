@@ -279,6 +279,15 @@ namespace ChatAppServer
                 case TankResponsePacket p: _server.ProcessTankResponse(p); break;
                 case TankActionPacket p: _server.ProcessTankAction(p); break;
                 case TankHitPacket p: _server.TankGameManager.ProcessHit(p.GameID, p.HitPlayerID, p.Damage, _server); break;
+
+                // === GROUP CHAT ===
+                case CreateGroupPacket p: HandleCreateGroup(p); break;
+                case GroupTextPacket p: HandleGroupText(p); break;
+                case GroupFilePacket p: HandleGroupFile(p); break;
+                case GroupInvitePacket p: HandleGroupInvite(p); break;
+                case LeaveGroupPacket p: HandleLeaveGroup(p); break;
+                case RequestGroupListPacket p: HandleRequestGroupList(p); break;
+                case GroupHistoryRequestPacket p: HandleGroupHistoryRequest(p); break;
             }
         }
 
@@ -380,6 +389,182 @@ namespace ChatAppServer
         private void HandleRequestOnlineList(RequestOnlineListPacket p)
         {
             SendPacket(new OnlineListPacket { OnlineUsers = _server.GetOnlineUsers(UserID) });
+        }
+
+        // =====================================================
+        // === XỬ LÝ NHÓM CHAT ===
+        // =====================================================
+
+        private void HandleCreateGroup(CreateGroupPacket p)
+        {
+            Logger.Info($"[Group] {p.CreatorID} tạo nhóm '{p.GroupName}' với {p.MemberIDs.Count} thành viên");
+            
+            string groupId = DatabaseManager.Instance.CreateGroup(p.GroupName, p.CreatorID, p.MemberIDs);
+            
+            if (string.IsNullOrEmpty(groupId))
+            {
+                SendPacket(new CreateGroupResultPacket { Success = false, Message = "Không thể tạo nhóm" });
+                return;
+            }
+            
+            var members = DatabaseManager.Instance.GetGroupMembers(groupId);
+            
+            // Gửi kết quả cho người tạo
+            SendPacket(new CreateGroupResultPacket 
+            { 
+                Success = true, 
+                GroupID = groupId, 
+                GroupName = p.GroupName,
+                Members = members
+            });
+            
+            // Thông báo cho các thành viên khác
+            var notification = new GroupInviteNotificationPacket
+            {
+                GroupID = groupId,
+                GroupName = p.GroupName,
+                InviterName = UserName,
+                Members = members
+            };
+            
+            foreach (var memberId in p.MemberIDs)
+            {
+                if (memberId != p.CreatorID)
+                {
+                    _server.RelayPrivatePacket(memberId, notification);
+                }
+            }
+        }
+
+        private void HandleGroupText(GroupTextPacket p)
+        {
+            Logger.Info($"[Group] {p.SenderID} -> Nhóm {p.GroupID}: {p.MessageContent}");
+            
+            // Lưu tin nhắn vào DB
+            _ = Task.Run(() => DatabaseManager.Instance.SaveGroupMessage(p.GroupID, p.SenderID, p.MessageContent, "Text"));
+            
+            // Lấy danh sách thành viên và gửi tin nhắn cho tất cả (trừ người gửi)
+            var members = DatabaseManager.Instance.GetGroupMembers(p.GroupID);
+            p.SenderName = UserName; // Đảm bảo có tên người gửi
+            p.SentAt = DateTime.Now;
+            
+            foreach (var member in members)
+            {
+                if (member.UserID != p.SenderID)
+                {
+                    _server.RelayPrivatePacket(member.UserID, p);
+                }
+            }
+        }
+
+        private void HandleGroupFile(GroupFilePacket p)
+        {
+            Logger.Info($"[Group] File từ {p.SenderID} -> Nhóm {p.GroupID}: {p.FileName}");
+            
+            // Lưu thông tin file vào DB
+            string type = p.IsImage ? "Image" : "File";
+            _ = Task.Run(() => DatabaseManager.Instance.SaveGroupMessage(p.GroupID, p.SenderID, $"Sent {type}: {p.FileName}", type, p.FileName));
+            
+            // Gửi cho tất cả thành viên
+            var members = DatabaseManager.Instance.GetGroupMembers(p.GroupID);
+            p.SenderName = UserName;
+            
+            foreach (var member in members)
+            {
+                if (member.UserID != p.SenderID)
+                {
+                    _server.RelayPrivatePacket(member.UserID, p);
+                }
+            }
+        }
+
+        private void HandleGroupInvite(GroupInvitePacket p)
+        {
+            Logger.Info($"[Group] {p.InviterID} mời {p.InviteeIDs.Count} người vào nhóm {p.GroupID}");
+            
+            var members = DatabaseManager.Instance.GetGroupMembers(p.GroupID);
+            
+            foreach (var inviteeId in p.InviteeIDs)
+            {
+                // Thêm vào DB
+                if (DatabaseManager.Instance.AddGroupMember(p.GroupID, inviteeId))
+                {
+                    // Thông báo cho người được mời
+                    var notification = new GroupInviteNotificationPacket
+                    {
+                        GroupID = p.GroupID,
+                        GroupName = p.GroupName,
+                        InviterName = UserName,
+                        Members = DatabaseManager.Instance.GetGroupMembers(p.GroupID)
+                    };
+                    _server.RelayPrivatePacket(inviteeId, notification);
+                    
+                    // Thông báo cho các thành viên cũ
+                    var memberUpdate = new GroupMemberUpdatePacket
+                    {
+                        GroupID = p.GroupID,
+                        UserID = inviteeId,
+                        UserName = DatabaseManager.Instance.GetDisplayName(inviteeId),
+                        Joined = true
+                    };
+                    
+                    foreach (var member in members)
+                    {
+                        _server.RelayPrivatePacket(member.UserID, memberUpdate);
+                    }
+                }
+            }
+        }
+
+        private void HandleLeaveGroup(LeaveGroupPacket p)
+        {
+            Logger.Info($"[Group] {p.UserID} rời nhóm {p.GroupID}");
+            
+            var members = DatabaseManager.Instance.GetGroupMembers(p.GroupID);
+            
+            if (DatabaseManager.Instance.RemoveGroupMember(p.GroupID, p.UserID))
+            {
+                // Thông báo cho các thành viên còn lại
+                var memberUpdate = new GroupMemberUpdatePacket
+                {
+                    GroupID = p.GroupID,
+                    UserID = p.UserID,
+                    UserName = UserName,
+                    Joined = false
+                };
+                
+                foreach (var member in members)
+                {
+                    if (member.UserID != p.UserID)
+                    {
+                        _server.RelayPrivatePacket(member.UserID, memberUpdate);
+                    }
+                }
+            }
+        }
+
+        private void HandleRequestGroupList(RequestGroupListPacket p)
+        {
+            var groups = DatabaseManager.Instance.GetUserGroups(p.UserID);
+            SendPacket(new GroupListPacket { Groups = groups });
+        }
+
+        private void HandleGroupHistoryRequest(GroupHistoryRequestPacket p)
+        {
+            // Kiểm tra quyền truy cập
+            if (!DatabaseManager.Instance.IsGroupMember(p.GroupID, p.UserID))
+            {
+                SendPacket(new GroupHistoryResponsePacket { Success = false, GroupID = p.GroupID });
+                return;
+            }
+            
+            var messages = DatabaseManager.Instance.GetGroupHistory(p.GroupID, p.Limit);
+            SendPacket(new GroupHistoryResponsePacket 
+            { 
+                Success = true, 
+                GroupID = p.GroupID,
+                Messages = messages 
+            });
         }
 
         public void Close()
