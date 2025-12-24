@@ -1,10 +1,10 @@
-﻿using System;
+﻿using ChatApp.Shared;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using System.Security.Cryptography; // Dùng để hash password nếu thiếu PasswordHelper
+using System.Security.Cryptography;
 using System.Text;
-using ChatApp.Shared; // Giả sử bạn có namespace này cho các class Packet
 
 namespace ChatAppServer
 {
@@ -20,55 +20,46 @@ namespace ChatAppServer
 
         private DatabaseManager()
         {
+            // ==================================================================================
+            // BƯỚC QUAN TRỌNG: SỬA TÊN SERVER TẠI ĐÂY
+            // 1. Nếu dùng bản Full mặc định: để là "." hoặc "localhost"
+            // 2. Nếu có tên cụ thể (VD: DESKTOP-ABC\SQL2019): điền y hệt vào
+            // ==================================================================================
 
-            // Danh sách các chuỗi kết nối để thử (Ưu tiên bản Full/Localhost trước)
-            string[] possibleConnectionStrings = new[]
+            string myServerName = "."; // <--- HÃY SỬA DÒNG NÀY (Ví dụ: @".\SQL2019" hoặc @"DESKTOP-ABC")
+
+            // ==================================================================================
+
+            // Tạo chuỗi kết nối chuẩn
+            _connectionString = $@"Data Source={myServerName};Initial Catalog=ChatDB;Integrated Security=True;TrustServerCertificate=True";
+
+            Logger.Info($"[Database] Đang kết nối tới SQL Server: {myServerName} ...");
+
+            try
             {
-                @"Data Source=.;Initial Catalog=ChatDB;Integrated Security=True;TrustServerCertificate=True",
-                @"Data Source=localhost;Initial Catalog=ChatDB;Integrated Security=True;TrustServerCertificate=True",
-                @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=ChatDB;Integrated Security=True;TrustServerCertificate=True",
-                @"Data Source=.\SQLEXPRESS;Initial Catalog=ChatDB;Integrated Security=True;TrustServerCertificate=True"
-            };
+                // Thử kết nối ngay lập tức (Timeout 5s)
+                var builder = new SqlConnectionStringBuilder(_connectionString);
+                builder.ConnectTimeout = 5;
 
-            Logger.Info("[Database] Đang tự động tìm máy chủ SQL Server...");
-
-            foreach (var connStr in possibleConnectionStrings)
-            {
-                try
+                using (var conn = new SqlConnection(builder.ConnectionString))
                 {
-                    // Test kết nối nhanh (Timeout 2s)
-                    var builder = new SqlConnectionStringBuilder(connStr);
-                    builder.ConnectTimeout = 2;
-
-                    using (var conn = new SqlConnection(builder.ConnectionString))
-                    {
-                        conn.Open();
-                    }
-
-                    // Nếu kết nối được thì chốt luôn
-                    _connectionString = connStr;
-                    _dbAvailable = true;
-                    string serverName = connStr.Split(';')[0].Replace("Data Source=", "");
-                    Logger.Success($"[Database] Đã kết nối thành công tới: {serverName}");
-                    break;
+                    conn.Open();
                 }
-                catch { /* Thử cái tiếp theo */ }
-            }
 
-            if (!_dbAvailable)
-            {
-                Logger.Error("[Database] KHÔNG TÌM THẤY SQL SERVER! Vui lòng kiểm tra Service SQL Server.");
-                // Fallback để tránh crash, dù biết là sẽ lỗi
-                _connectionString = possibleConnectionStrings[0];
-            }
-            else
-            {
+                _dbAvailable = true;
+                Logger.Success("[Database] Kết nối SQL Server THÀNH CÔNG!");
                 InitializeDatabase();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[Database] LỖI KẾT NỐI: {ex.Message}");
+                Logger.Warning($"LƯU Ý: Hãy kiểm tra xem tên Server '{myServerName}' đã đúng chưa?");
             }
         }
 
         private void InitializeDatabase()
         {
+            if (!_dbAvailable) return;
             try
             {
                 // 1. Kiểm tra và tạo Database nếu chưa có
@@ -157,25 +148,24 @@ namespace ChatAppServer
                                 string storedPass = reader["Password"].ToString();
                                 string realUser = reader["Username"].ToString();
                                 string display = reader["DisplayName"] != DBNull.Value ? reader["DisplayName"].ToString() : realUser;
+                                string email = reader["Email"] != DBNull.Value ? reader["Email"].ToString() : "";
 
                                 // Kiểm tra mật khẩu (Hỗ trợ cả Plain text và Hash)
                                 bool isValid = false;
                                 if (storedPass.Contains(":"))
                                 {
-                                    // Giả lập check hash (Nếu bạn có PasswordHelper thì dùng nó)
-                                    // Ở đây tôi viết hàm check đơn giản nội bộ để tránh lỗi thiếu file
                                     isValid = VerifyPasswordInternal(password, storedPass);
                                 }
                                 else
                                 {
                                     isValid = (storedPass == password);
                                     // Tự động nâng cấp lên Hash nếu đang dùng plain text
-                                    if (isValid) UpdatePassword(reader["Email"].ToString(), password);
+                                    if (isValid) UpdatePassword(email, password);
                                 }
 
                                 if (isValid)
                                 {
-                                    return new User { Username = realUser, DisplayName = display, Email = reader["Email"].ToString() };
+                                    return new User { Username = realUser, DisplayName = display, Email = email };
                                 }
                             }
                         }
@@ -233,7 +223,6 @@ namespace ChatAppServer
                 using (var conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
-                    // Lấy danh sách tất cả user (trừ bản thân)
                     string query = "SELECT Username, DisplayName, IsOnline FROM Users WHERE Username != @uid";
                     using (var cmd = new SqlCommand(query, conn))
                     {
@@ -423,7 +412,7 @@ namespace ChatAppServer
             catch { }
         }
 
-        // --- PASSWORD UTILS (Tự túc, không phụ thuộc PasswordHelper) ---
+        // --- PASSWORD UTILS ---
         private string HashPasswordInternal(string password)
         {
             using (var sha256 = SHA256.Create())
@@ -438,7 +427,7 @@ namespace ChatAppServer
             try
             {
                 var parts = storedHash.Split(':');
-                if (parts.Length != 2) return inputPassword == storedHash; // Fallback plain text
+                if (parts.Length != 2) return inputPassword == storedHash;
 
                 using (var sha256 = SHA256.Create())
                 {
@@ -449,13 +438,5 @@ namespace ChatAppServer
             }
             catch { return false; }
         }
-    }
-
-    // Class hỗ trợ map dữ liệu (Nếu ChatApp.Shared thiếu)
-    public class User
-    {
-        public string Username { get; set; }
-        public string DisplayName { get; set; }
-        public string Email { get; set; }
     }
 }

@@ -61,7 +61,7 @@ namespace ChatAppClient.Forms
             }
         }
 
-        // === [FIX: CONNECTION LOGIC] ===
+        // === [FIX: CONNECTION LOGIC - HỖ TRỢ WIFI] ===
         public async Task<bool> ConnectAsync(string ipAddress, int port)
         {
             // Nếu đã kết nối đúng IP/Port thì không cần kết nối lại
@@ -70,57 +70,108 @@ namespace ChatAppClient.Forms
 
             DisconnectInternal(false); // Reset sạch sẽ trước khi kết nối mới
 
-            var client = new TcpClient();
-            _client = client;
-            try
-            {
-                // Configure socket options BEFORE connecting
-                client.ReceiveBufferSize = 131072;
-                client.SendBufferSize = 131072;
-                client.NoDelay = true;
+            // ✅ [FIX WiFi] Thử kết nối tối đa 3 lần với timeout tăng dần
+            int maxRetries = 3;
+            int[] timeouts = { 10, 15, 20 }; // Timeout tăng dần: 10s, 15s, 20s
 
-                // Set keepalive to prevent firewall timeouts
+            for (int attempt = 0; attempt < maxRetries; attempt++)
+            {
+                var client = new TcpClient();
+                _client = client;
+
                 try
                 {
-                    client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-                    client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, 60000);
-                }
-                catch { }
+                    // Configure socket options BEFORE connecting
+                    client.ReceiveBufferSize = 131072;
+                    client.SendBufferSize = 131072;
+                    client.NoDelay = true;
 
-                // Connect with timeout
-                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken.None))
-                {
-                    cts.CancelAfter(TimeSpan.FromSeconds(10));
-                    await client.ConnectAsync(ipAddress, port, cts.Token);
-                }
-
-                // Check connection after connect attempt
-                if (client.Connected)
-                {
-                    lock (_streamLock)
+                    // ✅ [FIX WiFi] Cấu hình TCP KeepAlive đầy đủ cho kết nối qua mạng
+                    try
                     {
-                        _stream = client.GetStream();
+                        client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                        
+                        // Cấu hình keepalive chi tiết cho Windows
+                        byte[] keepAliveValues = new byte[12];
+                        BitConverter.GetBytes((uint)1).CopyTo(keepAliveValues, 0);        // Enable
+                        BitConverter.GetBytes((uint)30000).CopyTo(keepAliveValues, 4);    // 30s trước probe đầu
+                        BitConverter.GetBytes((uint)5000).CopyTo(keepAliveValues, 8);     // 5s giữa các probe
+                        client.Client.IOControl(IOControlCode.KeepAliveValues, keepAliveValues, null);
                     }
-                    CurrentServerIP = ipAddress;
-                    CurrentServerPort = port;
+                    catch { }
 
-                    // ✅ Start listening FIRST before any communication
-                    _listeningCts = new CancellationTokenSource();
-                    _ = StartListeningAsync(_listeningCts.Token);
+                    // Connect with timeout - tăng dần mỗi lần thử
+                    int timeoutSeconds = timeouts[attempt];
+                    Logger.Info($"[WiFi] Đang kết nối đến {ipAddress}:{port}... (Lần {attempt + 1}/{maxRetries}, timeout {timeoutSeconds}s)");
 
-                    Logger.Success($"Đã kết nối đến {ipAddress}:{port}");
-                    return true;
+                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken.None))
+                    {
+                        cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+                        await client.ConnectAsync(ipAddress, port, cts.Token);
+                    }
+
+                    // Check connection after connect attempt
+                    if (client.Connected)
+                    {
+                        lock (_streamLock)
+                        {
+                            _stream = client.GetStream();
+                            
+                            // ✅ [FIX WiFi] Thiết lập timeout cho NetworkStream
+                            _stream.ReadTimeout = 120000;  // 2 phút
+                            _stream.WriteTimeout = 60000;  // 1 phút
+                        }
+                        CurrentServerIP = ipAddress;
+                        CurrentServerPort = port;
+
+                        // ✅ Start listening FIRST before any communication
+                        _listeningCts = new CancellationTokenSource();
+                        _ = StartListeningAsync(_listeningCts.Token);
+
+                        Logger.Success($"Đã kết nối đến {ipAddress}:{port}");
+                        return true;
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    Logger.Warning($"Timeout lần {attempt + 1}: Không thể kết nối đến {ipAddress}:{port}");
+                    try { client.Close(); } catch { }
+                    _client = null;
+                    
+                    // Tiếp tục thử lần tiếp theo
+                    if (attempt < maxRetries - 1)
+                    {
+                        await Task.Delay(1000); // Chờ 1 giây trước khi thử lại
+                        continue;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Lỗi kết nối lần {attempt + 1}: {ex.Message}");
+                    try { client.Close(); } catch { }
+                    _client = null;
+                    
+                    // Nếu là lỗi "No route to host" hoặc "Connection refused", không cần thử lại
+                    if (ex is SocketException sockEx)
+                    {
+                        if (sockEx.SocketErrorCode == SocketError.NetworkUnreachable ||
+                            sockEx.SocketErrorCode == SocketError.HostUnreachable ||
+                            sockEx.SocketErrorCode == SocketError.ConnectionRefused)
+                        {
+                            Logger.Error($"Lỗi mạng không thể phục hồi: {sockEx.SocketErrorCode}");
+                            break;
+                        }
+                    }
+                    
+                    if (attempt < maxRetries - 1)
+                    {
+                        await Task.Delay(1000);
+                        continue;
+                    }
                 }
             }
-            catch (OperationCanceledException)
-            {
-                Logger.Error($"Timeout: Không thể kết nối đến {ipAddress}:{port} trong 10 giây");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Không thể kết nối đến {ipAddress}: {ex}");
-            }
 
+            Logger.Error($"Không thể kết nối đến {ipAddress}:{port} sau {maxRetries} lần thử");
             DisconnectInternal(false);
             return false;
         }
@@ -128,6 +179,9 @@ namespace ChatAppClient.Forms
         private async Task StartListeningAsync(CancellationToken token)
         {
             byte[] lenBuf = new byte[4];
+            int consecutiveTimeouts = 0;
+            const int maxConsecutiveTimeouts = 3; // Cho phép 3 lần timeout liên tiếp trước khi ngắt kết nối
+
             while (!token.IsCancellationRequested && _client != null && _client.Connected && _stream != null)
             {
                 try
@@ -150,21 +204,30 @@ namespace ChatAppClient.Forms
                             throw new EndOfStreamException();
                         }
 
-                        // Add read timeout to prevent indefinite waiting (especially over network)
+                        // ✅ [FIX WiFi] Tăng timeout lên 120s cho kết nối WiFi không ổn định
                         using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token))
                         {
-                            cts.CancelAfter(TimeSpan.FromSeconds(30)); // 30s timeout per read
+                            cts.CancelAfter(TimeSpan.FromSeconds(120)); // 120s timeout per read
                             try
                             {
                                 int r = await _stream.ReadAsync(lenBuf, read, 4 - read, cts.Token);
                                 if (r == 0) throw new EndOfStreamException();
                                 read += r;
+                                consecutiveTimeouts = 0; // Reset counter khi đọc thành công
                             }
                             catch (OperationCanceledException) when (cts.Token.IsCancellationRequested && !token.IsCancellationRequested)
                             {
-                                // ReadAsync timeout, not main token cancelled
-                                Logger.Warning("[Listening] ReadAsync timeout - server may be unresponsive");
-                                throw new EndOfStreamException();
+                                // ✅ [FIX WiFi] Cho phép một vài lần timeout trước khi ngắt kết nối
+                                consecutiveTimeouts++;
+                                Logger.Warning($"[Listening] ReadAsync timeout ({consecutiveTimeouts}/{maxConsecutiveTimeouts}) - server may be unresponsive");
+                                
+                                if (consecutiveTimeouts >= maxConsecutiveTimeouts)
+                                {
+                                    throw new EndOfStreamException("Too many consecutive timeouts");
+                                }
+                                
+                                // Tiếp tục đợi thêm thay vì ngắt kết nối ngay
+                                continue;
                             }
                         }
                     }
@@ -189,10 +252,10 @@ namespace ChatAppClient.Forms
                             throw new EndOfStreamException();
                         }
 
-                        // Add read timeout to prevent indefinite waiting
+                        // ✅ [FIX WiFi] Tăng timeout cho payload
                         using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token))
                         {
-                            cts.CancelAfter(TimeSpan.FromSeconds(30)); // 30s timeout per read
+                            cts.CancelAfter(TimeSpan.FromSeconds(120)); // 120s timeout per read
                             try
                             {
                                 int r = await _stream.ReadAsync(payload, offset, len - offset, cts.Token);
@@ -201,7 +264,7 @@ namespace ChatAppClient.Forms
                             }
                             catch (OperationCanceledException) when (cts.Token.IsCancellationRequested && !token.IsCancellationRequested)
                             {
-                                // ReadAsync timeout, not main token cancelled
+                                // ReadAsync timeout while reading payload - this is more serious
                                 Logger.Warning("[Listening] ReadAsync timeout while reading payload");
                                 throw new EndOfStreamException();
                             }
@@ -239,13 +302,32 @@ namespace ChatAppClient.Forms
                 }
                 catch (IOException ioEx)
                 {
-                    // Network error
+                    // ✅ [FIX WiFi] Kiểm tra xem có phải timeout tạm thời không
+                    if (ioEx.InnerException is SocketException sockEx && 
+                        sockEx.SocketErrorCode == SocketError.TimedOut)
+                    {
+                        consecutiveTimeouts++;
+                        Logger.Warning($"[Listening] IO Timeout ({consecutiveTimeouts}/{maxConsecutiveTimeouts})");
+                        
+                        if (consecutiveTimeouts < maxConsecutiveTimeouts)
+                            continue;
+                    }
+                    
                     Logger.Warning($"[Listening] IO Error: {ioEx.Message}");
                     break;
                 }
                 catch (SocketException sockEx)
                 {
-                    // Network socket error (timeout, connection reset, etc.)
+                    // ✅ [FIX WiFi] Xử lý một số lỗi socket có thể recover
+                    if (sockEx.SocketErrorCode == SocketError.TimedOut)
+                    {
+                        consecutiveTimeouts++;
+                        Logger.Warning($"[Listening] Socket Timeout ({consecutiveTimeouts}/{maxConsecutiveTimeouts})");
+                        
+                        if (consecutiveTimeouts < maxConsecutiveTimeouts)
+                            continue;
+                    }
+                    
                     Logger.Error($"[Listening] Socket Error: {sockEx.SocketErrorCode} - {sockEx.Message}");
                     break;
                 }

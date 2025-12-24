@@ -34,16 +34,29 @@ namespace ChatAppServer
                 ClientIP = _client.Client.RemoteEndPoint?.ToString() ?? "Unknown";
                 _stream = _client.GetStream();
 
-                // Configure socket for stable cross-network connections
+                // Configure socket for stable cross-network connections (WiFi, LAN)
                 _client.ReceiveBufferSize = 131072;
                 _client.SendBufferSize = 131072;
                 _client.NoDelay = true;
                 
-                // Set socket options for keepalive to prevent firewall from dropping idle connections
+                // ✅ [FIX WiFi] Thiết lập timeout cho NetworkStream - QUAN TRỌNG cho kết nối qua mạng
+                _stream.ReadTimeout = 120000;  // 2 phút - cho phép độ trễ cao của WiFi
+                _stream.WriteTimeout = 60000;  // 1 phút
+
+                // ✅ [FIX WiFi] Cấu hình TCP KeepAlive đầy đủ để duy trì kết nối qua NAT/Firewall
                 try
                 {
                     _client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-                    _client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, 60000); // 60s interval
+                    
+                    // Cấu hình keepalive chi tiết cho Windows (thời gian tính bằng milliseconds)
+                    // Byte 0-3: On/Off (1 = enable)
+                    // Byte 4-7: KeepAliveTime (thời gian trước khi gửi probe đầu tiên) 
+                    // Byte 8-11: KeepAliveInterval (thời gian giữa các probe)
+                    byte[] keepAliveValues = new byte[12];
+                    BitConverter.GetBytes((uint)1).CopyTo(keepAliveValues, 0);        // Enable
+                    BitConverter.GetBytes((uint)30000).CopyTo(keepAliveValues, 4);    // 30 giây trước probe đầu
+                    BitConverter.GetBytes((uint)5000).CopyTo(keepAliveValues, 8);     // 5 giây giữa các probe
+                    _client.Client.IOControl(IOControlCode.KeepAliveValues, keepAliveValues, null);
                 }
                 catch (Exception kex)
                 {
@@ -64,24 +77,59 @@ namespace ChatAppServer
         {
             if (_stream == null) return;
             byte[] lenBuf = new byte[4];
+            int consecutiveTimeouts = 0;
+            const int maxConsecutiveTimeouts = 5; // Server cho phép nhiều timeout hơn client
 
             while (_client != null && _client.Connected)
             {
                 try
                 {
+                    // ✅ [FIX WiFi] Đọc với khả năng chịu lỗi tạm thời
                     int read = 0;
                     while (read < 4)
                     {
-                        int r = await _stream.ReadAsync(lenBuf, read, 4 - read);
-                        if (r == 0) return;
-                        read += r;
+                        if (_stream == null || _client == null || !_client.Connected)
+                            return;
+                            
+                        try
+                        {
+                            int r = await _stream.ReadAsync(lenBuf, read, 4 - read);
+                            if (r == 0) return;
+                            read += r;
+                            consecutiveTimeouts = 0; // Reset khi đọc thành công
+                        }
+                        catch (IOException ioEx) when (ioEx.InnerException is SocketException sockEx && 
+                            sockEx.SocketErrorCode == SocketError.TimedOut)
+                        {
+                            // ✅ [FIX WiFi] Cho phép timeout tạm thời - không ngắt kết nối ngay
+                            consecutiveTimeouts++;
+                            Logger.Warning($"[{ClientIP}] Read timeout ({consecutiveTimeouts}/{maxConsecutiveTimeouts})");
+                            
+                            if (consecutiveTimeouts >= maxConsecutiveTimeouts)
+                            {
+                                Logger.Warning($"[{ClientIP}] Too many timeouts, disconnecting");
+                                return;
+                            }
+                            continue;
+                        }
                     }
+                    
                     int payloadLen = BitConverter.ToInt32(lenBuf, 0);
+
+                    // ✅ Validate packet size
+                    if (payloadLen <= 0 || payloadLen > 10 * 1024 * 1024)
+                    {
+                        Logger.Error($"[{ClientIP}] Invalid packet size: {payloadLen}");
+                        return;
+                    }
 
                     byte[] payload = new byte[payloadLen];
                     int offset = 0;
                     while (offset < payloadLen)
                     {
+                        if (_stream == null || _client == null || !_client.Connected)
+                            return;
+                            
                         int r = await _stream.ReadAsync(payload, offset, payloadLen - offset);
                         if (r == 0) return;
                         offset += r;

@@ -28,39 +28,63 @@ namespace ChatAppServer
             TankGameManager = new TankGameManager();
         }
 
-        public async Task StartAsync()
+        // --- Thay thế hàm StartAsync cũ bằng đoạn này ---
+
+        public void Start()
         {
             try
             {
+                // 1. Mở Firewall & Start Listener
                 if (!FirewallHelper.IsPortOpen(_port)) FirewallHelper.OpenPortAsAdmin(_port);
 
                 _listener.Start(100);
                 Logger.Success($"Server đang chạy tại Port: {_port}");
 
+                // 2. Chạy vòng lặp Game Loop (chạy ngầm)
                 _ = Task.Run(() => RunGameLoop(_serverCts.Token));
 
-                while (!_serverCts.IsCancellationRequested)
-                {
-                    try
-                    {
-                        TcpClient clientSocket = await _listener.AcceptTcpClientAsync();
-                        _ = Task.Run(() =>
-                        {
-                            try
-                            {
-                                var handler = new ClientHandler(clientSocket, this);
-                                _ = handler.StartHandlingAsync();
-                            }
-                            catch (Exception ex) { Logger.Error($"Lỗi client: {ex.Message}"); }
-                        });
-                    }
-                    catch (ObjectDisposedException) { break; }
-                }
+                // 3. Chạy vòng lặp Chờ Client kết nối (chạy ngầm, không await để tránh treo UI)
+                _ = Task.Run(() => AcceptClientsLoop(_serverCts.Token));
             }
             catch (Exception ex)
             {
                 Logger.Error($"Start Error: {ex.Message}");
                 throw;
+            }
+        }
+
+        // Hàm này chạy ngầm mãi mãi
+        private async Task AcceptClientsLoop(CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    // Chờ Client kết nối
+                    TcpClient clientSocket = await _listener.AcceptTcpClientAsync(token);
+
+                    // Có người kết nối -> Xử lý ở luồng riêng
+                    _ = Task.Run(() =>
+                    {
+                        try
+                        {
+                            var handler = new ClientHandler(clientSocket, this);
+                            _ = handler.StartHandlingAsync();
+                        }
+                        catch (Exception ex) { Logger.Error($"Lỗi client: {ex.Message}"); }
+                    });
+                }
+                catch (OperationCanceledException)
+                {
+                    // Server dừng thì thoát vòng lặp êm đẹp
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    // Lỗi khác thì log ra nhưng không dừng server
+                    if (!token.IsCancellationRequested)
+                        Logger.Error($"Accept Error: {ex.Message}");
+                }
             }
         }
 

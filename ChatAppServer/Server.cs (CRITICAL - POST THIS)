@@ -1,4 +1,0 @@
-﻿// Make sure your Server listens on:
-var listener = new TcpListener(IPAddress.Any, 9000);  // ✅ ANY = 0.0.0.0
-// NOT:
-var listener = new TcpListener(IPAddress.Loopback, 9000);  // ❌ 127.0.0.1 (local only)

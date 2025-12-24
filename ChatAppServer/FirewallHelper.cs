@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Net.NetworkInformation;
 using System.Security.Principal;
 using System.Threading;
 
@@ -45,6 +48,74 @@ namespace ChatAppServer
                 var principal = new WindowsPrincipal(identity);
                 return principal.IsInRole(WindowsBuiltInRole.Administrator);
             }
+        }
+
+        
+        /// <summary>
+        /// Ping an IP address (simple wrapper) returning (success, message, latencyMs)
+        /// </summary>
+        public static (bool success, string message, int latencyMs) Ping(string ipAddress, int timeoutMs = 3000)
+        {
+            try
+            {
+                using (var ping = new Ping())
+                {
+                    var reply = ping.Send(ipAddress, timeoutMs);
+                    if (reply.Status == IPStatus.Success)
+                        return (true, $"✓ Ping successful ({reply.RoundtripTime}ms)", (int)reply.RoundtripTime);
+                    return (false, $"✗ Ping failed: {reply.Status}", 0);
+                }
+            }
+            catch (Exception ex)
+            {
+                return (false, $"✗ Ping error: {ex.Message}", 0);
+            }
+        }
+
+        /// <summary>
+        /// Test TCP connection to ip:port with timeout, returns (success,message,latencyMs)
+        /// </summary>
+        public static (bool success, string message, int latencyMs) TestConnection(string ipAddress, int port, int timeoutMs = 5000)
+        {
+            var sw = Stopwatch.StartNew();
+            try
+            {
+                using (TcpClient client = new TcpClient())
+                {
+                    var result = client.BeginConnect(ipAddress, port, null, null);
+                    bool success = result.AsyncWaitHandle.WaitOne(timeoutMs);
+                    sw.Stop();
+                    if (success && client.Connected)
+                    {
+                        try { client.EndConnect(result); } catch { }
+                        return (true, $"✓ Connection successful to {ipAddress}:{port}", (int)sw.ElapsedMilliseconds);
+                    }
+                    return (false, $"✗ Cannot connect to {ipAddress}:{port} (Timeout)", (int)sw.ElapsedMilliseconds);
+                }
+            }
+            catch (Exception ex)
+            {
+                sw.Stop();
+                return (false, $"✗ Error: {ex.Message}", (int)sw.ElapsedMilliseconds);
+            }
+        }
+
+        /// <summary>
+        /// Check whether the local machine is listening on the given port (loopback)
+        /// </summary>
+        public static bool IsPortListening(int port)
+        {
+            try
+            {
+                using (var client = new TcpClient())
+                {
+                    var result = client.BeginConnect(IPAddress.Loopback, port, null, null);
+                    bool success = result.AsyncWaitHandle.WaitOne(2000);
+                    if (success && client.Connected) { try { client.EndConnect(result); } catch { } return true; }
+                    return false;
+                }
+            }
+            catch { return false; }
         }
 
         /// <summary>

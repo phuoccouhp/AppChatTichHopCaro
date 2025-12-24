@@ -19,6 +19,8 @@ namespace ChatAppServer
         {
             InitializeComponent();
             InitializeContextMenu();
+            // Thêm handler cho nút Test Connection
+            btnTestConnection.Click += BtnTestConnection_Click;
 
             // Xử lý chọn item trong listbox bằng chuột phải
             lstUsers.MouseDown += LstUsers_MouseDown;
@@ -42,12 +44,12 @@ namespace ChatAppServer
 
         // === 1. LOGIC START / STOP SERVER ===
 
-        private async void btnStart_Click(object sender, EventArgs e)
+        private void btnStart_Click(object sender, EventArgs e)
         {
-            // Kiểm tra Port có đang bị chiếm không (tránh crash)
+            // Kiểm tra Port
             if (IsPortInUse(PORT))
             {
-                MessageBox.Show($"Port {PORT} đang bị ứng dụng khác chiếm dụng!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Port {PORT} đang bận!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
@@ -60,26 +62,34 @@ namespace ChatAppServer
                 _server = new Server(PORT);
                 _server.OnUserListChanged += Server_OnUserListChanged;
 
-                // Chạy Server (StartAsync)
-                await _server.StartAsync();
+                // --- SỬA ĐOẠN NÀY ---
+                // Gọi hàm Start mới (không cần await nữa)
+                _server.Start();
 
-                // Nếu chạy thành công:
+                // Cập nhật lại IP hiển thị và kiểm tra port đang lắng nghe
+                UpdateServerIPDisplay();
+                bool listening = FirewallHelper.IsPortListening(PORT);
+                if (!listening)
+                {
+                    Logger.Warning($"Port {PORT} không lắng nghe trên localhost. Kiểm tra firewall hoặc quyền Admin.");
+                    MessageBox.Show($"Server có thể đã bắt đầu nhưng Port {PORT} không lắng nghe trên localhost.\n\nHãy thử: \n- Chạy 'Mở Firewall' và cấp quyền Admin.\n- Kiểm tra lại IP mà client nhập.\n- Kiểm tra AP Isolation trên Router.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+
+                // Cập nhật giao diện NGAY LẬP TỨC
                 btnStart.Enabled = false;
                 btnStop.Enabled = true;
                 lblStatus.Text = "Status: Running (Port " + PORT + ")";
                 lblStatus.ForeColor = Color.Green;
-
-                Logger.Success("Server đã khởi động thành công!");
+                // --------------------
             }
             catch (Exception ex)
             {
-                Logger.Error($"Khởi động thất bại: {ex.Message}");
-                MessageBox.Show($"Lỗi khởi động Server: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Logger.Error($"Server Start Failed: {ex.Message}");
+                MessageBox.Show($"Không thể Start Server: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
-                // Reset UI
                 btnStart.Enabled = true;
                 btnStop.Enabled = false;
-                lblStatus.Text = "Status: Stopped";
+                lblStatus.Text = "Status: Error";
                 lblStatus.ForeColor = Color.Red;
                 _server = null;
             }
@@ -295,6 +305,62 @@ namespace ChatAppServer
                "3. Copy địa chỉ IP màu xanh dương và gửi cho Client.\n" +
                "4. Client nhập IP đó vào ô 'Server IP' để kết nối.",
                "Hướng dẫn");
+        }
+
+        private async void BtnTestConnection_Click(object sender, EventArgs e)
+        {
+            btnTestConnection.Enabled = false;
+            btnTestConnection.Text = "Checking...";
+
+            await Task.Run(() =>
+            {
+                try
+                {
+                    var host = Dns.GetHostEntry(Dns.GetHostName());
+                    var ipList = host.AddressList
+                        .Where(ip => ip.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(ip))
+                        .Select(ip => ip.ToString())
+                        .ToList();
+
+                    if (ipList.Count == 0)
+                    {
+                        Logger.Warning("Không có IP mạng để kiểm tra.");
+                        Invoke(new Action(() => MessageBox.Show("Không tìm thấy IP mạng để kiểm tra.", "Kiểm tra kết nối", MessageBoxButtons.OK, MessageBoxIcon.Warning)));
+                        return;
+                    }
+
+                    var sb = new System.Text.StringBuilder();
+                    foreach (var ip in ipList)
+                    {
+                        sb.AppendLine($"-- Kiểm tra IP: {ip}:{PORT} --");
+
+                        var pingResult = FirewallHelper.Ping(ip, 2000);
+                        sb.AppendLine($"Ping: {pingResult.message} ({pingResult.latencyMs}ms)");
+
+                        var conn = FirewallHelper.TestConnection(ip, PORT, 3000);
+                        sb.AppendLine(conn.message + $" (latency {conn.latencyMs}ms)");
+
+                        bool listening = FirewallHelper.IsPortListening(PORT);
+                        sb.AppendLine(listening ? $"Port {PORT} đang LISTEN trên localhost" : $"Port {PORT} KHÔNG LISTEN trên localhost");
+
+                        bool fwOpen = FirewallHelper.IsPortOpen(PORT, "ChatAppServer");
+                        sb.AppendLine(fwOpen ? "Firewall rule: OK" : "Firewall rule: MISSING or not verified");
+                        sb.AppendLine();
+                    }
+
+                    string report = sb.ToString();
+                    Logger.Info(report);
+                    Invoke(new Action(() => MessageBox.Show(report, "Kết quả kiểm tra kết nối", MessageBoxButtons.OK, MessageBoxIcon.Information)));
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Lỗi khi kiểm tra kết nối: {ex.Message}");
+                    Invoke(new Action(() => MessageBox.Show($"Lỗi khi kiểm tra: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)));
+                }
+            });
+
+            btnTestConnection.Text = "🔍 Check Port";
+            btnTestConnection.Enabled = true;
         }
     }
 }
