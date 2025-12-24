@@ -27,33 +27,66 @@ namespace ChatAppServer
             // ==================================================================================
 
             string myServerName = "."; // <--- HÃY SỬA DÒNG NÀY (Ví dụ: @".\SQL2019" hoặc @"DESKTOP-ABC")
+            string targetDB = "ChatDB";
 
             // ==================================================================================
-
-            // Tạo chuỗi kết nối chuẩn
-            _connectionString = $@"Data Source={myServerName};Initial Catalog=ChatDB;Integrated Security=True;TrustServerCertificate=True";
 
             Logger.Info($"[Database] Đang kết nối tới SQL Server: {myServerName} ...");
 
             try
             {
-                // Thử kết nối ngay lập tức (Timeout 5s)
-                var builder = new SqlConnectionStringBuilder(_connectionString);
-                builder.ConnectTimeout = 5;
+                // ✅ BƯỚC 1: Kết nối vào "master" trước để kiểm tra/tạo Database
+                string masterConnectionString = $@"Data Source={myServerName};Initial Catalog=master;Integrated Security=True;TrustServerCertificate=True;Connect Timeout=5";
+                
+                using (var conn = new SqlConnection(masterConnectionString))
+                {
+                    conn.Open();
+                    Logger.Success("[Database] Kết nối SQL Server THÀNH CÔNG!");
+                    
+                    // Kiểm tra database tồn tại không
+                    string checkDb = $"SELECT database_id FROM sys.databases WHERE Name = '{targetDB}'";
+                    using (var cmd = new SqlCommand(checkDb, conn))
+                    {
+                        if (cmd.ExecuteScalar() == null)
+                        {
+                            // ✅ TẠO DATABASE NẾU CHƯA CÓ
+                            Logger.Warning($"[Database] Database '{targetDB}' chưa tồn tại. Đang tạo mới...");
+                            using (var createCmd = new SqlCommand($"CREATE DATABASE [{targetDB}]", conn))
+                            {
+                                createCmd.ExecuteNonQuery();
+                                Logger.Success($"[Database] Đã tạo Database '{targetDB}' thành công!");
+                            }
+                            
+                            // Chờ một chút để database sẵn sàng
+                            System.Threading.Thread.Sleep(1000);
+                        }
+                        else
+                        {
+                            Logger.Info($"[Database] Database '{targetDB}' đã tồn tại.");
+                        }
+                    }
+                }
 
-                using (var conn = new SqlConnection(builder.ConnectionString))
+                // ✅ BƯỚC 2: Bây giờ mới tạo chuỗi kết nối đến ChatDB
+                _connectionString = $@"Data Source={myServerName};Initial Catalog={targetDB};Integrated Security=True;TrustServerCertificate=True";
+                
+                // Thử kết nối để xác nhận
+                using (var conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
                 }
 
                 _dbAvailable = true;
-                Logger.Success("[Database] Kết nối SQL Server THÀNH CÔNG!");
+                Logger.Success($"[Database] Đã kết nối thành công đến '{targetDB}'!");
                 InitializeDatabase();
             }
             catch (Exception ex)
             {
                 Logger.Error($"[Database] LỖI KẾT NỐI: {ex.Message}");
-                Logger.Warning($"LƯU Ý: Hãy kiểm tra xem tên Server '{myServerName}' đã đúng chưa?");
+                Logger.Warning($"LƯU Ý: Hãy kiểm tra xem:");
+                Logger.Warning($"  1. Tên Server '{myServerName}' đã đúng chưa?");
+                Logger.Warning($"  2. SQL Server đã chạy chưa? (Mở Services.msc -> SQL Server)");
+                Logger.Warning($"  3. User Windows có quyền truy cập SQL Server không?");
             }
         }
 
@@ -62,30 +95,7 @@ namespace ChatAppServer
             if (!_dbAvailable) return;
             try
             {
-                // 1. Kiểm tra và tạo Database nếu chưa có
-                var builder = new SqlConnectionStringBuilder(_connectionString);
-                string targetDB = builder.InitialCatalog;
-                builder.InitialCatalog = "master"; // Kết nối vào master để check
-
-                using (var conn = new SqlConnection(builder.ConnectionString))
-                {
-                    conn.Open();
-                    string checkDb = $"SELECT database_id FROM sys.databases WHERE Name = '{targetDB}'";
-                    using (var cmd = new SqlCommand(checkDb, conn))
-                    {
-                        if (cmd.ExecuteScalar() == null)
-                        {
-                            Logger.Warning($"[Database] Database '{targetDB}' chưa tồn tại. Đang tạo mới...");
-                            using (var createCmd = new SqlCommand($"CREATE DATABASE {targetDB}", conn))
-                            {
-                                createCmd.ExecuteNonQuery();
-                                Logger.Success($"[Database] Đã tạo Database thành công.");
-                            }
-                        }
-                    }
-                }
-
-                // 2. Tạo Bảng (Tables) nếu chưa có
+                // Tạo Bảng (Tables) nếu chưa có
                 using (var conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
@@ -116,11 +126,12 @@ namespace ChatAppServer
                     {
                         cmd.ExecuteNonQuery();
                     }
+                    Logger.Success("[Database] Đã khởi tạo các bảng Users và Messages!");
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error($"[Database] Lỗi khởi tạo DB: {ex.Message}");
+                Logger.Error($"[Database] Lỗi khởi tạo bảng: {ex.Message}");
             }
         }
 

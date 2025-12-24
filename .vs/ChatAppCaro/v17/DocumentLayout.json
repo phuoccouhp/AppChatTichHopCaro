@@ -445,6 +445,14 @@
               "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
             },
             {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{74946827-37a0-11d2-a273-00c04f8ef4ff}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c64b9c2-e352-428e-a56d-0ace190b99a6}"
+            },
+            {
               "$type": "Document",
               "DocumentIndex": 93,
               "Title": "User.cs",
@@ -459,13 +467,34 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "FirewallHelper.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\FirewallHelper.cs",
+              "RelativeDocumentMoniker": "ChatAppServer\\FirewallHelper.cs",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\FirewallHelper.cs",
+              "RelativeToolTip": "ChatAppServer\\FirewallHelper.cs",
+              "ViewState": "AgIAABMAAAAAAAAAAAAQwCQAAAAfAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-24T08:45:26.698Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{56df62a4-05a3-4e5b-aa1a-99371ccfb997}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{b1e99781-ab81-11d0-b683-00aa00a3ee26}"
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 1,
               "Title": "ClientHandler.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\ClientHandler.cs",
               "RelativeDocumentMoniker": "ChatAppServer\\ClientHandler.cs",
               "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\ClientHandler.cs",
               "RelativeToolTip": "ChatAppServer\\ClientHandler.cs",
-              "ViewState": "AgIAAD4AAAAAAAAAAAA9wBEAAAA9AAAAAAAAAA==",
+              "ViewState": "AgIAAEsAAAAAAAAAAAA9wBEAAAA9AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-12-24T08:39:24.144Z",
               "EditorCaption": ""
@@ -485,26 +514,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "FirewallHelper.cs",
-              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\FirewallHelper.cs",
-              "RelativeDocumentMoniker": "ChatAppServer\\FirewallHelper.cs",
-              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\FirewallHelper.cs",
-              "RelativeToolTip": "ChatAppServer\\FirewallHelper.cs",
-              "ViewState": "AgIAABMAAAAAAAAAAAAQwCcAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-24T08:45:26.698Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
               "DocumentIndex": 4,
               "Title": "NetworkManager.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\NetworkManager.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\NetworkManager.cs",
               "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\NetworkManager.cs",
               "RelativeToolTip": "ChatAppClient\\NetworkManager.cs",
-              "ViewState": "AgIAAG8BAAAAAAAAAAAkwIgBAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAMEBAAAAAAAAAAAkwNoBAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-12-24T11:44:07.609Z",
               "EditorCaption": ""
@@ -534,22 +550,6 @@
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-12-24T11:27:30.568Z",
               "EditorCaption": ""
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{b1e99781-ab81-11d0-b683-00aa00a3ee26}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{56df62a4-05a3-4e5b-aa1a-99371ccfb997}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{74946827-37a0-11d2-a273-00c04f8ef4ff}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{1c64b9c2-e352-428e-a56d-0ace190b99a6}"
             },
             {
               "$type": "Document",
