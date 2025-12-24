@@ -2,87 +2,46 @@
 {
     partial class ChatMessageBubble
     {
-        /// <summary> 
-        /// Required designer variable.
-        /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary> 
-        /// Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
-            {
-                components.Dispose();
-            }
+            if (disposing && (components != null)) components.Dispose();
             base.Dispose(disposing);
         }
 
         #region Component Designer generated code
 
-        /// <summary> 
-        /// Required method for Designer support - do not modify 
-        /// the contents of this method with the code editor.
-        /// </summary>
         private void InitializeComponent()
         {
-            lblMessage = new Label();
-            btnForward = new Button();
-            SuspendLayout();
+            this.lblMessage = new System.Windows.Forms.Label();
+            this.SuspendLayout();
             // 
             // lblMessage
             // 
-            lblMessage.AutoSize = true;
-            lblMessage.BackColor = Color.Transparent;
-            lblMessage.Font = new Font("Segoe UI", 11F);
-            lblMessage.Location = new Point(12, 8);
-            lblMessage.Margin = new Padding(0);
-            lblMessage.MaximumSize = new Size(400, 0);
-            lblMessage.Name = "lblMessage";
-            lblMessage.Size = new Size(93, 25);
-            lblMessage.TabIndex = 0;
-            lblMessage.Text = "Message";
-            lblMessage.TextAlign = ContentAlignment.TopLeft;
-            lblMessage.Padding = new Padding(0);
-            // 
-            // btnForward
-            // 
-            btnForward.BackColor = Color.FromArgb(100, 100, 100);
-            btnForward.FlatAppearance.BorderSize = 0;
-            btnForward.FlatStyle = FlatStyle.Flat;
-            btnForward.Font = new Font("Segoe UI Emoji", 10F);
-            btnForward.ForeColor = Color.White;
-            btnForward.Location = new Point(0, 0);
-            btnForward.Name = "btnForward";
-            btnForward.Size = new Size(28, 28);
-            btnForward.TabIndex = 1;
-            btnForward.Text = "➡️";
-            btnForward.UseVisualStyleBackColor = false;
-            btnForward.Visible = false;
-            btnForward.Cursor = Cursors.Hand;
+            this.lblMessage.AutoSize = false;
+            this.lblMessage.BackColor = System.Drawing.Color.Transparent;
+            this.lblMessage.Dock = System.Windows.Forms.DockStyle.None; // Tự chỉnh location
+            this.lblMessage.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.lblMessage.Location = new System.Drawing.Point(5, 5);
+            this.lblMessage.Name = "lblMessage";
+            this.lblMessage.Size = new System.Drawing.Size(140, 40);
+            this.lblMessage.TabIndex = 0;
+            this.lblMessage.Text = "Message";
+            this.lblMessage.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // ChatMessageBubble
             // 
-            AutoScaleMode = AutoScaleMode.None;
-            AutoSize = true;
-            AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            BackColor = Color.Transparent;
-            Controls.Add(btnForward);
-            Controls.Add(lblMessage);
-            Margin = new Padding(5, 5, 100, 5);
-            MinimumSize = new Size(50, 30);
-            Name = "ChatMessageBubble";
-            Size = new Size(93, 32);
-            ResumeLayout(false);
-            PerformLayout();
-
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Controls.Add(this.lblMessage);
+            this.Name = "ChatMessageBubble";
+            this.Size = new System.Drawing.Size(150, 50);
+            this.ResumeLayout(false);
         }
 
         #endregion
 
         private System.Windows.Forms.Label lblMessage;
-        private System.Windows.Forms.Button btnForward;
     }
 }

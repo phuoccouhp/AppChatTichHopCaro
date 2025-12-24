@@ -6,10 +6,7 @@
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
-            {
-                components.Dispose();
-            }
+            if (disposing && (components != null)) components.Dispose();
             base.Dispose(disposing);
         }
 
@@ -18,13 +15,12 @@
         private void InitializeComponent()
         {
             this.pbImage = new System.Windows.Forms.PictureBox();
-            this.btnDownload = new System.Windows.Forms.Button();
-            this.btnForward = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pbImage)).BeginInit();
             this.SuspendLayout();
             // 
             // pbImage
             // 
+            this.pbImage.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pbImage.Cursor = System.Windows.Forms.Cursors.Hand;
             this.pbImage.Location = new System.Drawing.Point(0, 0);
             this.pbImage.Name = "pbImage";
@@ -33,56 +29,20 @@
             this.pbImage.TabIndex = 0;
             this.pbImage.TabStop = false;
             // 
-            // btnDownload
-            // 
-            this.btnDownload.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
-            this.btnDownload.FlatAppearance.BorderSize = 0;
-            this.btnDownload.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnDownload.Font = new System.Drawing.Font("Segoe UI Emoji", 9F);
-            this.btnDownload.ForeColor = System.Drawing.Color.White;
-            this.btnDownload.Location = new System.Drawing.Point(5, 5);
-            this.btnDownload.Name = "btnDownload";
-            this.btnDownload.Size = new System.Drawing.Size(30, 30);
-            this.btnDownload.TabIndex = 1;
-            this.btnDownload.Text = "⬇";
-            this.btnDownload.UseVisualStyleBackColor = false;
-            this.btnDownload.Visible = false;
-            this.btnDownload.Cursor = System.Windows.Forms.Cursors.Hand;
-            // 
-            // btnForward
-            // 
-            this.btnForward.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
-            this.btnForward.FlatAppearance.BorderSize = 0;
-            this.btnForward.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnForward.Font = new System.Drawing.Font("Segoe UI Emoji", 9F);
-            this.btnForward.ForeColor = System.Drawing.Color.White;
-            this.btnForward.Location = new System.Drawing.Point(40, 5);
-            this.btnForward.Name = "btnForward";
-            this.btnForward.Size = new System.Drawing.Size(30, 30);
-            this.btnForward.TabIndex = 2;
-            this.btnForward.Text = "↪";
-            this.btnForward.UseVisualStyleBackColor = false;
-            this.btnForward.Visible = false;
-            this.btnForward.Cursor = System.Windows.Forms.Cursors.Hand;
-            // 
             // ImageBubble
             // 
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
-            this.BackColor = System.Drawing.Color.Transparent;
-            this.Controls.Add(this.btnForward);
-            this.Controls.Add(this.btnDownload);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.pbImage);
             this.Name = "ImageBubble";
             this.Size = new System.Drawing.Size(200, 150);
             ((System.ComponentModel.ISupportInitialize)(this.pbImage)).EndInit();
             this.ResumeLayout(false);
-
         }
 
         #endregion
 
-        private System.Windows.Forms.PictureBox pbImage;
-        private System.Windows.Forms.Button btnDownload;
-        private System.Windows.Forms.Button btnForward;
+        // Khai báo biến ở đây, KHÔNG ĐƯỢC khai báo lại bên file .cs
+        public System.Windows.Forms.PictureBox pbImage;
     }
 }
