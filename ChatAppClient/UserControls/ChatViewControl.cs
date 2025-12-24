@@ -130,6 +130,12 @@ namespace ChatAppClient.UserControls
         // Thêm tin nhắn Text
         private void AddMessageBubble(string message, MessageType type, DateTime time)
         {
+            // ✅ [FIX] Đảm bảo message không null
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                message = "(Tin nhắn trống)";
+            }
+            
             var bubble = new ChatMessageBubble();
             bubble.SetData(message, type, time);
             AddControlToLayout(bubble, type);
@@ -232,10 +238,28 @@ namespace ChatAppClient.UserControls
             string content = txtMessage.Text.Trim();
             if (string.IsNullOrEmpty(content)) return;
 
+            // ✅ [FIX] Đảm bảo content không rỗng trước khi gửi
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return;
+            }
+
+            // Hiển thị tin nhắn ngay lập tức
             AddMessageBubble(content, MessageType.Outgoing, DateTime.Now);
 
-            var packet = new TextPacket { SenderID = _myId, ReceiverID = _friendId, MessageContent = content };
-            NetworkManager.Instance.SendPacket(packet);
+            // Gửi packet
+            var packet = new TextPacket 
+            { 
+                SenderID = _myId ?? "", 
+                ReceiverID = _friendId ?? "", 
+                MessageContent = content 
+            };
+            
+            if (!NetworkManager.Instance.SendPacket(packet))
+            {
+                // Nếu gửi thất bại, có thể hiển thị thông báo
+                System.Diagnostics.Debug.WriteLine("Không thể gửi tin nhắn");
+            }
 
             txtMessage.Clear();
             txtMessage.Focus();
@@ -384,6 +408,13 @@ namespace ChatAppClient.UserControls
         public void ReceiveMessage(string content)
         {
             if (this.InvokeRequired) { this.Invoke(new Action(() => ReceiveMessage(content))); return; }
+            
+            // ✅ [FIX] Đảm bảo content không null và không rỗng
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                content = "(Tin nhắn trống)";
+            }
+            
             AddMessageBubble(content, MessageType.Incoming, DateTime.Now);
         }
 
@@ -445,8 +476,19 @@ namespace ChatAppClient.UserControls
             string[] emojis = { "😊", "😂", "❤️", "👍", "🤔", "😢", "😠", "😮", "😎", "😥", "😭", "💀" };
             foreach (string emoji in emojis)
             {
-                Button btn = new Button { Text = emoji, Font = new Font("Segoe UI Emoji", 14), Size = new Size(40, 40), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand, BackColor = Color.White, ForeColor = Color.Black };
+                // ✅ [FIX] Màu button emoji đen như GroupChat
+                Button btn = new Button 
+                { 
+                    Text = emoji, 
+                    Font = new Font("Segoe UI Emoji", 14), 
+                    Size = new Size(40, 40), 
+                    FlatStyle = FlatStyle.Flat, 
+                    Cursor = Cursors.Hand, 
+                    BackColor = Color.FromArgb(54, 57, 63), 
+                    ForeColor = Color.White 
+                };
                 btn.FlatAppearance.BorderSize = 0;
+                btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(88, 101, 242);
                 btn.Click += (s, e) => { txtMessage.AppendText(emoji); pnlEmojiPicker.Visible = false; txtMessage.Focus(); };
                 pnlEmojiPicker.Controls.Add(btn);
             }
@@ -454,9 +496,8 @@ namespace ChatAppClient.UserControls
 
         private void PnlHeader_Paint(object sender, PaintEventArgs e)
         {
-            if (sender is not Panel p) return;
-            using (LinearGradientBrush b = new LinearGradientBrush(p.ClientRectangle, AppColors.HeaderGradientStart, AppColors.HeaderGradientEnd, LinearGradientMode.Vertical))
-                e.Graphics.FillRectangle(b, p.ClientRectangle);
+            // ✅ [FIX] Không vẽ gradient nữa, dùng màu đen như GroupChat
+            // Header đã được set BackColor trong Designer rồi
         }
 
         private void PnlInput_Paint(object sender, PaintEventArgs e) { /* Custom border */ }

@@ -353,7 +353,12 @@ namespace ChatAppClient.Forms
                 foreach (Control ctrl in flpFriendsList.Controls) { if (ctrl is FriendListItem item && item.FriendID == packet.SenderID) { senderName = item.FriendName; break; } }
             }
             
-            chatControl.ReceiveMessage(packet.MessageContent);
+            // ✅ [FIX] Đảm bảo MessageContent không null
+            string messageContent = packet.MessageContent ?? "";
+            if (!string.IsNullOrWhiteSpace(messageContent))
+            {
+                chatControl.ReceiveMessage(messageContent);
+            }
 
             // ✅ THÔNG BÁO TIN NHẮN ĐẾN nếu không đang xem chat này
             if (_currentChatControl == null || _currentChatControl.Name != packet.SenderID)

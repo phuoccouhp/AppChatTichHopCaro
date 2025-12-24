@@ -43,9 +43,10 @@
             lblMessage.Name = "lblMessage";
             lblMessage.Size = new Size(93, 25);
             lblMessage.TabIndex = 0;
-            lblMessage.Text = "Message";
+            lblMessage.Text = "";
             lblMessage.TextAlign = ContentAlignment.TopLeft;
             lblMessage.Padding = new Padding(0);
+            lblMessage.Visible = false; // ✅ [FIX] Ẩn hoàn toàn vì dùng custom painting
             // 
             // btnForward
             // 
@@ -66,15 +67,14 @@
             // ChatMessageBubble
             // 
             AutoScaleMode = AutoScaleMode.None;
-            AutoSize = true;
-            AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            AutoSize = false; // ✅ [FIX] Tắt AutoSize để control size được tính toán chính xác
             BackColor = Color.Transparent;
             Controls.Add(btnForward);
             Controls.Add(lblMessage);
-            Margin = new Padding(5, 5, 100, 5);
+            Margin = new Padding(5, 5, 5, 5);
             MinimumSize = new Size(50, 30);
             Name = "ChatMessageBubble";
-            Size = new Size(93, 32);
+            Size = new Size(100, 50);
             ResumeLayout(false);
             PerformLayout();
 

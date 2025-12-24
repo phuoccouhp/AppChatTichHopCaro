@@ -49,7 +49,7 @@
             // 
             // pnlHeader
             // 
-            pnlHeader.BackColor = Color.FromArgb(0, 145, 255);
+            pnlHeader.BackColor = Color.FromArgb(47, 49, 54); // ✅ [FIX] Màu đen như GroupChat
             pnlHeader.Controls.Add(btnStartGame);
             pnlHeader.Controls.Add(lblFriendName);
             pnlHeader.Dock = DockStyle.Top;
@@ -64,7 +64,7 @@
             btnStartGame.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnStartGame.BackColor = Color.Transparent;
             btnStartGame.FlatAppearance.BorderSize = 0;
-            btnStartGame.FlatAppearance.MouseOverBackColor = Color.FromArgb(0, 120, 220);
+            btnStartGame.FlatAppearance.MouseOverBackColor = Color.FromArgb(64, 68, 75); // ✅ [FIX] Màu hover đen
             btnStartGame.FlatStyle = FlatStyle.Flat;
             btnStartGame.Font = new Font("Segoe UI Emoji", 14F);
             btnStartGame.ForeColor = Color.White;
@@ -89,7 +89,7 @@
             // 
             // pnlInput
             // 
-            pnlInput.BackColor = Color.White;
+            pnlInput.BackColor = Color.FromArgb(64, 68, 75); // ✅ [FIX] Màu đen như GroupChat
             pnlInput.Controls.Add(btnEmoji);
             pnlInput.Controls.Add(btnAttach);
             pnlInput.Controls.Add(btnSend);
@@ -106,7 +106,7 @@
             // 
             btnEmoji.BackColor = Color.Transparent;
             btnEmoji.FlatAppearance.BorderSize = 0;
-            btnEmoji.FlatAppearance.MouseOverBackColor = Color.FromArgb(245, 245, 245);
+            btnEmoji.FlatAppearance.MouseOverBackColor = Color.FromArgb(88, 101, 242); // ✅ [FIX] Màu hover xanh
             btnEmoji.FlatStyle = FlatStyle.Flat;
             btnEmoji.Font = new Font("Segoe UI Emoji", 14F);
             btnEmoji.Location = new Point(55, 18);
@@ -122,7 +122,7 @@
             btnAttach.BackColor = Color.Transparent;
             btnAttach.ContextMenuStrip = ctxAttachMenu;
             btnAttach.FlatAppearance.BorderSize = 0;
-            btnAttach.FlatAppearance.MouseOverBackColor = Color.FromArgb(245, 245, 245);
+            btnAttach.FlatAppearance.MouseOverBackColor = Color.FromArgb(88, 101, 242); // ✅ [FIX] Màu hover xanh
             btnAttach.FlatStyle = FlatStyle.Flat;
             btnAttach.Font = new Font("Segoe UI Emoji", 14F);
             btnAttach.Location = new Point(12, 18);
@@ -157,7 +157,7 @@
             btnSend.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnSend.BackColor = Color.Transparent;
             btnSend.BorderRadius = 22;
-            btnSend.ButtonColor = Color.FromArgb(0, 145, 255);
+            btnSend.ButtonColor = Color.FromArgb(88, 101, 242); // ✅ [FIX] Màu xanh như GroupChat
             btnSend.FlatStyle = FlatStyle.Flat;
             btnSend.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             btnSend.ForeColor = Color.Transparent;
@@ -180,12 +180,13 @@
             txtMessage.Name = "txtMessage";
             txtMessage.Size = new Size(315, 38);
             txtMessage.TabIndex = 0;
-            txtMessage.BackColor = Color.FromArgb(245, 247, 250);
+            txtMessage.BackColor = Color.FromArgb(54, 57, 63); // ✅ [FIX] Màu đen như GroupChat
+            txtMessage.ForeColor = Color.White; // ✅ [FIX] Chữ trắng
             // 
             // flpMessages
             // 
             flpMessages.AutoScroll = true;
-            flpMessages.BackColor = Color.FromArgb(240, 242, 245);
+            flpMessages.BackColor = Color.FromArgb(54, 57, 63); // ✅ [FIX] Màu đen như GroupChat
             flpMessages.Dock = DockStyle.Fill;
             flpMessages.FlowDirection = FlowDirection.TopDown;
             flpMessages.Location = new Point(0, 65);
@@ -198,7 +199,7 @@
             // pnlEmojiPicker
             // 
             pnlEmojiPicker.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            pnlEmojiPicker.BackColor = Color.White;
+            pnlEmojiPicker.BackColor = Color.FromArgb(64, 68, 75); // ✅ [FIX] Màu đen như GroupChat
             pnlEmojiPicker.BorderStyle = BorderStyle.None;
             pnlEmojiPicker.Location = new Point(102, 330);
             pnlEmojiPicker.Name = "pnlEmojiPicker";

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -19,8 +20,7 @@ namespace ChatAppServer
         {
             InitializeComponent();
             InitializeContextMenu();
-            // Thêm handler cho nút Test Connection
-            btnTestConnection.Click += BtnTestConnection_Click;
+            
 
             // Xử lý chọn item trong listbox bằng chuột phải
             lstUsers.MouseDown += LstUsers_MouseDown;
@@ -174,29 +174,68 @@ namespace ChatAppServer
         {
             try
             {
-                // Lấy tất cả IP V4 của máy (Trừ localhost)
-                var host = Dns.GetHostEntry(Dns.GetHostName());
-                var ipList = host.AddressList
-                    .Where(ip => ip.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(ip))
-                    .Select(ip => ip.ToString())
-                    .ToList();
+                // ✅ [FIX] Lấy IP của interface mà socket server có thể nhận kết nối
+                // Dùng socket trick: kết nối đến địa chỉ bên ngoài để lấy IP của interface đang route
+                string selectedIP = GetSocketConnectableIP();
+                
+                if (string.IsNullOrEmpty(selectedIP))
+                {
+                    selectedIP = "localhost";
+                }
 
-                if (ipList.Count > 0)
-                {
-                    lblServerIP.Text = $"IP Client cần nhập: {string.Join("  HOẶC  ", ipList)}";
-                    lblServerIP.ForeColor = Color.Blue;
-                    Logger.Info($"Các địa chỉ IP khả dụng: {string.Join(", ", ipList)}");
-                }
-                else
-                {
-                    lblServerIP.Text = "Không tìm thấy IP mạng LAN. Kiểm tra kết nối Wifi/Dây.";
-                    lblServerIP.ForeColor = Color.Red;
-                }
+                lblServerIP.Text = $"IP Client cần nhập: {selectedIP}";
+                lblServerIP.ForeColor = Color.Blue;
+                Logger.Info($"Địa chỉ IP socket: {selectedIP}");
             }
-            catch
+            catch (Exception ex)
             {
-                lblServerIP.Text = "Lỗi khi lấy IP máy.";
+                lblServerIP.Text = "IP: localhost";
+                lblServerIP.ForeColor = Color.Blue;
+                Logger.Warning($"Lỗi khi lấy IP: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Lấy IP của interface mà socket có thể kết nối (IP mà client cần dùng để connect)
+        /// Đây là IP của interface đang route traffic ra internet
+        /// </summary>
+        private string? GetSocketConnectableIP()
+        {
+            try
+            {
+                // ✅ Socket trick: Tạo socket kết nối đến địa chỉ bên ngoài
+                // Hệ điều hành sẽ tự động chọn interface đang route ra internet
+                // LocalEndPoint của socket này chính là IP mà client cần dùng để kết nối
+                using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+                {
+                    socket.Connect("8.8.8.8", 65530);
+                    var endPoint = socket.LocalEndPoint as IPEndPoint;
+                    if (endPoint != null && !IPAddress.IsLoopback(endPoint.Address))
+                    {
+                        return endPoint.Address.ToString();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Socket trick failed: {ex.Message}");
+            }
+
+            // Fallback: Lấy IP đầu tiên không phải Loopback
+            try
+            {
+                var host = Dns.GetHostEntry(Dns.GetHostName());
+                var ip = host.AddressList
+                    .FirstOrDefault(addr => addr.AddressFamily == AddressFamily.InterNetwork 
+                                          && !IPAddress.IsLoopback(addr));
+                if (ip != null)
+                {
+                    return ip.ToString();
+                }
+            }
+            catch { }
+
+            return null;
         }
 
         private bool IsPortInUse(int port)
@@ -309,8 +348,6 @@ namespace ChatAppServer
 
         private async void BtnTestConnection_Click(object sender, EventArgs e)
         {
-            btnTestConnection.Enabled = false;
-            btnTestConnection.Text = "Checking...";
 
             await Task.Run(() =>
             {
@@ -359,8 +396,6 @@ namespace ChatAppServer
                 }
             });
 
-            btnTestConnection.Text = "🔍 Check Port";
-            btnTestConnection.Enabled = true;
         }
     }
 }
