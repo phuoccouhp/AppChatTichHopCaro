@@ -3,6 +3,18 @@
   "WorkspaceRootPath": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\RUN_DIAGNOSTICS.ps1||{3B902123-F8A7-4915-9F01-361F908088D0}|",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:RUN_DIAGNOSTICS.ps1||{3B902123-F8A7-4915-9F01-361F908088D0}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CB660E21-0DDC-4841-8C1F-F0221C293F47}|ChatAppClient\\ChatAppClient.csproj|c:\\users\\admin\\source\\repos\\appchattichhopcaro\\chatappclient\\forms\\frmlogin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{CB660E21-0DDC-4841-8C1F-F0221C293F47}|ChatAppClient\\ChatAppClient.csproj|solutionrelative:chatappclient\\forms\\frmlogin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CB660E21-0DDC-4841-8C1F-F0221C293F47}|ChatAppClient\\ChatAppClient.csproj|c:\\users\\admin\\source\\repos\\appchattichhopcaro\\chatappclient\\forms\\frmhome.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{CB660E21-0DDC-4841-8C1F-F0221C293F47}|ChatAppClient\\ChatAppClient.csproj|solutionrelative:chatappclient\\forms\\frmhome.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|c:\\users\\admin\\source\\repos\\appchattichhopcaro\\chatappserver\\firewallhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|solutionrelative:chatappserver\\firewallhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -129,6 +141,42 @@
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\MANUAL_COMMANDS.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:MANUAL_COMMANDS.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\DEBUG_CLIENT_HOME_FORM.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:DEBUG_CLIENT_HOME_FORM.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\CLIENT_HOME_FORM_FIX.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:CLIENT_HOME_FORM_FIX.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\APPLY_FIX_NOW.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:APPLY_FIX_NOW.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\SOLUTION_SUMMARY.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:SOLUTION_SUMMARY.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ACTION_NOW.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:ACTION_NOW.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\COMPLETE_SOLUTION.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:COMPLETE_SOLUTION.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\FLOW_DIAGRAM.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:FLOW_DIAGRAM.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\FINAL_SOLUTION.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:FINAL_SOLUTION.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\INDEX.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:INDEX.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}"
     }
   ],
   "DocumentGroupContainers": [
@@ -138,7 +186,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 16,
+          "SelectedChildIndex": 15,
           "Children": [
             {
               "$type": "Bookmark",
@@ -198,7 +246,165 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 25,
+              "DocumentIndex": 1,
+              "Title": "frmLogin.cs [Design]",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\Forms\\frmLogin.cs",
+              "RelativeDocumentMoniker": "ChatAppClient\\Forms\\frmLogin.cs",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\Forms\\frmLogin.cs [Design]",
+              "RelativeToolTip": "ChatAppClient\\Forms\\frmLogin.cs [Design]",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-24T10:46:58.629Z",
+              "EditorCaption": " [Design]"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "RUN_DIAGNOSTICS.ps1",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\RUN_DIAGNOSTICS.ps1",
+              "RelativeDocumentMoniker": "RUN_DIAGNOSTICS.ps1",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\RUN_DIAGNOSTICS.ps1",
+              "RelativeToolTip": "RUN_DIAGNOSTICS.ps1",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAA5AAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAANOSURBVDhPjVRLTBtXFD1jsEmgBBMwhFQKICtNUEJWXaTKrpG6aJAiISRWWXaTqs2KLmBXKatIEeomUqTumixY5NcqqyiNEhXk8IlCim3ANr/BgAf/xjOeYT7Pve/ZBCchlCOdee/emXvm3vs\u002BEggzMzOMjwfBNM3C6Ojoj2NjYw/ILJa9H6FUKokxGo2y/8Paygr788mTRH9//zWfz9ckAveBpzIK8YN4vLUVx1tauoaGhob7\u002Bvquejyehkrop\u002BAZuq57IHVdZ5OTk8wwDBYKhRYHBgauUWh9WWEP7zM8DBRFwcTEBFRVDQ4ODt4mVxfRJ15Wg2foOM6hqGkak2WZzc7O8oW8QmwWIhUcuoe7rKurQ3t7O3p6engYL7mGT3Yhtk00GmHBYFA4dlEsGthStuGpKX/P9wPp0ciFy/bwyMh9msQd2y68fP7sj3wuuykEI5EPBWmXYHlVhlLQ0dDkh0sKqulAkiR4az1wyOY\u002Bl9GjJEFZX2XD13/4ZjURm6paFJGDIBdc30qBNbch3diG5foAHq7bsBv8\u002BC1m4pFWj0dmIx4UjkpT1hEpqxWZZVk8eP8ecsGUqiPFahE3GJZ0Fyb17lzrF7j8ZRP\u002BWVIwny5iKVOEkisgmdxMO7a1w3WqBKtIdo7E1kgsrtlY0Cy8y1n4PZzCd93N8PtqEE2piCkq1GwB6c2NiGtbea6zb8lqQUMGXizoDP\u002BqFibiCvq6/LjY0Yhb4wksbuaRzWgwNAMeU4eWUV7TltrmKhXBvXI55\u002BNLkO0aTGouprI7sDUd356ox/NYCt\u002BfDuDmpU4EPAyOYRI1FotG1oq6bnClqgz3sCBvIF0sIaCkcEHdwkkvw69/z2NKzuJOKIF7b1bQfQT4utkHW82ZamZbp\u002BMpYmv5o9w7Xm4ZjmXjlx4vWo\u002BVjyrfLrSK1AoV2XweLYEA5sKLOH/2DB6/yGyNG3pSfEgQgh8jTyW\u002BWVwGP1sS2/1RSYhm0xmc7KAFScjIW3CTyfV5e8eMVj4qn5RwOMw6O08JB0fo7RzvKs0kSO8z36tAlERZ//zTjbumrv21Ia885bcRfyUEe3t7r9Kl\u002BRVNP3/H7YPp6elXfCDmhIMgBAlcyE/0Cuvw0IlczBYWgP8Ad15o\u002B6vo50EAAAAASUVORK5CYII=",
+              "WhenOpened": "2025-12-24T10:49:08.194Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 38,
+              "Title": "SOLUTION_SUMMARY.md",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\SOLUTION_SUMMARY.md",
+              "RelativeDocumentMoniker": "SOLUTION_SUMMARY.md",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\SOLUTION_SUMMARY.md",
+              "RelativeToolTip": "SOLUTION_SUMMARY.md",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAOEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2025-12-24T10:49:29.959Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 43,
+              "Title": "INDEX.md",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\INDEX.md",
+              "RelativeDocumentMoniker": "INDEX.md",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\INDEX.md",
+              "RelativeToolTip": "INDEX.md",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2025-12-24T10:51:41.974Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 42,
+              "Title": "FINAL_SOLUTION.md",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\FINAL_SOLUTION.md",
+              "RelativeDocumentMoniker": "FINAL_SOLUTION.md",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\FINAL_SOLUTION.md",
+              "RelativeToolTip": "FINAL_SOLUTION.md",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAIcBAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2025-12-24T10:51:19.278Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 41,
+              "Title": "FLOW_DIAGRAM.md",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\FLOW_DIAGRAM.md",
+              "RelativeDocumentMoniker": "FLOW_DIAGRAM.md",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\FLOW_DIAGRAM.md",
+              "RelativeToolTip": "FLOW_DIAGRAM.md",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACUBAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2025-12-24T10:50:40.579Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 40,
+              "Title": "COMPLETE_SOLUTION.md",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\COMPLETE_SOLUTION.md",
+              "RelativeDocumentMoniker": "COMPLETE_SOLUTION.md",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\COMPLETE_SOLUTION.md",
+              "RelativeToolTip": "COMPLETE_SOLUTION.md",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAEUBAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2025-12-24T10:50:19.093Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 39,
+              "Title": "ACTION_NOW.md",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ACTION_NOW.md",
+              "RelativeDocumentMoniker": "ACTION_NOW.md",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ACTION_NOW.md",
+              "RelativeToolTip": "ACTION_NOW.md",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8BAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2025-12-24T10:49:56.231Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "frmHome.cs [Design]",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\Forms\\frmHome.cs",
+              "RelativeDocumentMoniker": "ChatAppClient\\Forms\\frmHome.cs",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\Forms\\frmHome.cs [Design]*",
+              "RelativeToolTip": "ChatAppClient\\Forms\\frmHome.cs [Design]*",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-24T10:47:57.044Z",
+              "EditorCaption": " [Design]"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 37,
+              "Title": "APPLY_FIX_NOW.md",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\APPLY_FIX_NOW.md",
+              "RelativeDocumentMoniker": "APPLY_FIX_NOW.md",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\APPLY_FIX_NOW.md",
+              "RelativeToolTip": "APPLY_FIX_NOW.md",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAPgAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2025-12-24T10:48:54.801Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 36,
+              "Title": "CLIENT_HOME_FORM_FIX.md",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\CLIENT_HOME_FORM_FIX.md",
+              "RelativeDocumentMoniker": "CLIENT_HOME_FORM_FIX.md",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\CLIENT_HOME_FORM_FIX.md",
+              "RelativeToolTip": "CLIENT_HOME_FORM_FIX.md",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAANoAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2025-12-24T10:48:26.748Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 35,
+              "Title": "DEBUG_CLIENT_HOME_FORM.md",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\DEBUG_CLIENT_HOME_FORM.md",
+              "RelativeDocumentMoniker": "DEBUG_CLIENT_HOME_FORM.md",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\DEBUG_CLIENT_HOME_FORM.md",
+              "RelativeToolTip": "DEBUG_CLIENT_HOME_FORM.md",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAI0AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2025-12-24T10:47:36.565Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{b1e99781-ab81-11d0-b683-00aa00a3ee26}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 28,
               "Title": "CreateOutboundRuleFix.ps1",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\CreateOutboundRuleFix.ps1",
               "RelativeDocumentMoniker": "CreateOutboundRuleFix.ps1",
@@ -211,7 +417,28 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 24,
+              "DocumentIndex": 3,
+              "Title": "FirewallHelper.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\FirewallHelper.cs",
+              "RelativeDocumentMoniker": "ChatAppServer\\FirewallHelper.cs",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\FirewallHelper.cs",
+              "RelativeToolTip": "ChatAppServer\\FirewallHelper.cs",
+              "ViewState": "AgIAACYBAAAAAAAAAIAwwHYBAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-24T08:45:26.698Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{56df62a4-05a3-4e5b-aa1a-99371ccfb997}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c64b9c2-e352-428e-a56d-0ace190b99a6}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 27,
               "Title": "FIX_OUTBOUND_NOW.bat",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\FIX_OUTBOUND_NOW.bat",
               "RelativeDocumentMoniker": "FIX_OUTBOUND_NOW.bat",
@@ -224,20 +451,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "FirewallHelper.cs",
-              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\FirewallHelper.cs",
-              "RelativeDocumentMoniker": "ChatAppServer\\FirewallHelper.cs",
-              "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\FirewallHelper.cs",
-              "RelativeToolTip": "ChatAppServer\\FirewallHelper.cs",
-              "ViewState": "AgIAACYBAAAAAAAAAIAwwHYBAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-24T08:45:26.698Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 31,
+              "DocumentIndex": 34,
               "Title": "MANUAL_COMMANDS.md",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\MANUAL_COMMANDS.md",
               "RelativeDocumentMoniker": "MANUAL_COMMANDS.md",
@@ -250,7 +464,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 30,
+              "DocumentIndex": 33,
               "Title": "COMPLETE_FIX_SUMMARY.md",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\COMPLETE_FIX_SUMMARY.md",
               "RelativeDocumentMoniker": "COMPLETE_FIX_SUMMARY.md",
@@ -263,7 +477,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 29,
+              "DocumentIndex": 32,
               "Title": "VERIFICATION_CHECKLIST.md",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\VERIFICATION_CHECKLIST.md",
               "RelativeDocumentMoniker": "VERIFICATION_CHECKLIST.md",
@@ -276,7 +490,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 28,
+              "DocumentIndex": 31,
               "Title": "START_HERE.md",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\START_HERE.md",
               "RelativeDocumentMoniker": "START_HERE.md",
@@ -289,7 +503,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 27,
+              "DocumentIndex": 30,
               "Title": "OUTBOUND_FIX_FINAL.md",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\OUTBOUND_FIX_FINAL.md",
               "RelativeDocumentMoniker": "OUTBOUND_FIX_FINAL.md",
@@ -302,7 +516,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 26,
+              "DocumentIndex": 29,
               "Title": "FIX_AND_START.bat",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\FIX_AND_START.bat",
               "RelativeDocumentMoniker": "FIX_AND_START.bat",
@@ -315,7 +529,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 23,
               "Title": "VISUAL_GUIDE.txt",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\VISUAL_GUIDE.txt",
               "RelativeDocumentMoniker": "VISUAL_GUIDE.txt",
@@ -327,20 +541,8 @@
               "EditorCaption": ""
             },
             {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{1c64b9c2-e352-428e-a56d-0ace190b99a6}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{b1e99781-ab81-11d0-b683-00aa00a3ee26}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{56df62a4-05a3-4e5b-aa1a-99371ccfb997}"
-            },
-            {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 22,
               "Title": "FIX_COMPLETE_SUMMARY.md",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\FIX_COMPLETE_SUMMARY.md",
               "RelativeDocumentMoniker": "FIX_COMPLETE_SUMMARY.md",
@@ -353,7 +555,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 23,
+              "DocumentIndex": 26,
               "Title": "COMPLETION_CHECKLIST.md",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\COMPLETION_CHECKLIST.md",
               "RelativeDocumentMoniker": "COMPLETION_CHECKLIST.md",
@@ -366,7 +568,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 25,
               "Title": "QUICK_FIX_GUIDE.md",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\QUICK_FIX_GUIDE.md",
               "RelativeDocumentMoniker": "QUICK_FIX_GUIDE.md",
@@ -379,7 +581,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
+              "DocumentIndex": 24,
               "Title": "README_FIX.md",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\README_FIX.md",
               "RelativeDocumentMoniker": "README_FIX.md",
@@ -392,7 +594,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 21,
               "Title": "QuickStart.bat",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\QuickStart.bat",
               "RelativeDocumentMoniker": "QuickStart.bat",
@@ -405,7 +607,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 20,
               "Title": "CLIENT_SERVER_CONNECTION_FIX.md",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\CLIENT_SERVER_CONNECTION_FIX.md",
               "RelativeDocumentMoniker": "CLIENT_SERVER_CONNECTION_FIX.md",
@@ -418,7 +620,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 19,
               "Title": "RunServerAsAdmin.bat",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\RunServerAsAdmin.bat",
               "RelativeDocumentMoniker": "RunServerAsAdmin.bat",
@@ -431,7 +633,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 18,
               "Title": "SERVER_FIREWALL_SETUP_GUIDE.md",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\SERVER_FIREWALL_SETUP_GUIDE.md",
               "RelativeDocumentMoniker": "SERVER_FIREWALL_SETUP_GUIDE.md",
@@ -444,7 +646,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 17,
               "Title": "TestPowerShellFirewall.bat",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\TestPowerShellFirewall.bat",
               "RelativeDocumentMoniker": "TestPowerShellFirewall.bat",
@@ -457,7 +659,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 4,
               "Title": "CheckFirewallRuleDetails.bat",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\CheckFirewallRuleDetails.bat",
               "RelativeDocumentMoniker": "CheckFirewallRuleDetails.bat",
@@ -470,7 +672,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 16,
               "Title": "CreateOutboundRule.bat",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\CreateOutboundRule.bat",
               "RelativeDocumentMoniker": "CreateOutboundRule.bat",
@@ -483,20 +685,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 5,
               "Title": "ClientHandler.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\ClientHandler.cs",
               "RelativeDocumentMoniker": "ChatAppServer\\ClientHandler.cs",
               "ToolTip": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\ClientHandler.cs",
               "RelativeToolTip": "ChatAppServer\\ClientHandler.cs",
-              "ViewState": "AgIAADIBAAAAAAAAAAAqwEYBAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAOAAAAAAAAAAAIA/wEsBAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-12-24T08:39:24.144Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 15,
               "Title": "DebugFirewallRules.ps1",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\DebugFirewallRules.ps1",
               "RelativeDocumentMoniker": "DebugFirewallRules.ps1",
@@ -509,7 +711,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 14,
               "Title": "OpenFirewall.bat",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\OpenFirewall.bat",
               "RelativeDocumentMoniker": "OpenFirewall.bat",
@@ -522,7 +724,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 6,
               "Title": "NetworkManager.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\NetworkManager.cs",
               "RelativeDocumentMoniker": "ChatAppClient\\NetworkManager.cs",
@@ -534,7 +736,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 11,
               "Title": "CROSS_NETWORK_CONNECTION_GUIDE.md",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\CROSS_NETWORK_CONNECTION_GUIDE.md",
               "RelativeDocumentMoniker": "CROSS_NETWORK_CONNECTION_GUIDE.md",
@@ -546,7 +748,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 12,
               "Title": "QUICK_NETWORK_CHECKLIST.md",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\QUICK_NETWORK_CHECKLIST.md",
               "RelativeDocumentMoniker": "QUICK_NETWORK_CHECKLIST.md",
@@ -558,7 +760,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 13,
               "Title": "FIX_SUMMARY.md",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\FIX_SUMMARY.md",
               "RelativeDocumentMoniker": "FIX_SUMMARY.md",
@@ -570,7 +772,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 9,
               "Title": "appsettings.example.json",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\appsettings.example.json",
               "RelativeDocumentMoniker": "ChatAppServer\\appsettings.example.json",
@@ -582,7 +784,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 10,
               "Title": "SQL_SERVER_TROUBLESHOOTING.md",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\SQL_SERVER_TROUBLESHOOTING.md",
               "RelativeDocumentMoniker": "SQL_SERVER_TROUBLESHOOTING.md",
@@ -594,7 +796,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 8,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\appsettings.json",
               "RelativeDocumentMoniker": "ChatAppServer\\appsettings.json",
@@ -606,7 +808,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 7,
               "Title": "DatabaseManager.cs",
               "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppServer\\DatabaseManager.cs",
               "RelativeDocumentMoniker": "ChatAppServer\\DatabaseManager.cs",

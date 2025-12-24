@@ -75,9 +75,9 @@
             flpFriendsList.BackColor = Color.FromArgb(30, 33, 45);
             flpFriendsList.Dock = DockStyle.Fill;
             flpFriendsList.FlowDirection = FlowDirection.TopDown;
-            flpFriendsList.Location = new Point(0, 92);
+            flpFriendsList.Location = new Point(0, 90);
             flpFriendsList.Name = "flpFriendsList";
-            flpFriendsList.Size = new Size(280, 433);
+            flpFriendsList.Size = new Size(280, 435);
             flpFriendsList.TabIndex = 1;
             flpFriendsList.WrapContents = false;
             // 
@@ -90,7 +90,7 @@
             lblFriendsTitle.Location = new Point(0, 40);
             lblFriendsTitle.Name = "lblFriendsTitle";
             lblFriendsTitle.Padding = new Padding(15, 15, 0, 10);
-            lblFriendsTitle.Size = new Size(208, 52);
+            lblFriendsTitle.Size = new Size(212, 50);
             lblFriendsTitle.TabIndex = 0;
             lblFriendsTitle.Text = "DANH SÁCH BẠN BÈ";
             // 
@@ -125,7 +125,7 @@
             txtSearch.ForeColor = Color.White;
             txtSearch.Location = new Point(47, 8);
             txtSearch.Name = "txtSearch";
-            txtSearch.Size = new Size(220, 23);
+            txtSearch.Size = new Size(220, 25);
             txtSearch.TabIndex = 0;
             txtSearch.Text = "Tìm kiếm...";
             txtSearch.TextChanged += txtSearch_TextChanged;
@@ -150,7 +150,7 @@
             lblMainWelcome.ForeColor = Color.Gray;
             lblMainWelcome.Location = new Point(48, 241);
             lblMainWelcome.Name = "lblMainWelcome";
-            lblMainWelcome.Size = new Size(424, 42);
+            lblMainWelcome.Size = new Size(449, 37);
             lblMainWelcome.TabIndex = 0;
             lblMainWelcome.Text = "Chọn một người bạn để bắt đầu chat";
             // 
@@ -178,7 +178,7 @@
             lblWelcome.ForeColor = Color.White;
             lblWelcome.Location = new Point(75, 22);
             lblWelcome.Name = "lblWelcome";
-            lblWelcome.Size = new Size(260, 38);
+            lblWelcome.Size = new Size(237, 32);
             lblWelcome.TabIndex = 0;
             lblWelcome.Text = "Chào mừng, [User]!";
             // 
