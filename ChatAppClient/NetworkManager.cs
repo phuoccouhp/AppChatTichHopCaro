@@ -61,7 +61,7 @@ namespace ChatAppClient.Forms
             }
         }
 
-        // === [FIX LOGIC KẾT NỐI] ===
+        // === [FIX: CONNECTION LOGIC] ===
         public async Task<bool> ConnectAsync(string ipAddress, int port)
         {
             // Nếu đã kết nối đúng IP/Port thì không cần kết nối lại
@@ -74,31 +74,50 @@ namespace ChatAppClient.Forms
             _client = client;
             try
             {
-                // Bỏ qua logic Task.WhenAny/Delay phức tạp gây timeout ảo.
-                // Để TCP Client tự handle timeout (hoặc hệ điều hành).
-                await client.ConnectAsync(ipAddress, port);
+                // Configure socket options BEFORE connecting
+                client.ReceiveBufferSize = 131072;
+                client.SendBufferSize = 131072;
+                client.NoDelay = true;
 
-                // Use the local client reference to avoid races where _client is set to null
-                // by DisconnectInternal on a different thread while awaiting.
+                // Set keepalive to prevent firewall timeouts
+                try
+                {
+                    client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                    client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, 60000);
+                }
+                catch { }
+
+                // Connect with timeout
+                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken.None))
+                {
+                    cts.CancelAfter(TimeSpan.FromSeconds(10));
+                    await client.ConnectAsync(ipAddress, port, cts.Token);
+                }
+
+                // Check connection after connect attempt
                 if (client.Connected)
                 {
                     lock (_streamLock)
                     {
                         _stream = client.GetStream();
                     }
-                    _listeningCts = new CancellationTokenSource();
-                    // Bắt đầu lắng nghe ngay lập tức
-                    _ = StartListeningAsync(_listeningCts.Token);
-
                     CurrentServerIP = ipAddress;
                     CurrentServerPort = port;
+
+                    // ✅ Start listening FIRST before any communication
+                    _listeningCts = new CancellationTokenSource();
+                    _ = StartListeningAsync(_listeningCts.Token);
+
                     Logger.Success($"Đã kết nối đến {ipAddress}:{port}");
                     return true;
                 }
             }
+            catch (OperationCanceledException)
+            {
+                Logger.Error($"Timeout: Không thể kết nối đến {ipAddress}:{port} trong 10 giây");
+            }
             catch (Exception ex)
             {
-                // Log full exception to help diagnose SocketException and other failures
                 Logger.Error($"Không thể kết nối đến {ipAddress}: {ex}");
             }
 
