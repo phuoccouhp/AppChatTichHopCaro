@@ -8,14 +8,15 @@ namespace ChatAppServer
         [STAThread]
         static void Main()
         {
-            // Khởi tạo cấu hình từ file appsettings.json
-            AppConfig.Initialize();
-            
+            // --- XÓA HOẶC COMMENT DÒNG NÀY ---
+            // AppConfig.Initialize(); 
+            // ----------------------------------
+
             Application.SetHighDpiMode(HighDpiMode.SystemAware);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // Chạy Form Server thay vì Console
+            // Chạy Form Server
             Application.Run(new frmServer());
         }
     }

@@ -1,524 +1,177 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Net;
-using System.Net.Sockets;
+using System.Security.Principal;
+using System.Threading;
 
 namespace ChatAppServer
 {
-    /// <summary>
-    /// Helper class để mở port trên Windows Firewall và kiểm tra kết nối mạng
-    /// </summary>
     public static class FirewallHelper
     {
         /// <summary>
-        /// Mở port trên Windows Firewall cho cả Inbound và Outbound trên TẤT CẢ PROFILES
-        /// (Thường không thành công trừ khi chạy với quyền Admin - sử dụng OpenPortAsAdmin thay thế)
+        /// Hàm chính để gọi mở Port. Sẽ tự động hiện bảng xin quyền Admin nếu chưa có.
         /// </summary>
-        public static bool OpenPort(int port, string ruleName = "ChatAppServer")
+        public static void OpenPortAsAdmin(int port, string ruleName = "ChatAppServer")
         {
             try
             {
-                Logger.Warning("[OpenPort] This method usually requires admin privileges. Use OpenPortAsAdmin() for better results.");
-
-                // Xóa rule cũ trước (cần admin)
-                RunNetshCommand($"advfirewall firewall delete rule name=\"{ruleName}\"");
-                RunNetshCommand($"advfirewall firewall delete rule name=\"{ruleName} (Out)\"");
-
-                // Tạo Inbound Rule cho TẤT CẢ PROFILES (Domain, Private, Public)
-                string inboundResult = RunNetshCommand(
-                    $"advfirewall firewall add rule name=\"{ruleName}\" " +
-                    $"dir=in action=allow protocol=TCP localport={port} " +
-                    $"profile=domain,private,public enable=yes");
-
-                Logger.Info($"[Firewall] Inbound rule creation result: {inboundResult.Substring(0, Math.Min(100, inboundResult.Length))}");
-
-                // Tạo Outbound Rule cho TẤT CẢ PROFILES
-                // WARNING: netsh có vấn đề với rule name chứa parentheses - tốt nhất là sử dụng PowerShell
-                string outboundResult = RunNetshCommand(
-                    $"advfirewall firewall add rule name=\"{ruleName} (Out)\" " +
-                    $"dir=out action=allow protocol=TCP localport={port} remoteip=any " +
-                    $"profile=domain,private,public enable=yes");
-
-                Logger.Info($"[Firewall] Outbound rule creation result: {outboundResult.Substring(0, Math.Min(100, outboundResult.Length))}");
-
-                if (outboundResult.Contains("The object already exists") || outboundResult.Contains("successfully"))
+                // Kiểm tra xem đã có quyền Admin chưa
+                if (!IsAdministrator())
                 {
-                    Logger.Success($"✓ Đã mở port {port} trên Windows Firewall cho TẤT CẢ PROFILES (Domain, Private, Public)");
-                    return true;
+                    Logger.Warning($"Đang yêu cầu quyền Admin để mở Port {port}...");
+                    RunPowershellWithAdmin(port, ruleName);
                 }
                 else
                 {
-                    Logger.Warning($"⚠️ Outbound rule creation may have failed. Output: {outboundResult}");
-                    Logger.Warning("[OpenPort] Recommend using OpenPortAsAdmin() instead");
-                    return false;
+                    // Đã là Admin rồi thì chạy trực tiếp không cần popup
+                    Logger.Info($"Đang cấu hình Firewall cho Port {port} (Quyền Admin)...");
+                    RunPowershellDirect(port, ruleName);
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error($"Lỗi khi mở port {port} trên Firewall", ex);
-                return false;
+                Logger.Error($"Lỗi khi mở Firewall: {ex.Message}");
+                Logger.Warning("HÃY THỬ CHẠY VISUAL STUDIO HOẶC FILE EXE DƯỚI QUYỀN 'RUN AS ADMINISTRATOR'");
             }
         }
-
-        private static bool ParseNetshEnabledFlag(string netshOutput)
-        {
-            if (string.IsNullOrEmpty(netshOutput))
-            {
-                Logger.Info("[ParseNetshEnabledFlag] Empty netsh output");
-                return false;
-            }
-            
-            // Log the full output for debugging
-            Logger.Info($"[ParseNetshEnabledFlag] Netsh output length: {netshOutput.Length} chars");
-            
-            // Kiểm tra xem rule có tồn tại không (Rule Name là dấu hiệu rule tồn tại)
-            bool hasRuleName = netshOutput.Contains("Rule Name") || 
-                               netshOutput.Contains("Tên quy tắc") ||
-                               netshOutput.Contains("RuleName");
-            
-            if (!hasRuleName)
-            {
-                Logger.Info("[ParseNetshEnabledFlag] Rule Name not found in output - rule may not exist");
-                return false;
-            }
-
-            Logger.Info("[ParseNetshEnabledFlag] Rule Name found");
-
-            // Kiểm tra enabled status - nhiều định dạng khác nhau
-            if (netshOutput.Contains("Enabled: Yes") || netshOutput.Contains("Enabled:Yes"))
-            {
-                Logger.Info("[ParseNetshEnabledFlag] Match: Enabled: Yes");
-                return true;
-            }
-            
-            if (netshOutput.Contains("Đã bật") || netshOutput.Contains("Enabled: Có"))
-            {
-                Logger.Info("[ParseNetshEnabledFlag] Match: Enabled (Vietnamese)");
-                return true;
-            }
-            
-            if (netshOutput.Contains("Enabled") && netshOutput.Contains("Yes"))
-            {
-                Logger.Info("[ParseNetshEnabledFlag] Match: Enabled + Yes");
-                return true;
-            }
-            
-            // Nếu rule tồn tại và action=allow, thì coi như enabled
-            if (netshOutput.Contains("Action: Allow") || 
-                netshOutput.Contains("Hành động: Cho phép") ||
-                netshOutput.Contains("Action:Allow"))
-            {
-                Logger.Info("[ParseNetshEnabledFlag] Match: Action: Allow (rule exists and allows traffic)");
-                return true;
-            }
-
-            // Fallback: nếu rule name tồn tại nhưng không tìm thấy explicit enabled flag
-            // Log toàn bộ output để debug
-            Logger.Warning($"[ParseNetshEnabledFlag] Rule exists but cannot determine enabled status. Output:\n{netshOutput}");
-            return false;
-        }
-
-        private static bool IsPowerShellAvailable()
-        {
-            try
-            {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "powershell",
-                    Arguments = "-Command \"$PSVersionTable.PSVersion\"",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true
-                };
-                using (var p = Process.Start(psi))
-                {
-                    if (p == null) return false;
-                    string outp = p.StandardOutput.ReadToEnd();
-                    p.WaitForExit(1000);
-                }
-                return true;
-            }
-            catch { return false; }
-        }
-
-        private static bool QueryFirewallRuleEnabledWithPowerShell(string ruleName, bool inbound)
-        {
-            try
-            {
-                // Use Get-NetFirewallRule (requires admin) to test rule state
-                string direction = inbound ? "Inbound" : "Outbound";
-                string ps = $"(Get-NetFirewallRule -DisplayName \"{ruleName}\" -ErrorAction SilentlyContinue) | Select-Object -First 1 | ForEach-Object {{ $_.Enabled -eq 'True' }}";
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "powershell",
-                    Arguments = $"-NoProfile -Command \"{ps}\"",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
-                using (var p = Process.Start(psi))
-                {
-                    if (p == null) return false;
-                    string outp = p.StandardOutput.ReadToEnd();
-                    string err = p.StandardError.ReadToEnd();
-                    p.WaitForExit(2000);
-                    if (!string.IsNullOrEmpty(err)) return false;
-                    return outp.Trim().Equals("True", StringComparison.OrdinalIgnoreCase);
-                }
-            }
-            catch
-            {
-                return false;
-            }
-        } // <--- ĐÃ SỬA: Xóa bỏ khối catch thừa thãi và biến 'port' không tồn tại
 
         /// <summary>
-        /// Kiểm tra xem rule đã tồn tại và được enable chưa
+        /// Kiểm tra xem ứng dụng hiện tại có đang chạy với quyền Admin không
         /// </summary>
-        public static bool IsPortOpen(int port, string ruleName = "ChatAppServer", int retryCount = 1, int delayMs = 0)
+        public static bool IsAdministrator()
         {
-            for (int attempt = 0; attempt < retryCount; attempt++)
+            using (var identity = WindowsIdentity.GetCurrent())
             {
-                try
-                {
-                    // Kiểm tra inbound rule
-                    string inboundResult = RunNetshCommand($"advfirewall firewall show rule name=\"{ruleName}\" dir=in");
-                    Logger.Info($"[IsPortOpen] Inbound netsh output: {inboundResult.Length} chars");
-
-                    // Kiểm tra outbound rule
-                    string outboundRuleName = $"{ruleName} (Out)";
-                    string outboundResult = RunNetshCommand($"advfirewall firewall show rule name=\"{outboundRuleName}\" dir=out");
-                    Logger.Info($"[IsPortOpen] Outbound netsh output: {outboundResult.Length} chars");
-
-                    // Parse enabled state more robustly (netsh output may vary by language)
-                    bool inboundExists = ParseNetshEnabledFlag(inboundResult);
-                    bool outboundExists = ParseNetshEnabledFlag(outboundResult);
-
-                    // Fallback: try PowerShell query if netsh output didn't show enabled rules
-                    if ((!inboundExists || !outboundExists) && IsPowerShellAvailable())
-                    {
-                        Logger.Info("[IsPortOpen] Trying PowerShell fallback...");
-                        try
-                        {
-                            if (!inboundExists)
-                            {
-                                inboundExists = QueryFirewallRuleEnabledWithPowerShell(ruleName, true);
-                                Logger.Info($"[IsPortOpen] PowerShell inbound check: {inboundExists}");
-                            }
-                            if (!outboundExists)
-                            {
-                                outboundExists = QueryFirewallRuleEnabledWithPowerShell(outboundRuleName, false);
-                                Logger.Info($"[IsPortOpen] PowerShell outbound check: {outboundExists}");
-                            }
-                        }
-                        catch (Exception ex) 
-                        { 
-                            Logger.Warning($"[IsPortOpen] PowerShell fallback error: {ex.Message}");
-                        }
-                    }
-
-                    if (!inboundExists || !outboundExists)
-                    {
-                        Logger.Info($"[IsPortOpen] Attempt {attempt + 1}/{retryCount}: Inbound={inboundExists}, Outbound={outboundExists}");
-                    }
-
-                    if (inboundExists && outboundExists)
-                    {
-                        Logger.Success($"✓ Firewall rules verified: Port {port} is OPEN");
-                        return true;
-                    }
-                    else if (inboundExists && !outboundExists)
-                    {
-                        Logger.Warning($"⚠️ Inbound OK, Outbound MISSING. Client có thể gửi đến nhưng Server không trả lời được.");
-                        
-                        // Log raw netsh output for debugging
-                        if (!string.IsNullOrEmpty(outboundResult))
-                        {
-                            Logger.Info($"[DEBUG] Raw outbound netsh output:\n{outboundResult}");
-                        }
-                        else
-                        {
-                            Logger.Warning("[DEBUG] Outbound netsh returned empty output");
-                        }
-                    }
-
-                    if (attempt < retryCount - 1 && delayMs > 0)
-                    {
-                        Logger.Info($"[IsPortOpen] Waiting {delayMs}ms before retry...");
-                        System.Threading.Thread.Sleep(delayMs);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warning($"Lỗi kiểm tra firewall (lần {attempt + 1}): {ex.Message}");
-                }
+                var principal = new WindowsPrincipal(identity);
+                return principal.IsInRole(WindowsBuiltInRole.Administrator);
             }
-
-            return false;
         }
 
-        private static string RunNetshCommand(string arguments)
+        /// <summary>
+        /// Chỉ kiểm tra đơn giản xem Rule đã tồn tại chưa (Không check sâu enabled/disabled để tránh lỗi ngôn ngữ)
+        /// </summary>
+        public static bool IsPortOpen(int port, string ruleName = "ChatAppServer")
         {
             try
             {
-                ProcessStartInfo psi = new ProcessStartInfo
+                // Lệnh Powershell kiểm tra xem có rule nào tên như vậy không
+                string script = $"Get-NetFirewallRule -DisplayName '{ruleName}' -ErrorAction SilentlyContinue";
+
+                var psi = new ProcessStartInfo
                 {
-                    FileName = "netsh",
-                    Arguments = arguments,
+                    FileName = "powershell",
+                    Arguments = $"-NoProfile -Command \"{script}\"",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true,
-                    WindowStyle = ProcessWindowStyle.Hidden
+                    CreateNoWindow = true
                 };
 
-                using (Process process = new Process())
+                using (var process = Process.Start(psi))
                 {
-                    process.StartInfo = psi;
-                    process.Start();
-
                     string output = process.StandardOutput.ReadToEnd();
-                    string error = process.StandardError.ReadToEnd();
+                    process.WaitForExit();
 
-                    bool finished = process.WaitForExit(5000);
-
-                    if (!finished)
-                    {
-                        try { process.Kill(); } catch { }
-                        return "";
-                    }
-
-                    if (!string.IsNullOrEmpty(output) && (output.Contains("not valid") || output.Contains("Error")))
-                    {
-                        Logger.Info($"[Netsh Output] {output.Trim()}");
-                    }
-
-                    return output;
+                    // Nếu có output trả về tức là Rule có tồn tại
+                    return !string.IsNullOrWhiteSpace(output);
                 }
             }
             catch
             {
-                return "";
-            }
-        }
-
-        /// <summary>
-        /// Mở port với quyền Admin - CHỈDÙNG PURE POWERSHELL
-        /// Tạo rules cho TẤT CẢ PROFILES: Domain, Private, Public
-        /// </summary>
-        public static bool OpenPortAsAdmin(int port, string ruleName = "ChatAppServer")
-        {
-            try
-            {
-                Logger.Info("[OpenPortAsAdmin] Starting firewall rule creation...");
-
-                // Step 1: Delete old rules
-                Logger.Info("[OpenPortAsAdmin] Step 1: Deleting old rules...");
-                ExecutePS($"Remove-NetFirewallRule -DisplayName '{ruleName}' -ErrorAction SilentlyContinue");
-                ExecutePS($"Remove-NetFirewallRule -DisplayName '{ruleName} (Out)' -ErrorAction SilentlyContinue");
-
-                // Step 2: Create INBOUND rule
-                Logger.Info("[OpenPortAsAdmin] Step 2: Creating INBOUND rule...");
-                string inboundCmd = $"New-NetFirewallRule -DisplayName '{ruleName}' -Direction Inbound -Action Allow -Protocol TCP -LocalPort {port} -Profile Domain,Private,Public -Enabled $true";
-                int result1 = ExecutePS(inboundCmd);
-                if (result1 != 0)
-                {
-                    Logger.Error("[OpenPortAsAdmin] INBOUND rule creation failed");
-                }
-                else
-                {
-                    Logger.Success("[OpenPortAsAdmin] ✓ INBOUND rule created");
-                }
-
-                // Step 3: Create OUTBOUND rule - THIS IS THE KEY PART
-                Logger.Info("[OpenPortAsAdmin] Step 3: Creating OUTBOUND rule...");
-                string outboundCmd = $"New-NetFirewallRule -DisplayName '{ruleName} (Out)' -Direction Outbound -Action Allow -Protocol TCP -LocalPort {port} -RemoteAddress Any -Profile Domain,Private,Public -Enabled $true";
-                int result2 = ExecutePS(outboundCmd);
-                if (result2 != 0)
-                {
-                    Logger.Error("[OpenPortAsAdmin] OUTBOUND rule creation failed");
-                }
-                else
-                {
-                    Logger.Success("[OpenPortAsAdmin] ✓ OUTBOUND rule created");
-                }
-
-                // Step 4: Verify
-                Logger.Info("[OpenPortAsAdmin] Step 4: Verifying rules...");
-                System.Threading.Thread.Sleep(2000); // Wait for sync
-
-                bool inboundExists = VerifyRuleExists(ruleName, "Inbound");
-                bool outboundExists = VerifyRuleExists($"{ruleName} (Out)", "Outbound");
-
-                Logger.Info($"[OpenPortAsAdmin] Inbound exists: {inboundExists}, Outbound exists: {outboundExists}");
-
-                if (inboundExists && outboundExists)
-                {
-                    Logger.Success($"✓ Firewall port {port} successfully opened and verified!");
-                    return true;
-                }
-                else
-                {
-                    Logger.Warning($"⚠️ Rules may not be fully verified but continuing...");
-                    return true; // Vẫn return true để Server có thể chạy
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"[OpenPortAsAdmin] Failed: {ex.Message}");
+                // Nếu lỗi kiểm tra, cứ trả về false để code thực hiện mở lại cho chắc
                 return false;
             }
         }
 
         /// <summary>
-        /// Execute PowerShell command with Admin privileges
+        /// Chạy PowerShell với yêu cầu nâng quyền (Hiện bảng Yes/No)
         /// </summary>
-        private static int ExecutePS(string command)
+        private static void RunPowershellWithAdmin(int port, string ruleName)
         {
-            string tempFile = null;
+            string psScript = BuildPowershellScript(port, ruleName);
+
+            // Tạo file tạm chứa script để chạy cho ổn định
+            string tempFile = Path.Combine(Path.GetTempPath(), "OpenPort.ps1");
+            File.WriteAllText(tempFile, psScript);
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "powershell",
+                // ExecutionPolicy Bypass: Để cho phép chạy script không cần ký số
+                Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{tempFile}\"",
+                Verb = "runas", // <--- CÂU LỆNH QUAN TRỌNG: YÊU CẦU QUYỀN ADMIN
+                UseShellExecute = true, // Bắt buộc true để dùng Verb runas
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+
             try
             {
-                tempFile = Path.Combine(Path.GetTempPath(), $"fw_{Guid.NewGuid().ToString("N").Substring(0, 8)}.ps1");
-                File.WriteAllText(tempFile, command, System.Text.Encoding.UTF8);
-
-                ProcessStartInfo psi = new ProcessStartInfo
-                {
-                    FileName = "powershell.exe",
-                    Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{tempFile}\"",
-                    UseShellExecute = true,
-                    Verb = "runas",
-                    CreateNoWindow = true,
-                    WindowStyle = ProcessWindowStyle.Hidden
-                };
-
-                using (Process? p = Process.Start(psi))
-                {
-                    if (p == null) return -1;
-                    p.WaitForExit(10000);
-                    return p.ExitCode;
-                }
+                var process = Process.Start(psi);
+                process?.WaitForExit(); // Chờ user bấm Yes và chạy xong
+                Logger.Success($"Đã gửi lệnh mở Port {port} vào Windows Firewall.");
             }
-            catch (Exception ex)
+            catch (System.ComponentModel.Win32Exception)
             {
-                Logger.Warning($"[ExecutePS] Error: {ex.Message}");
-                return -1;
+                Logger.Error("Người dùng đã từ chối cấp quyền Admin (Bấm No). Không thể mở Port.");
             }
             finally
             {
-                try { if (tempFile != null && File.Exists(tempFile)) File.Delete(tempFile); } catch { }
+                // Dọn dẹp file tạm
+                if (File.Exists(tempFile)) File.Delete(tempFile);
             }
         }
 
         /// <summary>
-        /// Verify if a firewall rule exists using PowerShell
+        /// Chạy PowerShell trực tiếp (khi đã có quyền Admin)
         /// </summary>
-        private static bool VerifyRuleExists(string ruleName, string direction)
+        private static void RunPowershellDirect(int port, string ruleName)
         {
-            try
+            string psScript = BuildPowershellScript(port, ruleName);
+
+            var psi = new ProcessStartInfo
             {
-                string cmd = $"$r = Get-NetFirewallRule -DisplayName '{ruleName}' -Direction {direction} -ErrorAction SilentlyContinue; if ($r -ne $null) {{ exit 0 }} else {{ exit 1 }}";
-                int result = ExecutePS(cmd);
-                return result == 0;
-            }
-            catch
+                FileName = "powershell",
+                Arguments = $"-NoProfile -Command \"{psScript}\"",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            var process = Process.Start(psi);
+            process.WaitForExit();
+
+            // Check lỗi nếu cần
+            string error = process.StandardError.ReadToEnd();
+            if (!string.IsNullOrEmpty(error))
             {
-                return false;
+                // Logger.Warning($"PS Warning: {error}"); // Uncomment nếu muốn debug kỹ
             }
+            Logger.Success($"Đã cập nhật Firewall rule cho Port {port}.");
         }
 
-        public static (bool success, string message, int latencyMs) TestConnection(string ipAddress, int port, int timeoutMs = 5000)
+        /// <summary>
+        /// Tạo nội dung script PowerShell để xóa cũ -> tạo mới
+        /// </summary>
+        private static string BuildPowershellScript(int port, string ruleName)
         {
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            try
-            {
-                using (TcpClient client = new TcpClient())
-                {
-                    var result = client.BeginConnect(ipAddress, port, null, null);
-                    bool success = result.AsyncWaitHandle.WaitOne(timeoutMs);
-                    stopwatch.Stop();
+            // Script này làm 3 việc:
+            // 1. Xóa rule cũ (Inbound & Outbound) để tránh trùng lặp
+            // 2. Tạo Rule Inbound (Cho phép người khác nối vào mình)
+            // 3. Tạo Rule Outbound (Cho phép mình trả lời lại) - Quan trọng!
+            return $@"
+                $name = '{ruleName}';
+                $port = {port};
+                
+                # Xóa rule cũ nếu có
+                Remove-NetFirewallRule -DisplayName $name -ErrorAction SilentlyContinue;
+                Remove-NetFirewallRule -DisplayName ($name + ' Out') -ErrorAction SilentlyContinue;
 
-                    if (success && client.Connected)
-                    {
-                        client.EndConnect(result);
-                        return (true, $"✓ Connection successful to {ipAddress}:{port}", (int)stopwatch.ElapsedMilliseconds);
-                    }
-                    else
-                    {
-                        return (false, $"✗ Cannot connect to {ipAddress}:{port} (Timeout)", (int)stopwatch.ElapsedMilliseconds);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                return (false, $"✗ Error: {ex.Message}", (int)stopwatch.ElapsedMilliseconds);
-            }
-        }
+                # Tạo Inbound Rule (Cho phép kết nối đến) cho mọi Profile (Domain, Private, Public)
+                New-NetFirewallRule -DisplayName $name -Direction Inbound -LocalPort $port -Protocol TCP -Action Allow -Profile Any -Enabled True;
 
-        public static (bool success, string message, int latencyMs) Ping(string ipAddress, int timeoutMs = 3000)
-        {
-            try
-            {
-                using (var ping = new System.Net.NetworkInformation.Ping())
-                {
-                    var reply = ping.Send(ipAddress, timeoutMs);
-                    if (reply.Status == System.Net.NetworkInformation.IPStatus.Success)
-                        return (true, $"✓ Ping successful ({reply.RoundtripTime}ms)", (int)reply.RoundtripTime);
-                    else
-                        return (false, $"✗ Ping failed: {reply.Status}", 0);
-                }
-            }
-            catch (Exception ex)
-            {
-                return (false, $"✗ Ping error: {ex.Message}", 0);
-            }
-        }
-
-        public static List<string> GetAllLocalIPs()
-        {
-            var ips = new List<string>();
-            try
-            {
-                var host = Dns.GetHostEntry(Dns.GetHostName());
-                foreach (var ip in host.AddressList)
-                {
-                    if (ip.AddressFamily == AddressFamily.InterNetwork)
-                        ips.Add(ip.ToString());
-                }
-            }
-            catch { }
-            return ips;
-        }
-
-        public static bool IsPortInUse(int port)
-        {
-            try
-            {
-                using (TcpListener listener = new TcpListener(IPAddress.Loopback, port))
-                {
-                    listener.Start();
-                    listener.Stop();
-                    return false;
-                }
-            }
-            catch (SocketException) { return true; }
-        }
-
-        public static bool IsPortListening(int port)
-        {
-            try
-            {
-                using (TcpClient client = new TcpClient())
-                {
-                    var result = client.BeginConnect(IPAddress.Loopback, port, null, null);
-                    if (result.AsyncWaitHandle.WaitOne(2000) && client.Connected) return true;
-                }
-                return false;
-            }
-            catch { return false; }
+                # Tạo Outbound Rule (Cho phép gửi dữ liệu đi)
+                New-NetFirewallRule -DisplayName ($name + ' Out') -Direction Outbound -LocalPort $port -Protocol TCP -Action Allow -Profile Any -Enabled True;
+            ";
         }
     }
 }

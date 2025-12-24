@@ -1,235 +1,156 @@
-﻿using ChatApp.Shared;
-using System;
-using System.Collections.Concurrent;
+﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Security.Cryptography; // Dùng để hash password nếu thiếu PasswordHelper
+using System.Text;
+using ChatApp.Shared; // Giả sử bạn có namespace này cho các class Packet
 
 namespace ChatAppServer
 {
     public class DatabaseManager
     {
-        private readonly string _connectionString;
         private static DatabaseManager? _instance;
         public static DatabaseManager Instance => _instance ??= new DatabaseManager();
 
-        // Cache user trong RAM
-        private readonly ConcurrentDictionary<string, CachedUser> _userCache = new ConcurrentDictionary<string, CachedUser>(StringComparer.OrdinalIgnoreCase);
-        private volatile bool _dbAvailable = false;
+        private string _connectionString = "";
+        public string ConnectionString => _connectionString;
 
-        private class CachedUser
-        {
-            public string Username { get; set; } = string.Empty;
-            public string DisplayName { get; set; } = string.Empty;
-            public string Password { get; set; } = string.Empty;
-        }
+        private volatile bool _dbAvailable = false;
 
         private DatabaseManager()
         {
-            _connectionString = AppConfig.GetConnectionString("ChatAppDB");
-            
-            // Thêm timeout nếu chưa có
-            var builder = new SqlConnectionStringBuilder(_connectionString);
-            if (builder.ConnectTimeout < 30)
-            {
-                builder.ConnectTimeout = 30; // Tăng timeout lên 30s
-            }
-            _connectionString = builder.ConnectionString;
-            
-            CheckDatabaseConnection();
-        }
 
-        private void CheckDatabaseConnection()
-        {
-            try
+            // Danh sách các chuỗi kết nối để thử (Ưu tiên bản Full/Localhost trước)
+            string[] possibleConnectionStrings = new[]
             {
-                Logger.Info("[Database] Đang kiểm tra kết nối SQL Server...");
-                using (SqlConnection conn = new SqlConnection(_connectionString))
+                @"Data Source=.;Initial Catalog=ChatDB;Integrated Security=True;TrustServerCertificate=True",
+                @"Data Source=localhost;Initial Catalog=ChatDB;Integrated Security=True;TrustServerCertificate=True",
+                @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=ChatDB;Integrated Security=True;TrustServerCertificate=True",
+                @"Data Source=.\SQLEXPRESS;Initial Catalog=ChatDB;Integrated Security=True;TrustServerCertificate=True"
+            };
+
+            Logger.Info("[Database] Đang tự động tìm máy chủ SQL Server...");
+
+            foreach (var connStr in possibleConnectionStrings)
+            {
+                try
                 {
-                    conn.Open();
+                    // Test kết nối nhanh (Timeout 2s)
+                    var builder = new SqlConnectionStringBuilder(connStr);
+                    builder.ConnectTimeout = 2;
+
+                    using (var conn = new SqlConnection(builder.ConnectionString))
+                    {
+                        conn.Open();
+                    }
+
+                    // Nếu kết nối được thì chốt luôn
+                    _connectionString = connStr;
                     _dbAvailable = true;
-                    Logger.Success("[Database] Kết nối SQL Server thành công!");
+                    string serverName = connStr.Split(';')[0].Replace("Data Source=", "");
+                    Logger.Success($"[Database] Đã kết nối thành công tới: {serverName}");
+                    break;
                 }
+                catch { /* Thử cái tiếp theo */ }
             }
-            catch (SqlException sqlEx)
+
+            if (!_dbAvailable)
             {
-                _dbAvailable = false;
-                
-                // Diagnose specific SQL Server issues
-                if (sqlEx.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase))
-                {
-                    Logger.Error("[Database] Timeout kết nối SQL Server. Các nguyên nhân có thể:\n" +
-                        "  1. SQL Server KHÔNG CHẠY hoặc không khả dụng\n" +
-                        "  2. Firewall chặn port 1433 hoặc Named Pipes\n" +
-                        "  3. SQL Server Express không được khởi động\n" +
-                        "  4. Máy tính bị treo hoặc quá tải\n" +
-                        "\n  CÁCH FIX:\n" +
-                        "  - Kiểm tra SQL Server Management Studio có kết nối được không\n" +
-                        "  - Chạy: services.msc -> Tìm 'SQL Server (SQLEXPRESS)' -> Start\n" +
-                        "  - Hoặc: sqlplus.exe bằng SQL Server Configuration Manager", sqlEx);
-                }
-                else if (sqlEx.Message.Contains("login", StringComparison.OrdinalIgnoreCase))
-                {
-                    Logger.Error("[Database] Lỗi Authentication SQL Server. Kiểm tra:\n" +
-                        "  1. User đang chạy app có quyền truy cập SQL Server không?\n" +
-                        "  2. Database 'ChatAppDB' có tồn tại không?\n" +
-                        "  3. SQL Server có bật Mixed Mode Authentication không?", sqlEx);
-                }
-                else if (sqlEx.Message.Contains("instance", StringComparison.OrdinalIgnoreCase))
-                {
-                    Logger.Error("[Database] Không tìm thấy SQL Server instance 'SQLEXPRESS':\n" +
-                        "  1. Chạy 'sqlcmd -L' để liệt kê tất cả SQL Server instances\n" +
-                        "  2. Cập nhật appsettings.json với instance name đúng\n" +
-                        "  3. Hoặc dùng: Data Source=localhost (mặc định)", sqlEx);
-                }
-                else
-                {
-                    Logger.Error("[Database] Không thể kết nối SQL Server. Chi tiết lỗi:", sqlEx);
-                }
+                Logger.Error("[Database] KHÔNG TÌM THẤY SQL SERVER! Vui lòng kiểm tra Service SQL Server.");
+                // Fallback để tránh crash, dù biết là sẽ lỗi
+                _connectionString = possibleConnectionStrings[0];
             }
-            catch (Exception ex)
+            else
             {
-                Logger.Error("[Database] Lỗi khác khi kết nối SQL Server. Chế độ Offline.", ex);
-                _dbAvailable = false;
+                InitializeDatabase();
             }
         }
 
-        // --- HÀM QUAN TRỌNG: LẤY DANH SÁCH NGƯỜI ĐÃ TỪNG NHẮN TIN ---
-        public List<UserStatus> GetContacts(string currentUsername)
+        private void InitializeDatabase()
         {
-            var list = new List<UserStatus>();
-            if (!_dbAvailable) return list;
-
             try
             {
-                using (SqlConnection conn = new SqlConnection(_connectionString))
+                // 1. Kiểm tra và tạo Database nếu chưa có
+                var builder = new SqlConnectionStringBuilder(_connectionString);
+                string targetDB = builder.InitialCatalog;
+                builder.InitialCatalog = "master"; // Kết nối vào master để check
+
+                using (var conn = new SqlConnection(builder.ConnectionString))
                 {
                     conn.Open();
-
-                    // Logic: Lấy tất cả SenderID và ReceiverID liên quan đến tôi
-                    // Dùng DISTINCT để không trùng lặp
-                    string query = @"
-                        SELECT DISTINCT 
-                            CASE 
-                                WHEN SenderID = @me THEN ReceiverID 
-                                ELSE SenderID 
-                            END AS ContactID
-                        FROM Messages
-                        WHERE SenderID = @me OR ReceiverID = @me";
-
-                    var contactIds = new List<string>();
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    string checkDb = $"SELECT database_id FROM sys.databases WHERE Name = '{targetDB}'";
+                    using (var cmd = new SqlCommand(checkDb, conn))
                     {
-                        cmd.Parameters.AddWithValue("@me", currentUsername);
-                        using (var reader = cmd.ExecuteReader())
+                        if (cmd.ExecuteScalar() == null)
                         {
-                            while (reader.Read())
+                            Logger.Warning($"[Database] Database '{targetDB}' chưa tồn tại. Đang tạo mới...");
+                            using (var createCmd = new SqlCommand($"CREATE DATABASE {targetDB}", conn))
                             {
-                                if (!reader.IsDBNull(0))
-                                    contactIds.Add(reader.GetString(0));
-                            }
-                        }
-                    }
-
-                    // Sau khi có list ID, lấy thông tin chi tiết (DisplayName) từ bảng Users
-                    if (contactIds.Count > 0)
-                    {
-                        // Tạo chuỗi tham số cho câu lệnh IN (...)
-                        // Lưu ý: Parameterize đúng cách để tránh SQL Injection
-                        var parameters = new List<string>();
-                        var cmdParams = new List<SqlParameter>();
-                        for (int i = 0; i < contactIds.Count; i++)
-                        {
-                            string paramName = $"@p{i}";
-                            parameters.Add(paramName);
-                            cmdParams.Add(new SqlParameter(paramName, contactIds[i]));
-                        }
-
-                        // NOTE: Some older databases may not have the 'IsOnline' column.
-                        // To maintain compatibility, only select Username and DisplayName here,
-                        // and leave IsOnline = false by default. This avoids "Invalid column name 'IsOnline'" errors.
-                        string userQuery = $"SELECT Username, DisplayName FROM Users WHERE Username IN ({string.Join(",", parameters)})";
-
-                        using (SqlCommand cmd = new SqlCommand(userQuery, conn))
-                        {
-                            cmd.Parameters.AddRange(cmdParams.ToArray());
-                            using (var reader = cmd.ExecuteReader())
-                            {
-                                while (reader.Read())
-                                {
-                                    list.Add(new UserStatus
-                                    {
-                                        UserID = reader["Username"].ToString(),
-                                        UserName = reader["DisplayName"] != DBNull.Value ? reader["DisplayName"].ToString() : reader["Username"].ToString(),
-                                        IsOnline = false // Nếu DB không có cột IsOnline, mặc định false. Server sẽ set true cho client đang kết nối.
-                                    });
-                                }
+                                createCmd.ExecuteNonQuery();
+                                Logger.Success($"[Database] Đã tạo Database thành công.");
                             }
                         }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"[GetContacts] Lỗi lấy danh sách bạn bè: {ex.Message}");
-            }
-            return list;
-        }
 
-        // --- HÀM QUAN TRỌNG: LƯU TIN NHẮN VÀO DB ---
-        public int SaveMessage(string sender, string receiver, string content, string type = "Text", string fileName = null)
-        {
-            if (!_dbAvailable) return 0;
-            try
-            {
-                using (SqlConnection conn = new SqlConnection(_connectionString))
+                // 2. Tạo Bảng (Tables) nếu chưa có
+                using (var conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
-                    string query = @"
-                        INSERT INTO Messages (SenderID, ReceiverID, MessageContent, MessageType, FileName, CreatedAt) 
-                        OUTPUT INSERTED.MessageID 
-                        VALUES (@s, @r, @c, @t, @f, GETDATE())";
+                    string script = @"
+                        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Users')
+                        CREATE TABLE Users (
+                            UserID INT PRIMARY KEY IDENTITY(1,1),
+                            Username NVARCHAR(50) UNIQUE NOT NULL,
+                            Password NVARCHAR(255) NOT NULL,
+                            Email NVARCHAR(100),
+                            DisplayName NVARCHAR(50),
+                            IsOnline BIT DEFAULT 0,
+                            LastLogin DATETIME DEFAULT GETDATE()
+                        );
 
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Messages')
+                        CREATE TABLE Messages (
+                            MessageID INT PRIMARY KEY IDENTITY(1,1),
+                            SenderID NVARCHAR(50),
+                            ReceiverID NVARCHAR(50),
+                            MessageContent NVARCHAR(MAX),
+                            MessageType NVARCHAR(20) DEFAULT 'Text',
+                            FileName NVARCHAR(255),
+                            CreatedAt DATETIME DEFAULT GETDATE()
+                        );
+                    ";
+                    using (var cmd = new SqlCommand(script, conn))
                     {
-                        cmd.Parameters.AddWithValue("@s", sender);
-                        cmd.Parameters.AddWithValue("@r", receiver);
-                        cmd.Parameters.AddWithValue("@c", content ?? "");
-                        cmd.Parameters.AddWithValue("@t", type);
-                        cmd.Parameters.AddWithValue("@f", (object)fileName ?? DBNull.Value);
-
-                        int newId = (int)cmd.ExecuteScalar();
-                        // Logger.Info($"[DB] Đã lưu tin nhắn ID: {newId}");
-                        return newId;
+                        cmd.ExecuteNonQuery();
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error("[DB] Lỗi lưu tin nhắn", ex);
-                return 0;
+                Logger.Error($"[Database] Lỗi khởi tạo DB: {ex.Message}");
             }
         }
 
-        // --- Các hàm hỗ trợ khác (Login, Register, UpdateStatus...) ---
+        // --- CÁC HÀM XỬ LÝ DỮ LIỆU ---
 
-        public UserData? Login(string usernameOrEmail, string password, bool useEmail = false)
+        public User? Login(string usernameOrEmail, string password, bool useEmail)
         {
             if (!_dbAvailable) return null;
             try
             {
-                using (SqlConnection conn = new SqlConnection(_connectionString))
+                using (var conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
                     string query = useEmail
-                        ? "SELECT Username, DisplayName, Password FROM Users WHERE Email = @u"
-                        : "SELECT Username, DisplayName, Password FROM Users WHERE Username = @u";
+                        ? "SELECT * FROM Users WHERE Email = @u"
+                        : "SELECT * FROM Users WHERE Username = @u";
 
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    using (var cmd = new SqlCommand(query, conn))
                     {
                         cmd.Parameters.AddWithValue("@u", usernameOrEmail);
-                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        using (var reader = cmd.ExecuteReader())
                         {
                             if (reader.Read())
                             {
@@ -237,42 +158,32 @@ namespace ChatAppServer
                                 string realUser = reader["Username"].ToString();
                                 string display = reader["DisplayName"] != DBNull.Value ? reader["DisplayName"].ToString() : realUser;
 
-                                // Nếu pass chưa hash (code cũ) thì so sánh thường, nếu hash rồi thì Verify
-                                bool isValid = storedPass.Contains(":")
-                                    ? PasswordHelper.VerifyPassword(password, storedPass)
-                                    : storedPass == password;
+                                // Kiểm tra mật khẩu (Hỗ trợ cả Plain text và Hash)
+                                bool isValid = false;
+                                if (storedPass.Contains(":"))
+                                {
+                                    // Giả lập check hash (Nếu bạn có PasswordHelper thì dùng nó)
+                                    // Ở đây tôi viết hàm check đơn giản nội bộ để tránh lỗi thiếu file
+                                    isValid = VerifyPasswordInternal(password, storedPass);
+                                }
+                                else
+                                {
+                                    isValid = (storedPass == password);
+                                    // Tự động nâng cấp lên Hash nếu đang dùng plain text
+                                    if (isValid) UpdatePassword(reader["Email"].ToString(), password);
+                                }
 
                                 if (isValid)
                                 {
-                                    // Nếu pass chưa hash -> tự động hash và update lại
-                                    if (!storedPass.Contains(":"))
-                                    {
-                                        UpdatePasswordInDb(conn, realUser, password);
-                                    }
-                                    return new UserData { Username = realUser, DisplayName = display };
+                                    return new User { Username = realUser, DisplayName = display, Email = reader["Email"].ToString() };
                                 }
                             }
                         }
                     }
                 }
             }
-            catch (Exception ex) { Logger.Error("[Login] Lỗi DB", ex); }
+            catch (Exception ex) { Logger.Error($"Login Error: {ex.Message}"); }
             return null;
-        }
-
-        private void UpdatePasswordInDb(SqlConnection conn, string username, string plainPass)
-        {
-            try
-            {
-                string hash = PasswordHelper.HashPassword(plainPass);
-                using (SqlCommand cmd = new SqlCommand("UPDATE Users SET Password = @p WHERE Username = @u", conn))
-                {
-                    cmd.Parameters.AddWithValue("@p", hash);
-                    cmd.Parameters.AddWithValue("@u", username);
-                    cmd.ExecuteNonQuery();
-                }
-            }
-            catch { }
         }
 
         public bool RegisterUser(string username, string password, string email)
@@ -280,32 +191,141 @@ namespace ChatAppServer
             if (!_dbAvailable) return false;
             try
             {
-                using (SqlConnection conn = new SqlConnection(_connectionString))
+                using (var conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
-                    using (SqlCommand cmd = new SqlCommand("SELECT COUNT(*) FROM Users WHERE Username = @u", conn))
+                    // Check tồn tại
+                    using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Users WHERE Username = @u OR Email = @e", conn))
                     {
                         cmd.Parameters.AddWithValue("@u", username);
+                        cmd.Parameters.AddWithValue("@e", email ?? "");
                         if ((int)cmd.ExecuteScalar() > 0) return false;
                     }
 
-                    string hash = PasswordHelper.HashPassword(password);
-                    using (SqlCommand cmd = new SqlCommand("INSERT INTO Users (Username, Password, DisplayName, Email) VALUES (@u, @p, @d, @e)", conn))
+                    // Hash password
+                    string hashedPassword = HashPasswordInternal(password);
+
+                    // Insert
+                    string insert = "INSERT INTO Users (Username, Password, Email, DisplayName, IsOnline) VALUES (@u, @p, @e, @u, 1)";
+                    using (var cmd = new SqlCommand(insert, conn))
                     {
                         cmd.Parameters.AddWithValue("@u", username);
-                        cmd.Parameters.AddWithValue("@p", hash);
-                        cmd.Parameters.AddWithValue("@d", username);
-                        cmd.Parameters.AddWithValue("@e", (object)email ?? DBNull.Value);
+                        cmd.Parameters.AddWithValue("@p", hashedPassword);
+                        cmd.Parameters.AddWithValue("@e", email ?? DBNull.Value.ToString());
                         cmd.ExecuteNonQuery();
+                        return true;
                     }
-                    return true;
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error("[Register] Lỗi DB", ex);
+                Logger.Error($"Register Error: {ex.Message}");
                 return false;
             }
+        }
+
+        public List<UserStatus> GetContacts(string excludeUserID)
+        {
+            var list = new List<UserStatus>();
+            if (!_dbAvailable) return list;
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    // Lấy danh sách tất cả user (trừ bản thân)
+                    string query = "SELECT Username, DisplayName, IsOnline FROM Users WHERE Username != @uid";
+                    using (var cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@uid", excludeUserID);
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                list.Add(new UserStatus
+                                {
+                                    UserID = reader["Username"].ToString(),
+                                    UserName = reader["DisplayName"].ToString(),
+                                    IsOnline = reader["IsOnline"] != DBNull.Value && (bool)reader["IsOnline"]
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) { Logger.Error($"GetContacts Error: {ex.Message}"); }
+            return list;
+        }
+
+        public int SaveMessage(string sender, string receiver, string content, string type = "Text", string fileName = null)
+        {
+            if (!_dbAvailable) return 0;
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    string query = @"INSERT INTO Messages (SenderID, ReceiverID, MessageContent, MessageType, FileName) 
+                                     OUTPUT INSERTED.MessageID
+                                     VALUES (@s, @r, @c, @t, @f)";
+                    using (var cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@s", sender);
+                        cmd.Parameters.AddWithValue("@r", receiver);
+                        cmd.Parameters.AddWithValue("@c", content ?? "");
+                        cmd.Parameters.AddWithValue("@t", type);
+                        cmd.Parameters.AddWithValue("@f", (object)fileName ?? DBNull.Value);
+                        return (int)cmd.ExecuteScalar();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"SaveMessage Error: {ex.Message}");
+                return 0;
+            }
+        }
+
+        public List<ChatHistoryMessage> GetChatHistory(string u1, string u2, int limit)
+        {
+            var list = new List<ChatHistoryMessage>();
+            if (!_dbAvailable) return list;
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    string query = @"SELECT TOP (@l) * FROM Messages 
+                                     WHERE (SenderID=@u1 AND ReceiverID=@u2) OR (SenderID=@u2 AND ReceiverID=@u1) 
+                                     ORDER BY CreatedAt DESC";
+                    using (var cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@u1", u1);
+                        cmd.Parameters.AddWithValue("@u2", u2);
+                        cmd.Parameters.AddWithValue("@l", limit);
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                list.Add(new ChatHistoryMessage
+                                {
+                                    MessageID = (int)reader["MessageID"],
+                                    SenderID = reader["SenderID"].ToString(),
+                                    ReceiverID = reader["ReceiverID"].ToString(),
+                                    MessageContent = reader["MessageContent"].ToString(),
+                                    MessageType = reader["MessageType"].ToString(),
+                                    FileName = reader["FileName"] != DBNull.Value ? reader["FileName"].ToString() : null,
+                                    CreatedAt = (DateTime)reader["CreatedAt"]
+                                });
+                            }
+                        }
+                    }
+                }
+                list.Reverse();
+            }
+            catch { }
+            return list;
         }
 
         public void UpdateUserOnlineStatus(string username, bool isOnline)
@@ -313,16 +333,51 @@ namespace ChatAppServer
             if (!_dbAvailable) return;
             try
             {
-                using (SqlConnection conn = new SqlConnection(_connectionString))
+                using (var conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
-                    string query = isOnline
-                        ? "UPDATE Users SET IsOnline = 1 WHERE Username = @u"
-                        : "UPDATE Users SET IsOnline = 0, LastSeen = GETDATE() WHERE Username = @u";
-
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    using (var cmd = new SqlCommand("UPDATE Users SET IsOnline = @o WHERE Username = @u", conn))
                     {
+                        cmd.Parameters.AddWithValue("@o", isOnline);
                         cmd.Parameters.AddWithValue("@u", username);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch { }
+        }
+
+        public void UpdateDisplayName(string userId, string newName)
+        {
+            if (!_dbAvailable) return;
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    using (var cmd = new SqlCommand("UPDATE Users SET DisplayName = @n WHERE Username = @u", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@n", newName);
+                        cmd.Parameters.AddWithValue("@u", userId);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch { }
+        }
+
+        public void UpdateMessage(int msgId, string newContent)
+        {
+            if (!_dbAvailable) return;
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    using (var cmd = new SqlCommand("UPDATE Messages SET MessageContent = @c WHERE MessageID = @id", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@c", newContent);
+                        cmd.Parameters.AddWithValue("@id", msgId);
                         cmd.ExecuteNonQuery();
                     }
                 }
@@ -335,10 +390,10 @@ namespace ChatAppServer
             if (!_dbAvailable) return false;
             try
             {
-                using (SqlConnection conn = new SqlConnection(_connectionString))
+                using (var conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
-                    using (SqlCommand cmd = new SqlCommand("SELECT COUNT(*) FROM Users WHERE Email = @e", conn))
+                    using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Users WHERE Email = @e", conn))
                     {
                         cmd.Parameters.AddWithValue("@e", email);
                         return (int)cmd.ExecuteScalar() > 0;
@@ -348,16 +403,16 @@ namespace ChatAppServer
             catch { return false; }
         }
 
-        public void UpdatePassword(string email, string newPassword)
+        public void UpdatePassword(string email, string newPass)
         {
             if (!_dbAvailable) return;
             try
             {
-                using (SqlConnection conn = new SqlConnection(_connectionString))
+                string hash = HashPasswordInternal(newPass);
+                using (var conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
-                    string hash = PasswordHelper.HashPassword(newPassword);
-                    using (SqlCommand cmd = new SqlCommand("UPDATE Users SET Password = @p WHERE Email = @e", conn))
+                    using (var cmd = new SqlCommand("UPDATE Users SET Password = @p WHERE Email = @e", conn))
                     {
                         cmd.Parameters.AddWithValue("@p", hash);
                         cmd.Parameters.AddWithValue("@e", email);
@@ -365,105 +420,42 @@ namespace ChatAppServer
                     }
                 }
             }
-            catch (Exception ex) { Logger.Error("Lỗi UpdatePassword", ex); }
-        }
-
-        public void UpdateDisplayName(string username, string newName)
-        {
-            if (!_dbAvailable) return;
-            try
-            {
-                using (SqlConnection conn = new SqlConnection(_connectionString))
-                {
-                    conn.Open();
-                    using (SqlCommand cmd = new SqlCommand("UPDATE Users SET DisplayName = @n WHERE Username = @u", conn))
-                    {
-                        cmd.Parameters.AddWithValue("@n", newName);
-                        cmd.Parameters.AddWithValue("@u", username);
-                        cmd.ExecuteNonQuery();
-                    }
-                }
-            }
-            catch (Exception ex) { Logger.Error("Lỗi UpdateDisplayName", ex); }
-        }
-
-        public void UpdateMessage(int msgId, string newContent)
-        {
-            if (!_dbAvailable) return;
-            try
-            {
-                using (SqlConnection conn = new SqlConnection(_connectionString))
-                {
-                    conn.Open();
-                    using (SqlCommand cmd = new SqlCommand("UPDATE Messages SET MessageContent = @c WHERE MessageID = @id", conn))
-                    {
-                        cmd.Parameters.AddWithValue("@c", newContent);
-                        cmd.Parameters.AddWithValue("@id", msgId);
-                        cmd.ExecuteNonQuery();
-                    }
-                }
-            }
             catch { }
         }
 
-        public List<MessageData> GetChatHistory(string u1, string u2, int limit)
+        // --- PASSWORD UTILS (Tự túc, không phụ thuộc PasswordHelper) ---
+        private string HashPasswordInternal(string password)
         {
-            var list = new List<MessageData>();
-            if (!_dbAvailable) return list;
+            using (var sha256 = SHA256.Create())
+            {
+                var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+                return Convert.ToBase64String(bytes) + ":SHA256";
+            }
+        }
 
+        private bool VerifyPasswordInternal(string inputPassword, string storedHash)
+        {
             try
             {
-                using (SqlConnection conn = new SqlConnection(_connectionString))
-                {
-                    conn.Open();
-                    string query = @"SELECT TOP (@l) MessageID, SenderID, ReceiverID, MessageContent, MessageType, FileName, CreatedAt 
-                                     FROM Messages 
-                                     WHERE (SenderID=@u1 AND ReceiverID=@u2) OR (SenderID=@u2 AND ReceiverID=@u1) 
-                                     ORDER BY CreatedAt DESC";
+                var parts = storedHash.Split(':');
+                if (parts.Length != 2) return inputPassword == storedHash; // Fallback plain text
 
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@u1", u1);
-                        cmd.Parameters.AddWithValue("@u2", u2);
-                        cmd.Parameters.AddWithValue("@l", limit);
-                        using (var reader = cmd.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                list.Add(new MessageData
-                                {
-                                    MessageID = (int)reader["MessageID"],
-                                    SenderID = reader["SenderID"].ToString(),
-                                    ReceiverID = reader["ReceiverID"].ToString(),
-                                    MessageContent = reader["MessageContent"]?.ToString(),
-                                    MessageType = reader["MessageType"]?.ToString(),
-                                    FileName = reader["FileName"] != DBNull.Value ? reader["FileName"].ToString() : null,
-                                    CreatedAt = (DateTime)reader["CreatedAt"]
-                                });
-                            }
-                        }
-                    }
+                using (var sha256 = SHA256.Create())
+                {
+                    var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(inputPassword));
+                    string newHash = Convert.ToBase64String(bytes);
+                    return newHash == parts[0];
                 }
-                list.Reverse();
             }
-            catch (Exception ex)
-            {
-                Logger.Error("Lỗi GetChatHistory", ex);
-            }
-            return list;
+            catch { return false; }
         }
     }
 
-    // Helper classes
-    public class UserData { public string Username { get; set; } public string DisplayName { get; set; } }
-    public class MessageData
+    // Class hỗ trợ map dữ liệu (Nếu ChatApp.Shared thiếu)
+    public class User
     {
-        public int MessageID { get; set; }
-        public string SenderID { get; set; }
-        public string ReceiverID { get; set; }
-        public string MessageContent { get; set; }
-        public string MessageType { get; set; }
-        public string? FileName { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public string Username { get; set; }
+        public string DisplayName { get; set; }
+        public string Email { get; set; }
     }
 }

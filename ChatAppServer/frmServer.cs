@@ -13,149 +13,75 @@ namespace ChatAppServer
     {
         private Server? _server;
         private const int PORT = 9000;
-        private ContextMenuStrip _ctxUserMenu; // Menu chuột phải cho danh sách user
+        private ContextMenuStrip _ctxUserMenu;
 
         public frmServer()
         {
             InitializeComponent();
-            InitializeContextMenu(); // Tạo menu chuột phải
+            InitializeContextMenu();
 
-            // Đăng ký sự kiện MouseDown để chọn user khi click chuột phải
-            lstUsers.MouseDown += lstUsers_MouseDown;
-        }
-
-        // Tạo menu chuột phải bằng code
-        private void InitializeContextMenu()
-        {
-            _ctxUserMenu = new ContextMenuStrip();
-
-            var itemInfo = new ToolStripMenuItem("🔍 Xem thông tin User");
-            itemInfo.Click += (s, e) => ShowUserInfo();
-
-            var itemKick = new ToolStripMenuItem("👢 Kick (Ngắt kết nối)");
-            itemKick.ForeColor = Color.Red;
-            itemKick.Click += (s, e) => KickSelectedUser();
-
-            _ctxUserMenu.Items.Add(itemInfo);
-            _ctxUserMenu.Items.Add(new ToolStripSeparator());
-            _ctxUserMenu.Items.Add(itemKick);
-
-            lstUsers.ContextMenuStrip = _ctxUserMenu;
+            // Xử lý chọn item trong listbox bằng chuột phải
+            lstUsers.MouseDown += LstUsers_MouseDown;
         }
 
         private void frmServer_Load(object sender, EventArgs e)
         {
-            // Đăng ký nhận log
+            // Setup Logger
             Logger.OnLogReceived += Logger_OnLogReceived;
 
-            // Cấu hình RichTextBox Log
+            // Setup giao diện Log
             rtbLog.ReadOnly = true;
             rtbLog.BackColor = Color.FromArgb(30, 30, 30);
             rtbLog.ForeColor = Color.White;
             rtbLog.Font = new Font("Consolas", 9, FontStyle.Regular);
-            rtbLog.WordWrap = true;
 
-            // Hiển thị IP ngay khi mở form
+            // Lấy thông tin IP và trạng thái Firewall ban đầu
             UpdateServerIPDisplay();
-
-            // Kiểm tra trạng thái Firewall ngay lập tức để cập nhật màu nút
-            CheckFirewallStatusForButton();
+            CheckFirewallStatusAsync();
         }
 
-        private void UpdateServerIPDisplay()
+        // === 1. LOGIC START / STOP SERVER ===
+
+        private async void btnStart_Click(object sender, EventArgs e)
         {
-            string localIPs = GetLocalIPAddresses();
-            string wifiIP = null;
-
-            if (localIPs.Contains(","))
+            // Kiểm tra Port có đang bị chiếm không (tránh crash)
+            if (IsPortInUse(PORT))
             {
-                var parts = localIPs.Split(',');
-                if (parts.Length > 1) wifiIP = parts[1].Trim();
-            }
-
-            if (!string.IsNullOrEmpty(wifiIP))
-            {
-                lblServerIP.Text = $"IP LAN/WiFi: {wifiIP} (Port: {PORT})";
-                lblServerIP.ForeColor = Color.Blue;
-            }
-            else
-            {
-                lblServerIP.Text = $"IP Local: {localIPs} (Port: {PORT})";
-                lblServerIP.ForeColor = Color.OrangeRed;
-            }
-        }
-
-        private void CheckFirewallStatusForButton()
-        {
-            // Kiểm tra nhẹ (không delay) để set màu nút
-            bool isOpen = FirewallHelper.IsPortOpen(PORT, "ChatAppServer");
-            if (isOpen)
-            {
-                btnOpenFirewall.Text = "✓ Firewall OK";
-                btnOpenFirewall.BackColor = Color.Green;
-                // Vẫn cho phép click để mở lại nếu cần (trường hợp lỗi profile)
-            }
-            else
-            {
-                btnOpenFirewall.Text = "🔓 Mở Firewall";
-                btnOpenFirewall.BackColor = Color.Orange;
-            }
-        }
-
-        private void btnStart_Click(object sender, EventArgs e)
-        {
-            // 1. Kiểm tra Port có bị chiếm không
-            if (FirewallHelper.IsPortInUse(PORT))
-            {
-                Logger.Error($"Port {PORT} đang bị chiếm dụng bởi phần mềm khác!");
-                MessageBox.Show($"Port {PORT} đang bận. Vui lòng tắt ứng dụng đang chạy port này (hoặc server đang chạy ngầm).",
-                    "Lỗi Port", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Port {PORT} đang bị ứng dụng khác chiếm dụng!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
             btnStart.Enabled = false;
-            btnStop.Enabled = true;
             lblStatus.Text = "Status: Starting...";
             lblStatus.ForeColor = Color.Orange;
 
-            // 2. Khởi tạo và chạy Server
             try
             {
                 _server = new Server(PORT);
                 _server.OnUserListChanged += Server_OnUserListChanged;
 
-                // Chạy Async để không treo UI
-                Task.Run(async () =>
-                {
-                    try
-                    {
-                        await _server.StartAsync();
+                // Chạy Server (StartAsync)
+                await _server.StartAsync();
 
-                        // Cập nhật UI khi start thành công
-                        Invoke(new Action(() =>
-                        {
-                            lblStatus.Text = "Status: Running ✓";
-                            lblStatus.ForeColor = Color.Green;
-                        }));
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Error($"Server crash: {ex.Message}");
-                        Invoke(new Action(() =>
-                        {
-                            btnStart.Enabled = true;
-                            btnStop.Enabled = false;
-                            lblStatus.Text = "Status: Error";
-                            lblStatus.ForeColor = Color.Red;
-                        }));
-                    }
-                });
+                // Nếu chạy thành công:
+                btnStart.Enabled = false;
+                btnStop.Enabled = true;
+                lblStatus.Text = "Status: Running (Port " + PORT + ")";
+                lblStatus.ForeColor = Color.Green;
+
+                Logger.Success("Server đã khởi động thành công!");
             }
             catch (Exception ex)
             {
-                Logger.Error($"Không thể tạo Server: {ex.Message}");
+                Logger.Error($"Khởi động thất bại: {ex.Message}");
+                MessageBox.Show($"Lỗi khởi động Server: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                // Reset UI
                 btnStart.Enabled = true;
                 btnStop.Enabled = false;
+                lblStatus.Text = "Status: Stopped";
+                lblStatus.ForeColor = Color.Red;
+                _server = null;
             }
         }
 
@@ -171,141 +97,121 @@ namespace ChatAppServer
             btnStop.Enabled = false;
             lblStatus.Text = "Status: Stopped";
             lblStatus.ForeColor = Color.Red;
-            Logger.Warning("Server đã dừng.");
-
             lstUsers.Items.Clear();
+            Logger.Warning("Server đã dừng.");
         }
 
-        // === XỬ LÝ NÚT MỞ FIREWALL (INBOUND + OUTBOUND) ===
-        private void btnOpenFirewall_Click(object sender, EventArgs e)
+        // === 2. LOGIC FIREWALL (Quan Trọng) ===
+
+        private async void btnOpenFirewall_Click(object sender, EventArgs e)
         {
             var result = MessageBox.Show(
-                $"Bạn có muốn mở Port {PORT} (TCP) cho cả Inbound và Outbound không?\n\n" +
-                "Thao tác này sẽ chạy lệnh CMD quyền Admin để cấu hình Windows Firewall.\n" +
-                "Vui lòng nhấn YES khi hộp thoại UAC hiện lên.",
-                "Cấu hình Firewall",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
+                $"Hệ thống sẽ yêu cầu quyền Administrator để mở Port {PORT}.\n\n" +
+                "Vui lòng chọn YES/ALLOW khi cửa sổ xác nhận hiện lên.",
+                "Cấp quyền Admin",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Information);
 
-            if (result == DialogResult.Yes)
+            if (result == DialogResult.Cancel) return;
+
+            btnOpenFirewall.Enabled = false;
+            btnOpenFirewall.Text = "Đang xử lý...";
+
+            await Task.Run(() =>
             {
-                btnOpenFirewall.Enabled = false;
-                btnOpenFirewall.Text = "Đang xử lý...";
-
-                Task.Run(() =>
+                try
                 {
-                    // Gọi hàm Helper đã có sẵn
-                    bool success = FirewallHelper.OpenPortAsAdmin(PORT, "ChatAppServer");
+                    // Gọi hàm Helper mới (sẽ hiện popup UAC)
+                    FirewallHelper.OpenPortAsAdmin(PORT, "ChatAppServer");
+                }
+                catch (Exception ex)
+                {
+                    Invoke(new Action(() => Logger.Error($"Lỗi script firewall: {ex.Message}")));
+                }
+            });
 
-                    Invoke(new Action(() =>
-                    {
-                        btnOpenFirewall.Enabled = true;
-                        if (success)
-                        {
-                            btnOpenFirewall.Text = "✓ Firewall OK";
-                            btnOpenFirewall.BackColor = Color.Green;
-                            MessageBox.Show("Đã mở Firewall thành công!\nClient từ máy khác có thể kết nối ngay bây giờ.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                        else
-                        {
-                            btnOpenFirewall.Text = "Thử lại";
-                            btnOpenFirewall.BackColor = Color.Red;
-                            MessageBox.Show("Không thể mở Firewall tự động.\n\n" +
-                                "Nguyên nhân có thể:\n" +
-                                "1. Bạn đã từ chối quyền Admin (UAC).\n" +
-                                "2. Antivirus chặn script.\n" +
-                                "3. Windows Firewall bị tắt.\n\n" +
-                                "Hãy mở thủ công: Windows Defender Firewall > Advanced Settings > Inbound Rules > New Rule > Port > TCP > 9000 > Allow > All profiles.\n" +
-                                "Làm tương tự cho Outbound Rules.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-                    }));
-                });
-            }
+            // Kiểm tra lại trạng thái sau khi chạy script
+            await CheckFirewallStatusAsync();
+            btnOpenFirewall.Enabled = true;
         }
 
-        // === XỬ LÝ NÚT TEST KẾT NỐI ===
-        private void btnTestConnection_Click(object sender, EventArgs e)
+        private async Task CheckFirewallStatusAsync()
         {
-            // Kiểm tra toàn diện
-            bool isListening = FirewallHelper.IsPortListening(PORT);
-            bool isFirewallOpen = FirewallHelper.IsPortOpen(PORT, "ChatAppServer");
-            bool isInUse = FirewallHelper.IsPortInUse(PORT);
-            string ip = GetLocalIPAddresses();
+            bool isOpen = false;
+            await Task.Run(() =>
+            {
+                isOpen = FirewallHelper.IsPortOpen(PORT, "ChatAppServer");
+            });
 
-            string statusMsg = "=== KẾT QUẢ CHẨN ĐOÁN ===\n\n";
-
-            // 1. Kiểm tra Server chạy chưa
-            statusMsg += $"1. Server Listening (Port {PORT}): " + (isListening ? "✅ ĐANG CHẠY" : "❌ CHƯA CHẠY") + "\n";
-            if (!isListening) statusMsg += "   -> Hãy nhấn nút 'Start Server' trước.\n";
-
-            // 2. Kiểm tra Firewall
-            statusMsg += $"2. Windows Firewall Rule: " + (isFirewallOpen ? "✅ ĐÃ CÓ RULE" : "⚠️ CHƯA CÓ RULE") + "\n";
-            if (!isFirewallOpen) statusMsg += "   -> Hãy nhấn nút 'Mở Firewall'.\n";
-
-            // 3. Kiểm tra IP
-            statusMsg += $"3. IP Máy Chủ: {ip}\n";
-            statusMsg += $"4. Network Profile: Kiểm tra trong Windows Defender Firewall > Advanced Settings xem profile nào đang active (Domain/Private/Public).\n";
-
-            // 4. Lời khuyên
-            statusMsg += "\n=== LỜI KHUYÊN NẾU CLIENT KHÔNG KẾT NỐI ĐƯỢC ===\n";
-            statusMsg += "- Đảm bảo Client nhập đúng IP (ưu tiên IP Wifi 192.168.x.x).\n";
-            statusMsg += "- Đảm bảo 2 máy PING thấy nhau.\n";
-            statusMsg += "- Tắt tạm thời phần mềm diệt virus (Kaspersky, McAfee...) để test.\n";
-            statusMsg += "- Nếu dùng Wifi công cộng (Cafe/Trường học), họ thường chặn kết nối giữa các máy (AP Isolation). Hãy thử phát Wifi từ điện thoại (4G) rồi cho 2 máy kết nối vào.";
-
-            MessageBox.Show(statusMsg, "Chẩn đoán kết nối", MessageBoxButtons.OK, isListening ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+            Invoke(new Action(() =>
+            {
+                if (isOpen)
+                {
+                    btnOpenFirewall.Text = "✓ Firewall đã mở";
+                    btnOpenFirewall.BackColor = Color.LightGreen;
+                }
+                else
+                {
+                    btnOpenFirewall.Text = "⚠️ Mở Firewall ngay";
+                    btnOpenFirewall.BackColor = Color.Orange;
+                }
+            }));
         }
 
-        private void btnShowHelp_Click(object sender, EventArgs e)
-        {
-            string help = "HƯỚNG DẪN:\n\n" +
-                          "1. Nhấn 'Mở Firewall' -> Chọn Yes -> Đồng ý Admin.\n" +
-                          "2. Nhấn 'Start Server'.\n" +
-                          "3. Gửi IP (dòng chữ xanh) cho bạn bè nhập vào Client.\n\n" +
-                          "LƯU Ý: Nếu Client báo lỗi kết nối, hãy thử tắt hẳn Firewall của Windows ở cả 2 máy để test.";
-            MessageBox.Show(help, "Trợ giúp");
-        }
+        // === 3. CÁC HÀM TIỆN ÍCH (HELPER) ===
 
-        #region Helper Methods (IP, UI Update)
-
-        private string GetLocalIPAddresses()
+        private void UpdateServerIPDisplay()
         {
-            string wifiIP = null;
             try
             {
-                using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+                // Lấy tất cả IP V4 của máy (Trừ localhost)
+                var host = Dns.GetHostEntry(Dns.GetHostName());
+                var ipList = host.AddressList
+                    .Where(ip => ip.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(ip))
+                    .Select(ip => ip.ToString())
+                    .ToList();
+
+                if (ipList.Count > 0)
                 {
-                    socket.Connect("8.8.8.8", 65530);
-                    var endPoint = socket.LocalEndPoint as IPEndPoint;
-                    wifiIP = endPoint?.Address.ToString();
+                    lblServerIP.Text = $"IP Client cần nhập: {string.Join("  HOẶC  ", ipList)}";
+                    lblServerIP.ForeColor = Color.Blue;
+                    Logger.Info($"Các địa chỉ IP khả dụng: {string.Join(", ", ipList)}");
+                }
+                else
+                {
+                    lblServerIP.Text = "Không tìm thấy IP mạng LAN. Kiểm tra kết nối Wifi/Dây.";
+                    lblServerIP.ForeColor = Color.Red;
                 }
             }
-            catch { }
-
-            if (!string.IsNullOrEmpty(wifiIP)) return $"127.0.0.1, {wifiIP}";
-
-            // Fallback
-            var host = Dns.GetHostEntry(Dns.GetHostName());
-            var ips = host.AddressList.Where(ip => ip.AddressFamily == AddressFamily.InterNetwork).Select(ip => ip.ToString());
-            return string.Join(", ", ips);
+            catch
+            {
+                lblServerIP.Text = "Lỗi khi lấy IP máy.";
+            }
         }
+
+        private bool IsPortInUse(int port)
+        {
+            try
+            {
+                using (var client = new TcpClient())
+                {
+                    // Thử kết nối vào port chính mình, nếu được -> Port đang bị chiếm
+                    var result = client.BeginConnect("127.0.0.1", port, null, null);
+                    bool success = result.AsyncWaitHandle.WaitOne(100); // Check nhanh 100ms
+                    return success;
+                }
+            }
+            catch { return false; }
+        }
+
+        // === 4. XỬ LÝ UI / THREAD SAFE ===
 
         private void Logger_OnLogReceived(string message, Color color)
         {
             if (rtbLog.IsDisposed) return;
-            if (rtbLog.InvokeRequired)
-            {
-                rtbLog.Invoke(new Action(() => Logger_OnLogReceived(message, color)));
-                return;
-            }
+            if (InvokeRequired) { Invoke(new Action(() => Logger_OnLogReceived(message, color))); return; }
 
-            // Giới hạn dòng log
-            if (rtbLog.Lines.Length > 1000)
-            {
-                rtbLog.Select(0, rtbLog.GetFirstCharIndexFromLine(100));
-                rtbLog.SelectedText = "";
-            }
-
+            // Auto-scroll logic
             rtbLog.SelectionStart = rtbLog.TextLength;
             rtbLog.SelectionLength = 0;
             rtbLog.SelectionColor = color;
@@ -316,66 +222,79 @@ namespace ChatAppServer
         private void Server_OnUserListChanged(List<string> users)
         {
             if (lstUsers.IsDisposed) return;
-            if (lstUsers.InvokeRequired)
-            {
-                Invoke(new Action(() => Server_OnUserListChanged(users)));
-                return;
-            }
+            if (InvokeRequired) { Invoke(new Action(() => Server_OnUserListChanged(users))); return; }
+
             lstUsers.Items.Clear();
             foreach (var u in users) lstUsers.Items.Add(u);
         }
 
-        #endregion
+        // === 5. CONTEXT MENU (CHUỘT PHẢI USER) ===
 
-        #region Xử lý Menu Chuột Phải
+        private void InitializeContextMenu()
+        {
+            _ctxUserMenu = new ContextMenuStrip();
+            var itemInfo = new ToolStripMenuItem("🔍 Xem thông tin");
+            itemInfo.Click += (s, e) => ShowUserInfo();
 
-        private void lstUsers_MouseDown(object sender, MouseEventArgs e)
+            var itemKick = new ToolStripMenuItem("👢 Kick user");
+            itemKick.ForeColor = Color.Red;
+            itemKick.Click += (s, e) => KickSelectedUser();
+
+            _ctxUserMenu.Items.Add(itemInfo);
+            _ctxUserMenu.Items.Add(new ToolStripSeparator());
+            _ctxUserMenu.Items.Add(itemKick);
+
+            lstUsers.ContextMenuStrip = _ctxUserMenu;
+        }
+
+        private void LstUsers_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Right)
             {
                 int index = lstUsers.IndexFromPoint(e.Location);
-                if (index != ListBox.NoMatches)
-                {
-                    lstUsers.SelectedIndex = index;
-                }
+                if (index != ListBox.NoMatches) lstUsers.SelectedIndex = index;
             }
-        }
-
-        private string? GetSelectedUserID()
-        {
-            if (lstUsers.SelectedItem == null) return null;
-            // Format: "Tên (ID)" -> Cắt lấy ID
-            string itemText = lstUsers.SelectedItem.ToString();
-            int open = itemText.LastIndexOf('(');
-            int close = itemText.LastIndexOf(')');
-            if (open != -1 && close != -1)
-            {
-                return itemText.Substring(open + 1, close - open - 1);
-            }
-            return null;
         }
 
         private void ShowUserInfo()
         {
-            string? id = GetSelectedUserID();
-            if (id != null && _server != null)
-            {
-                MessageBox.Show(_server.GetUserInfo(id), "Thông tin User");
-            }
+            if (lstUsers.SelectedItem == null || _server == null) return;
+            string userId = ExtractUserId(lstUsers.SelectedItem.ToString());
+            if (userId != null) MessageBox.Show(_server.GetUserInfo(userId), "User Info");
         }
 
         private void KickSelectedUser()
         {
-            string? id = GetSelectedUserID();
-            if (id != null && _server != null)
+            if (lstUsers.SelectedItem == null || _server == null) return;
+            string userId = ExtractUserId(lstUsers.SelectedItem.ToString());
+
+            if (userId != null && MessageBox.Show($"Kick user {userId}?", "Confirm", MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
-                if (MessageBox.Show($"Bạn chắc chắn muốn kick user '{id}'?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
-                {
-                    _server.KickUser(id);
-                }
+                _server.KickUser(userId);
             }
         }
 
-        #endregion
+        private string? ExtractUserId(string? displayText)
+        {
+            // Format hiển thị: "TênUser (UserID)"
+            if (string.IsNullOrEmpty(displayText)) return null;
+            int lastOpen = displayText.LastIndexOf('(');
+            int lastClose = displayText.LastIndexOf(')');
+            if (lastOpen != -1 && lastClose != -1 && lastClose > lastOpen)
+            {
+                return displayText.Substring(lastOpen + 1, lastClose - lastOpen - 1);
+            }
+            return null; // Hoặc trả về chính text nếu không parse được
+        }
+
+        private void btnShowHelp_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show(
+               "1. Nhấn 'Mở Firewall ngay' -> Chọn Yes -> Chờ thông báo thành công.\n" +
+               "2. Nhấn 'Start Server'.\n" +
+               "3. Copy địa chỉ IP màu xanh dương và gửi cho Client.\n" +
+               "4. Client nhập IP đó vào ô 'Server IP' để kết nối.",
+               "Hướng dẫn");
+        }
     }
 }
