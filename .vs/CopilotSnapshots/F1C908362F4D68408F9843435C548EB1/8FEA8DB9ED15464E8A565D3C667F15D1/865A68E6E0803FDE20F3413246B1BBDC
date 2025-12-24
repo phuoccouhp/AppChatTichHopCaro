@@ -263,9 +263,8 @@ namespace ChatAppClient.Forms
                 }
                 catch { }
 
-                lock (_streamLock)
+                lock (_stream)
                 {
-                    if (_stream == null) return false;
                     _stream.Write(lenBuf, 0, 4);
                     _stream.Write(data, 0, data.Length);
                     _stream.Flush();
@@ -317,11 +316,8 @@ namespace ChatAppClient.Forms
 
         private void DisconnectInternal(bool notify)
         {
-            lock (_streamLock)
-            {
-                try { _listeningCts?.Cancel(); _client?.Close(); } catch { }
-                _client = null; _stream = null; _listeningCts = null;
-            }
+            try { _listeningCts?.Cancel(); _client?.Close(); } catch { }
+            _client = null; _stream = null; _listeningCts = null;
 
             if (notify && _homeForm != null && !_homeForm.IsDisposed && _homeForm.IsHandleCreated)
                 SafeInvokeHomeForm(() => MessageBox.Show("Mất kết nối máy chủ.", "Lỗi Mạng", MessageBoxButtons.OK, MessageBoxIcon.Warning));

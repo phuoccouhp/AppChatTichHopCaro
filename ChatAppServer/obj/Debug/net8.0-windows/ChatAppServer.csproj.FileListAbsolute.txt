@@ -150,3 +150,7 @@ C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.
 C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ChatAppServer.pdb
 C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ChatAppServer.genruntimeconfig.cache
 C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ref\ChatAppServer.dll
+C:\Users\Admin\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\System.IO.Pipelines.dll
+C:\Users\Admin\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\System.Text.Encodings.Web.dll
+C:\Users\Admin\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\System.Text.Json.dll
+C:\Users\Admin\Source\Repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\runtimes\browser\lib\net8.0\System.Text.Encodings.Web.dll

@@ -153,3 +153,8 @@ C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.
 C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.pdb
 C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.genruntimeconfig.cache
 C:\Users\QUANG HUY\Source\Repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ref\ChatAppClient.dll
+C:\Users\Admin\Source\Repos\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\System.IO.Pipelines.dll
+C:\Users\Admin\Source\Repos\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\System.Text.Encodings.Web.dll
+C:\Users\Admin\Source\Repos\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\System.Text.Json.dll
+C:\Users\Admin\Source\Repos\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\runtimes\browser\lib\net8.0\System.Text.Encodings.Web.dll
+C:\Users\Admin\Source\Repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmForwardMessage.resources

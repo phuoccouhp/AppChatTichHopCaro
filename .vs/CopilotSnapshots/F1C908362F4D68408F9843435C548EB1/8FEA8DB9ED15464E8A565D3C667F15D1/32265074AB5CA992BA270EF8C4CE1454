@@ -35,7 +35,6 @@ namespace ChatAppClient.Forms
 
         private CancellationTokenSource? _listeningCts;
         private readonly object _loginLock = new object();
-        private readonly object _streamLock = new object();
         private Queue<UserStatusPacket> _pendingStatusPackets = new Queue<UserStatusPacket>();
 
         private JsonSerializerOptions _jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -70,22 +69,16 @@ namespace ChatAppClient.Forms
 
             DisconnectInternal(false); // Reset sạch sẽ trước khi kết nối mới
 
-            var client = new TcpClient();
-            _client = client;
+            _client = new TcpClient();
             try
             {
                 // Bỏ qua logic Task.WhenAny/Delay phức tạp gây timeout ảo.
                 // Để TCP Client tự handle timeout (hoặc hệ điều hành).
-                await client.ConnectAsync(ipAddress, port);
+                await _client.ConnectAsync(ipAddress, port);
 
-                // Use the local client reference to avoid races where _client is set to null
-                // by DisconnectInternal on a different thread while awaiting.
-                if (client.Connected)
+                if (_client.Connected)
                 {
-                    lock (_streamLock)
-                    {
-                        _stream = client.GetStream();
-                    }
+                    _stream = _client.GetStream();
                     _listeningCts = new CancellationTokenSource();
                     // Bắt đầu lắng nghe ngay lập tức
                     _ = StartListeningAsync(_listeningCts.Token);
@@ -263,9 +256,8 @@ namespace ChatAppClient.Forms
                 }
                 catch { }
 
-                lock (_streamLock)
+                lock (_stream)
                 {
-                    if (_stream == null) return false;
                     _stream.Write(lenBuf, 0, 4);
                     _stream.Write(data, 0, data.Length);
                     _stream.Flush();
@@ -317,11 +309,8 @@ namespace ChatAppClient.Forms
 
         private void DisconnectInternal(bool notify)
         {
-            lock (_streamLock)
-            {
-                try { _listeningCts?.Cancel(); _client?.Close(); } catch { }
-                _client = null; _stream = null; _listeningCts = null;
-            }
+            try { _listeningCts?.Cancel(); _client?.Close(); } catch { }
+            _client = null; _stream = null; _listeningCts = null;
 
             if (notify && _homeForm != null && !_homeForm.IsDisposed && _homeForm.IsHandleCreated)
                 SafeInvokeHomeForm(() => MessageBox.Show("Mất kết nối máy chủ.", "Lỗi Mạng", MessageBoxButtons.OK, MessageBoxIcon.Warning));
