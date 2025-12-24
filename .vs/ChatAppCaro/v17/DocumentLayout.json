@@ -3,7 +3,7 @@
   "WorkspaceRootPath": "E:\\project\\khoqua\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|E:\\project\\khoqua\\chatappserver\\frmserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "AbsoluteMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|e:\\project\\khoqua\\chatappserver\\frmserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
       "RelativeMoniker": "D:0:0:{66DA92DE-DBA9-44CA-936A-9F78632D6221}|ChatAppServer\\ChatAppServer.csproj|solutionrelative:chatappserver\\frmserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     },
     {
@@ -294,7 +294,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 16,
+          "SelectedChildIndex": 14,
           "Children": [
             {
               "$type": "Bookmark",
@@ -353,14 +353,6 @@
               "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
             },
             {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{56df62a4-05a3-4e5b-aa1a-99371ccfb997}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{74946827-37a0-11d2-a273-00c04f8ef4ff}"
-            },
-            {
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "frmServer.cs [Design]",
@@ -373,31 +365,6 @@
               "EditorCaption": " [Design]"
             },
             {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{1c64b9c2-e352-428e-a56d-0ace190b99a6}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{b1e99781-ab81-11d0-b683-00aa00a3ee26}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "ChatAppServer.csproj",
-              "DocumentMoniker": "E:\\project\\khoqua\\ChatAppServer\\ChatAppServer.csproj",
-              "RelativeDocumentMoniker": "ChatAppServer\\ChatAppServer.csproj",
-              "ToolTip": "E:\\project\\khoqua\\ChatAppServer\\ChatAppServer.csproj",
-              "RelativeToolTip": "ChatAppServer\\ChatAppServer.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2025-11-30T05:53:48.405Z",
-              "EditorCaption": ""
-            },
-            {
               "$type": "Document",
               "DocumentIndex": 2,
               "Title": "NetworkManager.cs",
@@ -407,8 +374,7 @@
               "RelativeToolTip": "ChatAppClient\\NetworkManager.cs",
               "ViewState": "AgIAAE8AAAAAAAAAAAAswEEAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-30T15:40:38.627Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T15:40:38.627Z"
             },
             {
               "$type": "Document",
@@ -420,8 +386,23 @@
               "RelativeToolTip": "ChatAppServer\\FirewallHelper.cs",
               "ViewState": "AgIAAEABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-23T16:27:21.125Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-23T16:27:21.125Z"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c64b9c2-e352-428e-a56d-0ace190b99a6}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ChatAppServer.csproj",
+              "DocumentMoniker": "E:\\project\\khoqua\\ChatAppServer\\ChatAppServer.csproj",
+              "RelativeDocumentMoniker": "ChatAppServer\\ChatAppServer.csproj",
+              "ToolTip": "E:\\project\\khoqua\\ChatAppServer\\ChatAppServer.csproj",
+              "RelativeToolTip": "ChatAppServer\\ChatAppServer.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2025-11-30T05:53:48.405Z"
             },
             {
               "$type": "Document",
@@ -433,8 +414,7 @@
               "RelativeToolTip": "ChatAppServer\\AppConfig.cs",
               "ViewState": "AgIAADEAAAAAAAAAAAAQwEcAAAAjAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-24T02:42:43.594Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-24T02:42:43.594Z"
             },
             {
               "$type": "Document",
@@ -446,8 +426,7 @@
               "RelativeToolTip": "ChatAppServer\\frmServer.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-02T07:59:12.269Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-02T07:59:12.269Z"
             },
             {
               "$type": "Document",
@@ -630,8 +609,7 @@
               "RelativeToolTip": "ChatAppClient\\UserControls\\ChatViewControl.Designer.cs",
               "ViewState": "AgIAANIAAAAAAAAAAAAwwN8AAAA0AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-22T00:37:50.539Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-22T00:37:50.539Z"
             },
             {
               "$type": "Document",
@@ -706,7 +684,8 @@
               "RelativeToolTip": "ChatAppClient\\UserControls\\ChatMessageBubble.cs",
               "ViewState": "AgIAAFEAAAAAAAAAAAAwwGwAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-24T04:12:48.407Z"
+              "WhenOpened": "2025-12-24T04:12:48.407Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -742,8 +721,7 @@
               "RelativeToolTip": "ChatAppClient\\UserControls\\ImageBubble.Designer.cs",
               "ViewState": "AgIAABkAAAAAAAAAAAAUwC8AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-24T02:58:29.279Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-24T02:58:29.279Z"
             },
             {
               "$type": "Document",
@@ -767,8 +745,7 @@
               "RelativeToolTip": "ChatAppClient\\UserControls\\FriendListItem.Designer.cs",
               "ViewState": "AgIAAAsAAAAAAAAAAAAAwBYAAAAdAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-22T00:34:32.991Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-22T00:34:32.991Z"
             },
             {
               "$type": "Document",
@@ -804,8 +781,7 @@
               "RelativeToolTip": "ChatAppClient\\UserControls\\FileBubble.Designer.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAGwAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-24T02:58:15.231Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-24T02:58:15.231Z"
             },
             {
               "$type": "Document",
@@ -841,8 +817,7 @@
               "RelativeToolTip": "ChatAppClient\\Forms\\frmSignup.Designer.cs",
               "ViewState": "AgIAAAEAAAAAAAAAAAAmwL4AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-30T15:13:49.381Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T15:13:49.381Z"
             },
             {
               "$type": "Document",
@@ -854,8 +829,7 @@
               "RelativeToolTip": "ChatAppClient\\Forms\\frmTankGame.Designer.cs",
               "ViewState": "AgIAAEQAAAAAAAAAAAAuwGYAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-22T01:00:58.597Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-22T01:00:58.597Z"
             },
             {
               "$type": "Document",
@@ -953,8 +927,7 @@
               "RelativeToolTip": "ChatAppClient\\Forms\\frmLogin.Designer.cs",
               "ViewState": "AgIAAAUAAAAAAAAAAAAqwP4AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-30T15:15:09.297Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T15:15:09.297Z"
             },
             {
               "$type": "Document",
@@ -991,8 +964,7 @@
               "RelativeToolTip": "ChatAppClient\\Forms\\frmCaroGame.Designer.cs",
               "ViewState": "AgIAAF0AAAAAAAAAAAAuwH8AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-24T02:50:17.656Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-24T02:50:17.656Z"
             },
             {
               "$type": "Document",
@@ -1004,8 +976,7 @@
               "RelativeToolTip": "ChatAppClient\\Forms\\frmForgotPass.Designer.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAmwLAAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-02T08:27:12.599Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-02T08:27:12.599Z"
             },
             {
               "$type": "Document",
@@ -1028,8 +999,7 @@
               "ToolTip": "E:\\project\\khoqua\\ChatAppClient\\ChatAppClient.csproj",
               "RelativeToolTip": "ChatAppClient\\ChatAppClient.csproj",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2025-12-24T02:49:11.787Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-24T02:49:11.787Z"
             },
             {
               "$type": "Document",
@@ -1090,8 +1060,7 @@
               "RelativeToolTip": "ChatAppClient\\ChatAppClient.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2025-11-30T05:48:28.678Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T05:48:28.678Z"
             },
             {
               "$type": "Document",
@@ -1114,8 +1083,19 @@
               "RelativeToolTip": "ChatApp.Shared\\ChatApp.Shared.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2025-11-30T09:20:38.286Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T09:20:38.286Z"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{56df62a4-05a3-4e5b-aa1a-99371ccfb997}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{74946827-37a0-11d2-a273-00c04f8ef4ff}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{b1e99781-ab81-11d0-b683-00aa00a3ee26}"
             },
             {
               "$type": "Document",
@@ -1126,8 +1106,7 @@
               "ToolTip": "E:\\project\\khoqua\\ChatAppClient\\UserControls\\FriendListItem.cs [Design]",
               "RelativeToolTip": "ChatAppClient\\UserControls\\FriendListItem.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-22T00:34:11.848Z",
-              "EditorCaption": " [Design]"
+              "WhenOpened": "2025-12-22T00:34:11.848Z"
             },
             {
               "$type": "Document",
@@ -1138,8 +1117,7 @@
               "ToolTip": "E:\\project\\khoqua\\ChatAppClient\\UserControls\\ChatViewControl.cs [Design]",
               "RelativeToolTip": "ChatAppClient\\UserControls\\ChatViewControl.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-22T00:37:41.734Z",
-              "EditorCaption": " [Design]"
+              "WhenOpened": "2025-12-22T00:37:41.734Z"
             },
             {
               "$type": "Document",
@@ -1161,8 +1139,7 @@
               "ToolTip": "E:\\project\\khoqua\\ChatAppClient\\UserControls\\ImageBubble.cs [Design]",
               "RelativeToolTip": "ChatAppClient\\UserControls\\ImageBubble.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-24T04:33:07.752Z",
-              "EditorCaption": " [Design]"
+              "WhenOpened": "2025-12-24T04:33:07.752Z"
             },
             {
               "$type": "Document",
@@ -1173,8 +1150,7 @@
               "ToolTip": "E:\\project\\khoqua\\ChatAppClient\\UserControls\\FileBubble.cs [Design]",
               "RelativeToolTip": "ChatAppClient\\UserControls\\FileBubble.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-24T04:00:50.339Z",
-              "EditorCaption": " [Design]"
+              "WhenOpened": "2025-12-24T04:00:50.339Z"
             },
             {
               "$type": "Document",
@@ -1185,8 +1161,7 @@
               "ToolTip": "E:\\project\\khoqua\\ChatAppClient\\Forms\\frmTankGame.cs [Design]",
               "RelativeToolTip": "ChatAppClient\\Forms\\frmTankGame.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-22T01:00:33.979Z",
-              "EditorCaption": " [Design]"
+              "WhenOpened": "2025-12-22T01:00:33.979Z"
             },
             {
               "$type": "Document",
@@ -1197,8 +1172,7 @@
               "ToolTip": "E:\\project\\khoqua\\ChatAppClient\\Forms\\frmCaroGame.cs [Design]",
               "RelativeToolTip": "ChatAppClient\\Forms\\frmCaroGame.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-24T02:50:06.319Z",
-              "EditorCaption": " [Design]"
+              "WhenOpened": "2025-12-24T02:50:06.319Z"
             },
             {
               "$type": "Document",
@@ -1209,8 +1183,7 @@
               "ToolTip": "E:\\project\\khoqua\\ChatAppClient\\Forms\\frmLogin.cs [Design]",
               "RelativeToolTip": "ChatAppClient\\Forms\\frmLogin.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-30T15:45:25.13Z",
-              "EditorCaption": " [Design]"
+              "WhenOpened": "2025-11-30T15:45:25.13Z"
             },
             {
               "$type": "Document",
@@ -1221,8 +1194,7 @@
               "ToolTip": "E:\\project\\khoqua\\ChatAppClient\\Forms\\frmForgotPass.cs [Design]",
               "RelativeToolTip": "ChatAppClient\\Forms\\frmForgotPass.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-02T08:16:02.939Z",
-              "EditorCaption": " [Design]"
+              "WhenOpened": "2025-12-02T08:16:02.939Z"
             },
             {
               "$type": "Document",
@@ -1233,8 +1205,7 @@
               "ToolTip": "E:\\project\\khoqua\\ChatAppClient\\Forms\\frmSignup.cs [Design]",
               "RelativeToolTip": "ChatAppClient\\Forms\\frmSignup.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-30T15:13:39.387Z",
-              "EditorCaption": " [Design]"
+              "WhenOpened": "2025-11-30T15:13:39.387Z"
             },
             {
               "$type": "Document",
@@ -1245,8 +1216,7 @@
               "ToolTip": "E:\\project\\khoqua\\ChatAppClient\\Forms\\frmLogin.resx",
               "RelativeToolTip": "ChatAppClient\\Forms\\frmLogin.resx",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001005|",
-              "WhenOpened": "2025-11-30T15:45:15.907Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T15:45:15.907Z"
             }
           ]
         }
