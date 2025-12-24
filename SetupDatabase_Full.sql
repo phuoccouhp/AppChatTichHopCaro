@@ -2,11 +2,11 @@
 -- FULL SCRIPT SETUP DATABASE CHAT APP + GAME CARO
 -- SQL SERVER (T-SQL)
 -- XÓA + TẠO LẠI TOÀN BỘ DATABASE STRUCTURE
+-- (ĐÃ LOẠI BỎ PHẦN GROUPCHAT)
 -- ============================================
 IF DB_ID('ChatAppDB') IS NULL
     CREATE DATABASE ChatAppDB;
 GO
-
 
 USE ChatAppDB;
 GO
@@ -22,8 +22,6 @@ PRINT '';
 
 PRINT 'Đang xóa các bảng cũ...';
 
-IF OBJECT_ID('GroupMembers', 'U') IS NOT NULL DROP TABLE GroupMembers;
-IF OBJECT_ID('Groups', 'U') IS NOT NULL DROP TABLE Groups;
 IF OBJECT_ID('GameHistory', 'U') IS NOT NULL DROP TABLE GameHistory;
 IF OBJECT_ID('Messages', 'U') IS NOT NULL DROP TABLE Messages;
 IF OBJECT_ID('Users', 'U') IS NOT NULL DROP TABLE Users;
@@ -60,6 +58,8 @@ PRINT '✓ Đã tạo bảng Users';
 
 /* =====================================================
    BƯỚC 3 - TẠO BẢNG MESSAGES
+   (Chú ý: phần groupchat đã bị loại bỏ; Messages giữ cho
+    nhắn 1-1 giữa các Username)
 ===================================================== */
 
 CREATE TABLE Messages (
@@ -69,7 +69,7 @@ CREATE TABLE Messages (
     MessageContent NVARCHAR(MAX) NOT NULL,
     MessageType VARCHAR(20) DEFAULT 'Text',
     FileName NVARCHAR(255),
-    IsGroupMessage BIT DEFAULT 0,
+    -- IsGroupMessage cũ đã bỏ vì bảng Groups/GroupMembers không còn
     CreatedAt DATETIME DEFAULT GETDATE()
 );
 GO
@@ -114,32 +114,7 @@ GO
 PRINT '✓ Đã tạo bảng GameHistory';
 
 /* =====================================================
-   BƯỚC 5 - TẠO GROUP CHAT
-===================================================== */
-
-CREATE TABLE Groups (
-    GroupID INT IDENTITY(1,1) PRIMARY KEY,
-    GroupName NVARCHAR(100) NOT NULL,
-    CreatedBy NVARCHAR(50) NOT NULL,
-    CreatedAt DATETIME DEFAULT GETDATE(),
-    FOREIGN KEY (CreatedBy) REFERENCES Users(Username)
-);
-GO
-
-CREATE TABLE GroupMembers (
-    ID INT IDENTITY(1,1) PRIMARY KEY,
-    GroupID INT NOT NULL,
-    UserID NVARCHAR(50) NOT NULL,
-    JoinedAt DATETIME DEFAULT GETDATE(),
-    FOREIGN KEY (GroupID) REFERENCES Groups(GroupID),
-    FOREIGN KEY (UserID) REFERENCES Users(Username)
-);
-GO
-
-PRINT '✓ Đã tạo Group Chat';
-
-/* =====================================================
-   BƯỚC 6 - INSERT USER TEST
+   BƯỚC 5 - INSERT USER TEST
 ===================================================== */
 
 INSERT INTO Users (Username, Password, DisplayName, Email) VALUES
@@ -157,7 +132,8 @@ GO
 PRINT '✓ Đã insert tài khoản test';
 
 /* =====================================================
-   BƯỚC 7 - HIỂN THỊ KẾT QUẢ
+   BƯỚC 6 - HIỂN THỊ KẾT QUẢ
+   (ĐÃ LOẠI BỎ HIỂN THỊ GROUPS / GROUP MEMBERS)
 ===================================================== */
 
 PRINT '';
@@ -166,12 +142,6 @@ SELECT * FROM Users;
 
 PRINT '========== MESSAGES =========='; 
 SELECT * FROM Messages;
-
-PRINT '========== GROUPS =========='; 
-SELECT * FROM Groups;
-
-PRINT '========== GROUP MEMBERS =========='; 
-SELECT * FROM GroupMembers;
 
 PRINT '========== GAME HISTORY =========='; 
 SELECT * FROM GameHistory;
