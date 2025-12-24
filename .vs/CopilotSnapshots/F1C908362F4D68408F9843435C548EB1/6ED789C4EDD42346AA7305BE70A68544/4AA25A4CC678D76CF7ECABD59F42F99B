@@ -284,29 +284,22 @@ namespace ChatAppClient.Forms
         public async Task<LoginResultPacket> LoginAsync(LoginPacket packet)
         {
             _loginCompletionSource = new TaskCompletionSource<LoginResultPacket>();
-            if (!SendPacket(packet))
-            {
-                // Trả về gói lỗi thay vì ném Exception để caller xử lý theo luồng bình thường
-                return new LoginResultPacket { Success = false, Message = "Gửi yêu cầu đăng nhập thất bại." };
-            }
+            if (!SendPacket(packet)) throw new Exception("Gửi yêu cầu đăng nhập thất bại.");
 
             // Tăng timeout lên 10s hoặc hơn để đảm bảo không bị timeout ảo
             if (await Task.WhenAny(_loginCompletionSource.Task, Task.Delay(10000)) == _loginCompletionSource.Task)
                 return await _loginCompletionSource.Task;
-            return new LoginResultPacket { Success = false, Message = "Server không phản hồi yêu cầu đăng nhập (Timeout)." };
+            throw new TimeoutException("Server không phản hồi yêu cầu đăng nhập.");
         }
 
         public async Task<RegisterResultPacket> RegisterAsync(RegisterPacket packet)
         {
             _registerCompletionSource = new TaskCompletionSource<RegisterResultPacket>();
-            if (!SendPacket(packet))
-            {
-                return new RegisterResultPacket { Success = false, Message = "Gửi yêu cầu đăng ký thất bại." };
-            }
+            if (!SendPacket(packet)) throw new Exception("Gửi yêu cầu đăng ký thất bại.");
 
             if (await Task.WhenAny(_registerCompletionSource.Task, Task.Delay(10000)) == _registerCompletionSource.Task)
                 return await _registerCompletionSource.Task;
-            return new RegisterResultPacket { Success = false, Message = "Server không phản hồi yêu cầu đăng ký (Timeout)." };
+            throw new TimeoutException("Server không phản hồi yêu cầu đăng ký.");
         }
 
         public async Task<ChatHistoryResponsePacket> RequestChatHistoryAsync(string friendID, int limit = 100)
