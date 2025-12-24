@@ -3,7 +3,11 @@
 -- SQL SERVER (T-SQL)
 -- XÓA + TẠO LẠI TOÀN BỘ DATABASE STRUCTURE
 -- ============================================
-CREATE DATABASE ChatAppDB;
+IF DB_ID('ChatAppDB') IS NULL
+    CREATE DATABASE ChatAppDB;
+GO
+
+
 USE ChatAppDB;
 GO
 
