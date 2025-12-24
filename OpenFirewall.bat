@@ -1,85 +1,72 @@
 @echo off
-:: Kiem tra quyen Admin
+REM ============================================================================
+REM ?????? PowerShell ????????? netsh ????
+REM ============================================================================
+
+setlocal enabledelayedexpansion
+
+REM ?? Admin ??
 net session >nul 2>&1
 if %errorLevel% neq 0 (
     echo.
     echo =========================================
-    echo    CAN QUYEN ADMINISTRATOR!
+    echo    ????????
     echo =========================================
     echo.
-    echo Vui long chay file nay voi quyen Administrator:
-    echo Right-click vao file -^> "Run as administrator"
-    echo.
-    echo HOAC chay file OpenFirewall.ps1 thay vi file .bat
+    echo ?????????????
+    echo ???? -^> "????????"
     echo.
     pause
     exit /b 1
 )
 
-echo =========================================
-echo    MO FIREWALL CHO CHAT APP SERVER
-echo =========================================
-echo.
-echo Dang mo port 9000 tren Windows Firewall...
-echo.
-
-:: Xoa rule cu neu co
-echo [1/3] Xoa rule cu...
-netsh advfirewall firewall delete rule name="ChatAppServer" >nul 2>&1
-netsh advfirewall firewall delete rule name="ChatAppServer (Out)" >nul 2>&1
-if %errorLevel% equ 0 (
-    echo    Done
-) else (
-    echo    Khong co rule cu de xoa
-)
-
-:: Them rule moi - Inbound (cho phep ket noi DEN tu BAT KY dau trong mang local)
-echo [2/3] Them rule Inbound (cho phep ket noi den)...
-netsh advfirewall firewall add rule name="ChatAppServer" dir=in action=allow protocol=TCP localport=9000 profile=private,domain enable=yes
-if %errorLevel% equ 0 (
-    echo    Da them rule Inbound
-) else (
-    echo    LOI: Khong the them rule Inbound!
-    echo    Kiem tra quyen Admin hoac thu chay file OpenFirewall.ps1
-)
-
-:: Them rule moi - Outbound (cho phep ket noi di)  
-echo [3/3] Them rule Outbound (cho phep ket noi di)...
-netsh advfirewall firewall add rule name="ChatAppServer (Out)" dir=out action=allow protocol=TCP localport=9000 profile=private,domain enable=yes
-if %errorLevel% equ 0 (
-    echo    Da them rule Outbound
-) else (
-    echo    LOI: Khong the them rule Outbound!
-    echo    Kiem tra quyen Admin hoac thu chay file OpenFirewall.ps1
-)
-
 echo.
 echo =========================================
-echo    KIEM TRA KET QUA
+echo    ?? ChatApp ?????
 echo =========================================
 echo.
+echo ?? PowerShell ????...
+echo.
 
-:: Kiem tra rule da tao chua
-netsh advfirewall firewall show rule name="ChatAppServer" | findstr /C:"Rule Name" >nul 2>&1
+REM ?? PowerShell ??????????? netsh ??????
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+"^
+try { ^
+  Remove-NetFirewallRule -DisplayName 'ChatAppServer' -Direction Inbound -ErrorAction SilentlyContinue | Out-Null; ^
+  Remove-NetFirewallRule -DisplayName 'ChatAppServer (Out)' -Direction Outbound -ErrorAction SilentlyContinue | Out-Null; ^
+  New-NetFirewallRule -DisplayName 'ChatAppServer' -Direction Inbound -Action Allow -Protocol TCP -LocalPort 9000 -Profile Domain,Private,Public -Enabled $true | Out-Null; ^
+  New-NetFirewallRule -DisplayName 'ChatAppServer (Out)' -Direction Outbound -Action Allow -Protocol TCP -LocalPort 9000 -RemoteAddress Any -Profile Domain,Private,Public -Enabled $true | Out-Null; ^
+  Write-Host 'Firewall rules created successfully!' -ForegroundColor Green; ^
+  Write-Host ''; ^
+  Write-Host 'Rules Status:' -ForegroundColor Cyan; ^
+  Get-NetFirewallRule -DisplayName 'ChatAppServer*' | Format-Table DisplayName, Direction, Action, Enabled -AutoSize ^
+} catch { ^
+  Write-Host "Error: $_.Exception.Message" -ForegroundColor Red ^
+}^
+"
+
 if %errorLevel% equ 0 (
-    echo DA MO PORT 9000 THANH CONG!
     echo.
-    echo Bay gio cac may khac trong CUNG MANG WiFi co the ket noi den Server.
+    echo =========================================
+    echo    ? ??
+    echo =========================================
+    echo.
+    echo ?? 9000 ?????
+    echo ????????????????????
+    echo.
 ) else (
-    echo CANH BAO: Co the co loi!
     echo.
-    echo Kiem tra thu cong trong Windows Firewall:
-    echo 1. Windows Security -^> Firewall ^& network protection
-    echo 2. Advanced settings -^> Inbound Rules
-    echo 3. Tim rule "ChatAppServer" -^> Kiem tra Status = Enabled
+    echo =========================================
+    echo    ? ??
+    echo =========================================
     echo.
-    echo HOAC thu chay file OpenFirewall.ps1 voi quyen Admin
+    echo ????
+    echo 1. ???????????
+    echo 2. Windows PowerShell ???
+    echo 3. ?? Windows ?????
+    echo.
 )
 
-echo.
-echo LUA Y:
-echo - Rule chi ap dung cho Private network (WiFi)
-echo - Neu dung Public network, can mo rule rieng
-echo.
 pause
+
 

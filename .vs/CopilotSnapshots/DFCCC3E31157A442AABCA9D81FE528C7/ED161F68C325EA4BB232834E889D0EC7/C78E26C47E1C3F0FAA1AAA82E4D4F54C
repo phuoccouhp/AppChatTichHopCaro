@@ -1,0 +1,72 @@
+﻿@echo off
+REM ============================================================================
+REM 改进版：使用 PowerShell 创建防火墙规则（比 netsh 更可靠）
+REM ============================================================================
+
+setlocal enabledelayedexpansion
+
+REM 检查 Admin 权限
+net session >nul 2>&1
+if %errorLevel% neq 0 (
+    echo.
+    echo =========================================
+    echo    需要管理员权限！
+    echo =========================================
+    echo.
+    echo 请以管理员身份运行此脚本：
+    echo 右键点击 -^> "以管理员身份运行"
+    echo.
+    pause
+    exit /b 1
+)
+
+echo.
+echo =========================================
+echo    打开 ChatApp 防火墙端口
+echo =========================================
+echo.
+echo 使用 PowerShell 创建规则...
+echo.
+
+REM 使用 PowerShell 创建规则（更可靠，避免 netsh 的括号问题）
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+"^
+try { ^
+  Remove-NetFirewallRule -DisplayName 'ChatAppServer' -Direction Inbound -ErrorAction SilentlyContinue | Out-Null; ^
+  Remove-NetFirewallRule -DisplayName 'ChatAppServer (Out)' -Direction Outbound -ErrorAction SilentlyContinue | Out-Null; ^
+  New-NetFirewallRule -DisplayName 'ChatAppServer' -Direction Inbound -Action Allow -Protocol TCP -LocalPort 9000 -Profile Domain,Private,Public -Enabled $true | Out-Null; ^
+  New-NetFirewallRule -DisplayName 'ChatAppServer (Out)' -Direction Outbound -Action Allow -Protocol TCP -LocalPort 9000 -RemoteAddress Any -Profile Domain,Private,Public -Enabled $true | Out-Null; ^
+  Write-Host 'Firewall rules created successfully!' -ForegroundColor Green; ^
+  Write-Host ''; ^
+  Write-Host 'Rules Status:' -ForegroundColor Cyan; ^
+  Get-NetFirewallRule -DisplayName 'ChatAppServer*' | Format-Table DisplayName, Direction, Action, Enabled -AutoSize ^
+} catch { ^
+  Write-Host "Error: $_.Exception.Message" -ForegroundColor Red ^
+}^
+"
+
+if %errorLevel% equ 0 (
+    echo.
+    echo =========================================
+    echo    ✓ 成功
+    echo =========================================
+    echo.
+    echo 端口 9000 现已打开！
+    echo 同一网络内的其他计算机可以连接到服务器。
+    echo.
+) else (
+    echo.
+    echo =========================================
+    echo    ✗ 错误
+    echo =========================================
+    echo.
+    echo 请确保：
+    echo 1. 以管理员身份运行此脚本
+    echo 2. Windows PowerShell 已安装
+    echo 3. 检查 Windows 防火墙设置
+    echo.
+)
+
+pause
+
+

@@ -1,15 +1,15 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Admin\\Source\\Repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj": {}
+    "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Admin\\Source\\Repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj": {
+    "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Admin\\Source\\Repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj",
+        "projectUniqueName": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj",
         "projectName": "ChatApp.Shared",
-        "projectPath": "C:\\Users\\Admin\\Source\\Repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj",
+        "projectPath": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj",
         "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
         "outputPath": "C:\\Users\\Admin\\Source\\Repos\\AppChatTichHopCaro\\ChatApp.Shared\\obj\\",
         "projectStyle": "PackageReference",

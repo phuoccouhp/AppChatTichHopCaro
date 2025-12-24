@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "VRYZtoKK+vg=",
+  "dgSpecHash": "FdmbxKLH83Y=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Admin\\Source\\Repos\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj",
+  "projectFilePath": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Admin\\.nuget\\packages\\system.io.pipelines\\10.0.1\\system.io.pipelines.10.0.1.nupkg.sha512",
     "C:\\Users\\Admin\\.nuget\\packages\\system.text.encodings.web\\10.0.1\\system.text.encodings.web.10.0.1.nupkg.sha512",

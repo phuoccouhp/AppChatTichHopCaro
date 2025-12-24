@@ -1,15 +1,15 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Admin\\Source\\Repos\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj": {}
+    "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Admin\\Source\\Repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj": {
+    "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Admin\\Source\\Repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj",
+        "projectUniqueName": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj",
         "projectName": "ChatApp.Shared",
-        "projectPath": "C:\\Users\\Admin\\Source\\Repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj",
+        "projectPath": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj",
         "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
         "outputPath": "C:\\Users\\Admin\\Source\\Repos\\AppChatTichHopCaro\\ChatApp.Shared\\obj\\",
         "projectStyle": "PackageReference",
@@ -69,14 +69,14 @@
         }
       }
     },
-    "C:\\Users\\Admin\\Source\\Repos\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj": {
+    "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Admin\\Source\\Repos\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj",
+        "projectUniqueName": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj",
         "projectName": "ChatAppClient",
-        "projectPath": "C:\\Users\\Admin\\Source\\Repos\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj",
+        "projectPath": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj",
         "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Admin\\Source\\Repos\\AppChatTichHopCaro\\ChatAppClient\\obj\\",
+        "outputPath": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatAppClient\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -97,8 +97,8 @@
           "net8.0-windows7.0": {
             "targetAlias": "net8.0-windows",
             "projectReferences": {
-              "C:\\Users\\Admin\\Source\\Repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj": {
-                "projectPath": "C:\\Users\\Admin\\Source\\Repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj"
+              "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj": {
+                "projectPath": "C:\\Users\\Admin\\source\\repos\\AppChatTichHopCaro\\ChatApp.Shared\\ChatApp.Shared.csproj"
               }
             }
           }
