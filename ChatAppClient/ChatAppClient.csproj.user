@@ -41,6 +41,12 @@
     <Compile Update="Forms\frmTankGame.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="Forms\frmTankMultiplayer.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\frmTankMultiplayerLobby.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="UserControls\ChatMessageBubble.cs">
       <SubType>UserControl</SubType>
     </Compile>

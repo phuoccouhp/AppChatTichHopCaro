@@ -187,9 +187,8 @@ namespace ChatAppClient.Forms
                     txtOTP.Text = "";
                     txtOTP.Focus();
                     
-                    // KHONG xoa _pendingOtp va _pendingEmail vi nguoi dung co the nhap lai
-                    _pendingOtp = null;
-                    _pendingEmail = null;
+                    // KHÔNG xoa _pendingOtp va _pendingEmail vi nguoi dung co the nhap lai
+                    // _pendingOtp va _pendingEmail se duoc set lai trong btnResetPassword_Click
                 }
             }
         }

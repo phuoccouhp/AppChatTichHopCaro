@@ -283,6 +283,16 @@ namespace ChatAppServer
                 case LeaveGroupPacket p: HandleLeaveGroup(p); break;
                 case RequestGroupListPacket p: HandleRequestGroupList(p); break;
                 case GroupHistoryRequestPacket p: HandleGroupHistoryRequest(p); break;
+
+                // Tank Multiplayer
+                case TankCreateRoomPacket p: _server.ProcessTankCreateRoom(p, UserID); break;
+                case TankJoinRoomPacket p: _server.ProcessTankJoinRoom(p); break;
+                case TankLeaveRoomPacket p: _server.ProcessTankLeaveRoom(p); break;
+                case TankRequestRoomListPacket p: _server.ProcessTankRequestRoomList(p); break;
+                case TankPlayerReadyPacket p: _server.ProcessTankPlayerReady(p); break;
+                case TankStartMultiplayerPacket p: _server.ProcessTankStartMultiplayer(p); break;
+                case TankMultiplayerActionPacket p: _server.ProcessTankMultiplayerAction(p); break;
+                case TankMultiplayerHitPacket p: _server.ProcessTankMultiplayerHit(p); break;
             }
         }
 

@@ -1,12 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <UseWindowsForms>true</UseWindowsForms>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
+<PropertyGroup>
+  <OutputType>WinExe</OutputType>
+  <TargetFramework>net8.0-windows</TargetFramework>
+  <Nullable>enable</Nullable>
+  <UseWindowsForms>true</UseWindowsForms>
+  <ImplicitUsings>enable</ImplicitUsings>
+  <!-- Cho phép chạy nhiều instance khi debug -->
+  <UseAppHost>true</UseAppHost>
+  <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+</PropertyGroup>
+  
+<!-- Copy output ra thư mục riêng để tránh lock file khi debug nhiều instance -->
+<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+  <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+</PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="System.Text.Json" Version="10.0.1" />

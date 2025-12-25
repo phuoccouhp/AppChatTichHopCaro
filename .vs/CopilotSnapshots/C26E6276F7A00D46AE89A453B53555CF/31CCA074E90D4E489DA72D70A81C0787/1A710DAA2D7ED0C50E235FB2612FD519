@@ -1,0 +1,530 @@
+﻿#pragma warning disable SYSLIB0011 
+using ChatApp.Shared;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net.Sockets;
+using System.Text;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace ChatAppClient.Forms
+{
+    public class NetworkManager
+    {
+        private static NetworkManager? _instance;
+        public static NetworkManager Instance => _instance ??= new NetworkManager();
+
+        private TcpClient? _client;
+        private NetworkStream? _stream;
+        private frmHome? _homeForm;
+
+        public string? UserID { get; private set; }
+        public string? UserName { get; private set; }
+        public string? CurrentServerIP { get; private set; }
+        public int CurrentServerPort { get; private set; } = 9000;
+
+        private TaskCompletionSource<LoginResultPacket>? _loginCompletionSource;
+        private TaskCompletionSource<RegisterResultPacket>? _registerCompletionSource;
+        private TaskCompletionSource<ChatHistoryResponsePacket>? _chatHistoryCompletionSource;
+
+        public event Action<ForgotPasswordResultPacket>? OnForgotPasswordResult;
+        public event Action<ChatHistoryResponsePacket>? OnChatHistoryReceived;
+
+        private CancellationTokenSource? _listeningCts;
+        private readonly object _loginLock = new object();
+        private readonly object _streamLock = new object();
+        private Queue<UserStatusPacket> _pendingStatusPackets = new Queue<UserStatusPacket>();
+        
+        // ✅ [FIX] Flag để chặn login 2 lần
+        private volatile bool _isLoggingIn = false;
+        private volatile bool _loginCompleted = false;
+
+        private JsonSerializerOptions _jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+        private NetworkManager() { }
+
+        public void RegisterHomeForm(frmHome homeForm)
+        {
+            _homeForm = homeForm;
+            while (_pendingStatusPackets.Count > 0)
+            {
+                var packet = _pendingStatusPackets.Dequeue();
+                SafeInvokeHomeForm(() => _homeForm.HandleUserStatusUpdate(packet));
+            }
+            // Yêu cầu danh sách bạn bè (contacts + online)
+            SendPacket(new RequestOnlineListPacket());
+            // Yêu cầu danh sách nhóm chat
+            SendPacket(new RequestGroupListPacket { UserID = UserID });
+        }
+
+        private void SafeInvokeHomeForm(Action action)
+        {
+            if (_homeForm != null && !_homeForm.IsDisposed && _homeForm.IsHandleCreated)
+            {
+                try { _homeForm.BeginInvoke(action); } catch { }
+            }
+        }
+
+        // === [FIX: CONNECTION LOGIC - HỖ TRỢ WIFI] ===
+        public async Task<bool> ConnectAsync(string ipAddress, int port)
+        {
+            // Nếu đã kết nối đúng IP/Port thì không cần kết nối lại
+            if (_client != null && _client.Connected && CurrentServerIP == ipAddress && CurrentServerPort == port)
+                return true;
+
+            DisconnectInternal(false); // Reset sạch sẽ trước khi kết nối mới
+
+            // ✅ [FIX WiFi] Thử kết nối tối đa 3 lần với timeout tăng dần
+            int maxRetries = 3;
+            int[] timeouts = { 10, 15, 20 }; // Timeout tăng dần: 10s, 15s, 20s
+
+            for (int attempt = 0; attempt < maxRetries; attempt++)
+            {
+                var client = new TcpClient();
+                _client = client;
+
+                try
+                {
+                    // Configure socket options BEFORE connecting
+                    client.ReceiveBufferSize = 131072;
+                    client.SendBufferSize = 131072;
+                    client.NoDelay = true;
+
+                    // ✅ [FIX WiFi] Cấu hình TCP KeepAlive đầy đủ cho kết nối qua mạng
+                    try
+                    {
+                        client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                        
+                        // Cấu hình keepalive chi tiết cho Windows
+                        byte[] keepAliveValues = new byte[12];
+                        BitConverter.GetBytes((uint)1).CopyTo(keepAliveValues, 0);        // Enable
+                        BitConverter.GetBytes((uint)30000).CopyTo(keepAliveValues, 4);    // 30s trước probe đầu
+                        BitConverter.GetBytes((uint)5000).CopyTo(keepAliveValues, 8);     // 5s giữa các probe
+                        client.Client.IOControl(IOControlCode.KeepAliveValues, keepAliveValues, null);
+                    }
+                    catch { }
+
+                    // Connect with timeout - tăng dần mỗi lần thử
+                    int timeoutSeconds = timeouts[attempt];
+                    Logger.Info($"[WiFi] Đang kết nối đến {ipAddress}:{port}... (Lần {attempt + 1}/{maxRetries}, timeout {timeoutSeconds}s)");
+
+                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken.None))
+                    {
+                        cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+                        await client.ConnectAsync(ipAddress, port, cts.Token);
+                    }
+
+                    // Check connection after connect attempt
+                    if (client.Connected)
+                    {
+                        lock (_streamLock)
+                        {
+                            _stream = client.GetStream();
+                            
+                            // ✅ [FIX WiFi] Thiết lập timeout cho NetworkStream
+                            _stream.ReadTimeout = 120000;  // 2 phút
+                            _stream.WriteTimeout = 60000;  // 1 phút
+                        }
+                        CurrentServerIP = ipAddress;
+                        CurrentServerPort = port;
+
+                        // ✅ Start listening FIRST before any communication
+                        _listeningCts = new CancellationTokenSource();
+                        _ = StartListeningAsync(_listeningCts.Token);
+
+                        Logger.Success($"Đã kết nối đến {ipAddress}:{port}");
+                        return true;
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    Logger.Warning($"Timeout lần {attempt + 1}: Không thể kết nối đến {ipAddress}:{port}");
+                    try { client.Close(); } catch { }
+                    _client = null;
+                    
+                    // Tiếp tục thử lần tiếp theo
+                    if (attempt < maxRetries - 1)
+                    {
+                        await Task.Delay(1000); // Chờ 1 giây trước khi thử lại
+                        continue;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Lỗi kết nối lần {attempt + 1}: {ex.Message}");
+                    try { client.Close(); } catch { }
+                    _client = null;
+                    
+                    // Nếu là lỗi "No route to host" hoặc "Connection refused", không cần thử lại
+                    if (ex is SocketException sockEx)
+                    {
+                        if (sockEx.SocketErrorCode == SocketError.NetworkUnreachable ||
+                            sockEx.SocketErrorCode == SocketError.HostUnreachable ||
+                            sockEx.SocketErrorCode == SocketError.ConnectionRefused)
+                        {
+                            Logger.Error($"Lỗi mạng không thể phục hồi: {sockEx.SocketErrorCode}");
+                            break;
+                        }
+                    }
+                    
+                    if (attempt < maxRetries - 1)
+                    {
+                        await Task.Delay(1000);
+                        continue;
+                    }
+                }
+            }
+
+            Logger.Error($"Không thể kết nối đến {ipAddress}:{port} sau {maxRetries} lần thử");
+            DisconnectInternal(false);
+            return false;
+        }
+
+        private async Task StartListeningAsync(CancellationToken token)
+        {
+            byte[] lenBuf = new byte[4];
+            int consecutiveTimeouts = 0;
+            const int maxConsecutiveTimeouts = 3; // Cho phép 3 lần timeout liên tiếp trước khi ngắt kết nối
+
+            while (!token.IsCancellationRequested && _client != null && _client.Connected && _stream != null)
+            {
+                try
+                {
+                    // ✅ CHECK NULL trước khi dùng
+                    if (_stream == null)
+                    {
+                        Logger.Warning("[Listening] Stream is null, stopping listen loop.");
+                        break;
+                    }
+
+                    // Đọc độ dài (4 bytes) - với timeout để prevent indefinite hanging
+                    int read = 0;
+                    while (read < 4)
+                    {
+                        // ✅ CHECK NULL trong vòng lặp
+                        if (_stream == null || !_client.Connected)
+                        {
+                            Logger.Warning("[Listening] Connection lost while reading length.");
+                            throw new EndOfStreamException();
+                        }
+
+                        // ✅ [FIX WiFi] Tăng timeout lên 120s cho kết nối WiFi không ổn định
+                        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token))
+                        {
+                            cts.CancelAfter(TimeSpan.FromSeconds(120)); // 120s timeout per read
+                            try
+                            {
+                                int r = await _stream.ReadAsync(lenBuf, read, 4 - read, cts.Token);
+                                if (r == 0) throw new EndOfStreamException();
+                                read += r;
+                                consecutiveTimeouts = 0; // Reset counter khi đọc thành công
+                            }
+                            catch (OperationCanceledException) when (cts.Token.IsCancellationRequested && !token.IsCancellationRequested)
+                            {
+                                // ✅ [FIX WiFi] Cho phép một vài lần timeout trước khi ngắt kết nối
+                                consecutiveTimeouts++;
+                                Logger.Warning($"[Listening] ReadAsync timeout ({consecutiveTimeouts}/{maxConsecutiveTimeouts}) - server may be unresponsive");
+                                
+                                if (consecutiveTimeouts >= maxConsecutiveTimeouts)
+                                {
+                                    throw new EndOfStreamException("Too many consecutive timeouts");
+                                }
+                                
+                                // Tiếp tục đợi thêm thay vì ngắt kết nối ngay
+                                continue;
+                            }
+                        }
+                    }
+                    int len = BitConverter.ToInt32(lenBuf, 0);
+
+                    // ✅ Validate packet size (chặn packet quá lớn)
+                    if (len <= 0 || len > 10 * 1024 * 1024) // 10MB max
+                    {
+                        Logger.Error($"[Listening] Invalid packet size: {len}");
+                        break;
+                    }
+
+                    // Đọc payload
+                    byte[] payload = new byte[len];
+                    int offset = 0;
+                    while (offset < len)
+                    {
+                        // ✅ CHECK NULL trước khi ReadAsync
+                        if (_stream == null || !_client.Connected)
+                        {
+                            Logger.Warning("[Listening] Connection lost while reading payload.");
+                            throw new EndOfStreamException();
+                        }
+
+                        // ✅ [FIX WiFi] Tăng timeout cho payload
+                        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token))
+                        {
+                            cts.CancelAfter(TimeSpan.FromSeconds(120)); // 120s timeout per read
+                            try
+                            {
+                                int r = await _stream.ReadAsync(payload, offset, len - offset, cts.Token);
+                                if (r == 0) throw new EndOfStreamException();
+                                offset += r;
+                            }
+                            catch (OperationCanceledException) when (cts.Token.IsCancellationRequested && !token.IsCancellationRequested)
+                            {
+                                // ReadAsync timeout while reading payload - this is more serious
+                                Logger.Warning("[Listening] ReadAsync timeout while reading payload");
+                                throw new EndOfStreamException();
+                            }
+                        }
+                    }
+
+                    // Deserialize JSON
+                    string jsonString = Encoding.UTF8.GetString(payload);
+                    var wrapper = JsonSerializer.Deserialize<PacketWrapper>(jsonString, _jsonOptions);
+
+                    if (wrapper != null && !string.IsNullOrEmpty(wrapper.Type))
+                    {
+                        Type type = PacketMapper.GetPacketType(wrapper.Type);
+                        if (type != null)
+                        {
+                            object packet = JsonSerializer.Deserialize(wrapper.Payload, type, _jsonOptions);
+                            if (packet != null)
+                            {
+                                HandlePacket(packet);
+                            }
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // Token bị cancel
+                    Logger.Info("[Listening] Listening cancelled by token.");
+                    break;
+                }
+                catch (EndOfStreamException)
+                {
+                    // Server đóng kết nối bình thường
+                    Logger.Warning("[Listening] End of stream - server closed connection.");
+                    break;
+                }
+                catch (IOException ioEx)
+                {
+                    // ✅ [FIX WiFi] Kiểm tra xem có phải timeout tạm thời không
+                    if (ioEx.InnerException is SocketException sockEx && 
+                        sockEx.SocketErrorCode == SocketError.TimedOut)
+                    {
+                        consecutiveTimeouts++;
+                        Logger.Warning($"[Listening] IO Timeout ({consecutiveTimeouts}/{maxConsecutiveTimeouts})");
+                        
+                        if (consecutiveTimeouts < maxConsecutiveTimeouts)
+                            continue;
+                    }
+                    
+                    Logger.Warning($"[Listening] IO Error: {ioEx.Message}");
+                    break;
+                }
+                catch (SocketException sockEx)
+                {
+                    // ✅ [FIX WiFi] Xử lý một số lỗi socket có thể recover
+                    if (sockEx.SocketErrorCode == SocketError.TimedOut)
+                    {
+                        consecutiveTimeouts++;
+                        Logger.Warning($"[Listening] Socket Timeout ({consecutiveTimeouts}/{maxConsecutiveTimeouts})");
+                        
+                        if (consecutiveTimeouts < maxConsecutiveTimeouts)
+                            continue;
+                    }
+                    
+                    Logger.Error($"[Listening] Socket Error: {sockEx.SocketErrorCode} - {sockEx.Message}");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    // Lỗi khác
+                    Logger.Error($"[Listening] Error: {ex.Message}", ex);
+                    break;
+                }
+            }
+            
+            Logger.Info("[Listening] Listen loop ended, disconnecting...");
+            DisconnectInternal(true);
+        }
+
+        private void HandlePacket(object packet)
+        {
+            // Async Responses
+            if (packet is LoginResultPacket pLogin) { lock (_loginLock) _loginCompletionSource?.TrySetResult(pLogin); return; }
+            if (packet is RegisterResultPacket pReg) { _registerCompletionSource?.TrySetResult(pReg); return; }
+            if (packet is ForgotPasswordResultPacket pForgot) { OnForgotPasswordResult?.Invoke(pForgot); return; }
+            if (packet is ChatHistoryResponsePacket pHist) { _chatHistoryCompletionSource?.TrySetResult(pHist); OnChatHistoryReceived?.Invoke(pHist); return; }
+
+            // UI Updates
+            if (packet is UserStatusPacket pStatus && _homeForm == null) { _pendingStatusPackets.Enqueue(pStatus); return; }
+            if (_homeForm == null || _homeForm.IsDisposed) return;
+
+            Action? action = packet switch
+            {
+                UserStatusPacket p => () => _homeForm.HandleUserStatusUpdate(p),
+                TextPacket p => () => _homeForm.HandleIncomingTextMessage(p),
+                FilePacket p => () => _homeForm.HandleIncomingFileMessage(p),
+                GameInvitePacket p => () => _homeForm.HandleIncomingGameInvite(p),
+                GameResponsePacket p => () => _homeForm.HandleGameResponse(p),
+                GameStartPacket p => () => _homeForm.HandleGameStart(p),
+                GameMovePacket p => () => _homeForm.HandleGameMove(p),
+                RematchRequestPacket p => () => _homeForm.HandleRematchRequest(p),
+                RematchResponsePacket p => () => _homeForm.HandleRematchResponse(p),
+                GameResetPacket p => () => _homeForm.HandleGameReset(p),
+                UpdateProfilePacket p => () => _homeForm.HandleUpdateProfile(p),
+                TankInvitePacket p => () => _homeForm.HandleTankInvite(p),
+                TankResponsePacket p => () => _homeForm.HandleTankResponse(p),
+                TankStartPacket p => () => _homeForm.HandleTankStart(p),
+                TankActionPacket p => () => _homeForm.HandleTankAction(p),
+                TankHitPacket p => () => _homeForm.HandleTankHit(p),
+                OnlineListPacket p => () => _homeForm.HandleOnlineListUpdate(p),
+                
+                // === GROUP CHAT ===
+                CreateGroupResultPacket p => () => _homeForm.HandleCreateGroupResult(p),
+                GroupTextPacket p => () => _homeForm.HandleGroupText(p),
+                GroupFilePacket p => () => _homeForm.HandleGroupFile(p),
+                GroupInviteNotificationPacket p => () => _homeForm.HandleGroupInviteNotification(p),
+                GroupMemberUpdatePacket p => () => _homeForm.HandleGroupMemberUpdate(p),
+                GroupListPacket p => () => _homeForm.HandleGroupList(p),
+                GroupHistoryResponsePacket p => () => _homeForm.HandleGroupHistoryResponse(p),
+                
+                _ => null
+            };
+            if (action != null) SafeInvokeHomeForm(action);
+        }
+
+        public bool SendPacket(object packet)
+        {
+            if (_client == null || !_client.Connected || _stream == null) return false;
+            try
+            {
+                string typeName = packet.GetType().Name; // Lấy tên class (VD: LoginPacket)
+                string payloadJson = JsonSerializer.Serialize(packet, packet.GetType(), _jsonOptions);
+                var wrapper = new PacketWrapper { Type = typeName, Payload = payloadJson };
+                string wrapperJson = JsonSerializer.Serialize(wrapper, _jsonOptions);
+                byte[] data = Encoding.UTF8.GetBytes(wrapperJson);
+                byte[] lenBuf = BitConverter.GetBytes(data.Length);
+
+                // Log outgoing raw payload (truncated)
+                try
+                {
+                    string snippet = wrapperJson.Length > 1000 ? wrapperJson.Substring(0, 1000) + "..." : wrapperJson;
+                    Logger.Info($"[SEND RAW] {CurrentServerIP}:{CurrentServerPort} -> {snippet}");
+                }
+                catch { }
+
+                lock (_streamLock)
+                {
+                    if (_stream == null) return false;
+                    _stream.Write(lenBuf, 0, 4);
+                    _stream.Write(data, 0, data.Length);
+                    _stream.Flush();
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[SEND ERROR] Failed to send packet: {ex}");
+                DisconnectInternal(true);
+                return false;
+            }
+        }
+
+        public async Task<LoginResultPacket> LoginAsync(LoginPacket packet)
+        {
+            // ✅ [FIX] Chặn login 2 lần - thread-safe check
+            lock (_loginLock)
+            {
+                if (_isLoggingIn)
+                {
+                    Logger.Warning("[LoginAsync] Đang trong quá trình login, bỏ qua request trùng lặp");
+                    return new LoginResultPacket { Success = false, Message = "Đang xử lý đăng nhập, vui lòng đợi..." };
+                }
+                
+                if (_loginCompleted && !string.IsNullOrEmpty(UserID))
+                {
+                    Logger.Warning("[LoginAsync] Đã login thành công rồi, bỏ qua request");
+                    return new LoginResultPacket { Success = true, UserID = UserID, UserName = UserName };
+                }
+                
+                _isLoggingIn = true;
+                _loginCompletionSource = new TaskCompletionSource<LoginResultPacket>();
+            }
+            
+            try
+            {
+                if (!SendPacket(packet))
+                {
+                    return new LoginResultPacket { Success = false, Message = "Gửi yêu cầu đăng nhập thất bại." };
+                }
+
+                // Tăng timeout lên 10s hoặc hơn để đảm bảo không bị timeout ảo
+                if (await Task.WhenAny(_loginCompletionSource.Task, Task.Delay(10000)) == _loginCompletionSource.Task)
+                {
+                    var result = await _loginCompletionSource.Task;
+                    if (result.Success)
+                    {
+                        _loginCompleted = true;
+                    }
+                    return result;
+                }
+                return new LoginResultPacket { Success = false, Message = "Server không phản hồi yêu cầu đăng nhập (Timeout)." };
+            }
+            finally
+            {
+                _isLoggingIn = false;
+            }
+        }
+
+        public async Task<RegisterResultPacket> RegisterAsync(RegisterPacket packet)
+        {
+            _registerCompletionSource = new TaskCompletionSource<RegisterResultPacket>();
+            if (!SendPacket(packet))
+            {
+                return new RegisterResultPacket { Success = false, Message = "Gửi yêu cầu đăng ký thất bại." };
+            }
+
+            if (await Task.WhenAny(_registerCompletionSource.Task, Task.Delay(10000)) == _registerCompletionSource.Task)
+                return await _registerCompletionSource.Task;
+            return new RegisterResultPacket { Success = false, Message = "Server không phản hồi yêu cầu đăng ký (Timeout)." };
+        }
+
+        public async Task<ChatHistoryResponsePacket> RequestChatHistoryAsync(string friendID, int limit = 100)
+        {
+            if (string.IsNullOrEmpty(UserID)) return new ChatHistoryResponsePacket { Success = false };
+            _chatHistoryCompletionSource = new TaskCompletionSource<ChatHistoryResponsePacket>();
+            SendPacket(new ChatHistoryRequestPacket { UserID = UserID, FriendID = friendID, Limit = limit });
+
+            if (await Task.WhenAny(_chatHistoryCompletionSource.Task, Task.Delay(5000)) == _chatHistoryCompletionSource.Task)
+                return await _chatHistoryCompletionSource.Task;
+            return new ChatHistoryResponsePacket { Success = false, Message = "Timeout" };
+        }
+
+        public void SetUserCredentials(string id, string name) { UserID = id; UserName = name; }
+        public void Disconnect() { DisconnectInternal(true); }
+
+        private void DisconnectInternal(bool notify)
+        {
+            lock (_streamLock)
+            {
+                try { _listeningCts?.Cancel(); _client?.Close(); } catch { }
+                _client = null; _stream = null; _listeningCts = null;
+            }
+            
+            // ✅ [FIX] Reset login flags khi disconnect
+            lock (_loginLock)
+            {
+                _isLoggingIn = false;
+                _loginCompleted = false;
+            }
+
+            if (notify && _homeForm != null && !_homeForm.IsDisposed && _homeForm.IsHandleCreated)
+                SafeInvokeHomeForm(() => MessageBox.Show("Mất kết nối máy chủ.", "Lỗi Mạng", MessageBoxButtons.OK, MessageBoxIcon.Warning));
+
+            UserID = null; UserName = null;
+        }
+    }
+}

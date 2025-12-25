@@ -80,7 +80,7 @@ namespace ChatAppClient.Forms
             btnCreateGroup.Text = "+ Nhóm";
             btnCreateGroup.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             btnCreateGroup.Size = new Size(70, 30);
-            btnCreateGroup.Location = new Point(200, 10);
+            btnCreateGroup.Location = new Point(130, 10);
             btnCreateGroup.BackColor = Color.FromArgb(88, 101, 242);
             btnCreateGroup.ForeColor = Color.White;
             btnCreateGroup.FlatStyle = FlatStyle.Flat;
@@ -88,6 +88,20 @@ namespace ChatAppClient.Forms
             btnCreateGroup.Cursor = Cursors.Hand;
             btnCreateGroup.Click += (s, e) => CreateNewGroup();
             lblFriendsTitle.Controls.Add(btnCreateGroup);
+
+            // ✅ Thêm nút Tank Multiplayer
+            Button btnTankMP = new Button();
+            btnTankMP.Text = "Tank MP";
+            btnTankMP.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            btnTankMP.Size = new Size(70, 30);
+            btnTankMP.Location = new Point(205, 10);
+            btnTankMP.BackColor = Color.FromArgb(67, 181, 129);
+            btnTankMP.ForeColor = Color.White;
+            btnTankMP.FlatStyle = FlatStyle.Flat;
+            btnTankMP.FlatAppearance.BorderSize = 0;
+            btnTankMP.Cursor = Cursors.Hand;
+            btnTankMP.Click += (s, e) => OpenTankMultiplayerLobby();
+            lblFriendsTitle.Controls.Add(btnTankMP);
         }
 
         private void frmHome_Load(object sender, EventArgs e)
@@ -482,7 +496,8 @@ namespace ChatAppClient.Forms
                 string senderName = packet.SenderID;
                 foreach (Control ctrl in flpFriendsList.Controls) { if (ctrl is FriendListItem item && item.FriendID == packet.SenderID) { senderName = item.FriendName; break; } }
                 chatControl = new ChatViewControl(packet.SenderID, senderName, this) { Name = packet.SenderID, Dock = DockStyle.Fill, Visible = false };
-                openChatControls.Add(packet.SenderID, chatControl); pnlMain.Controls.Add(chatControl);
+                openChatControls.Add(packet.SenderID, chatControl);
+                pnlMain.Controls.Add(chatControl);
             }
             chatControl.ReceiveFileMessage(packet, MessageType.Incoming);
 
@@ -998,6 +1013,13 @@ namespace ChatAppClient.Forms
                     break;
                 }
             }
+        }
+
+        // Hàm mở Tank Multiplayer Lobby
+        private void OpenTankMultiplayerLobby()
+        {
+            var lobbyForm = new frmTankMultiplayerLobby();
+            lobbyForm.Show();
         }
 
         // Hàm để tạo nhóm mới - gọi từ UI
