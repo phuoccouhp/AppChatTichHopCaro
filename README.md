@@ -7,6 +7,21 @@
 ```
 📦 AppChatTichHopCaro
 │
+├── .gitignore                           # Cấu hình Git ignore
+├── ChatAppCaro.sln                      # Solution file chính
+├── README.md                            # Tài liệu hướng dẫn
+│
+├── # --- Database Scripts ---
+├── SetupDatabase_Full.sql               # Script tạo database đầy đủ
+├── UpdateDatabase_AddIndexes.sql        # Script thêm indexes tối ưu
+│
+├── # --- Batch/PowerShell Scripts ---
+├── QuickStart.bat                       # Khởi động nhanh ứng dụng
+├── RunServerAsAdmin.bat                 # Chạy Server với quyền Admin
+├── RunMultipleClients.bat               # Chạy nhiều Client cùng lúc
+├── StartMultipleClients.bat             # Khởi động nhiều Client
+├── CreateOutboundRuleFix.ps1            # Script PowerShell mở firewall
+│
 ├── 📂 ChatAppServer/                    # Server xử lý kết nối
 │   ├── Program.cs                       # Entry point khởi động server
 │   ├── Server.cs                        # Xử lý kết nối socket chính, quản lý clients
