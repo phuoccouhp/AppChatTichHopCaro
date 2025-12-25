@@ -161,22 +161,12 @@ namespace ChatAppClient.UserControls
             this.Controls.Add(pnlEmojiPicker);
             LoadEmojis();
 
-            txtMessage = new TextBox();
-            txtMessage.Font = new Font("Segoe UI", 11);
-            txtMessage.Location = new Point(95, 12);
-            txtMessage.Size = new Size(this.Width - 195, 35);
-            txtMessage.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
-            txtMessage.BackColor = Color.FromArgb(54, 57, 63);
-            txtMessage.ForeColor = Color.White;
-            txtMessage.BorderStyle = BorderStyle.None;
-            txtMessage.KeyDown += TxtMessage_KeyDown;
-            pnlInput.Controls.Add(txtMessage);
-
+            // ? [FIX] Send button - ??t TR??C và dùng pnlInput.Width ?? tính v? trí chính xác
             btnSend = new Button();
             btnSend.Text = "Send";
             btnSend.Font = new Font("Segoe UI", 10, FontStyle.Bold);
             btnSend.Size = new Size(70, 40);
-            btnSend.Location = new Point(this.Width - 90, 10);
+            btnSend.Location = new Point(pnlInput.Width - 80, 10);
             btnSend.Anchor = AnchorStyles.Right | AnchorStyles.Top;
             btnSend.BackColor = Color.FromArgb(88, 101, 242);
             btnSend.ForeColor = Color.White;
@@ -186,11 +176,31 @@ namespace ChatAppClient.UserControls
             btnSend.Click += BtnSend_Click;
             pnlInput.Controls.Add(btnSend);
 
-            // Ensure order
-            this.Controls.SetChildIndex(pnlInput, 0);
-            this.Controls.SetChildIndex(pnlHeader, 2);
-            this.Controls.SetChildIndex(flpMessages, 1);
-            this.Controls.SetChildIndex(pnlEmojiPicker, 3);
+            // ? [FIX] TextBox - dùng pnlInput.Width ?? tính kích th??c chính xác
+            // 95 (left buttons) + 80 (send btn) + 10 (padding) = 185
+            txtMessage = new TextBox();
+            txtMessage.Font = new Font("Segoe UI", 11);
+            txtMessage.Location = new Point(95, 12);
+            txtMessage.Size = new Size(pnlInput.Width - 185, 35);
+            txtMessage.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+            txtMessage.BackColor = Color.FromArgb(54, 57, 63);
+            txtMessage.ForeColor = Color.White;
+            txtMessage.BorderStyle = BorderStyle.None;
+            txtMessage.KeyDown += TxtMessage_KeyDown;
+            pnlInput.Controls.Add(txtMessage);
+
+            // ? [FIX] ??m b?o th? t? hi?n th? ?úng cho Dock layout
+            // Quy t?c: Controls thêm SAU s? dock TR??C
+            // Nên Fill ph?i thêm ??U TIÊN, sau ?ó Top và Bottom
+            this.Controls.Clear();
+            
+            // Add theo th? t? ng??c: Fill tr??c, r?i Top/Bottom sau
+            this.Controls.Add(flpMessages);   // Dock = Fill (thêm ??u tiên, s? dock sau cùng)
+            this.Controls.Add(pnlHeader);     // Dock = Top (thêm sau, s? dock tr??c Fill)
+            this.Controls.Add(pnlInput);      // Dock = Bottom (thêm sau, s? dock tr??c Fill)
+            this.Controls.Add(pnlEmojiPicker); // Không dock - float
+            
+            // ??m b?o emoji picker luôn ? trên cùng
             pnlEmojiPicker.BringToFront();
         }
 
@@ -621,9 +631,25 @@ namespace ChatAppClient.UserControls
 
         private void ScrollToBottom()
         {
-            flpMessages.VerticalScroll.Value = flpMessages.VerticalScroll.Maximum;
+            // ? [FIX] C?i thi?n scroll ?? luôn cu?n ??n tin nh?n m?i nh?t
+            if (flpMessages.Controls.Count == 0) return;
+            
+            // ??i layout hoàn t?t tr??c khi scroll
+            flpMessages.SuspendLayout();
+            flpMessages.ResumeLayout(true);
             flpMessages.PerformLayout();
-            flpMessages.VerticalScroll.Value = flpMessages.VerticalScroll.Maximum;
+            
+            // Scroll ??n control cu?i cùng
+            Control lastControl = flpMessages.Controls[flpMessages.Controls.Count - 1];
+            flpMessages.ScrollControlIntoView(lastControl);
+            
+            // ??m b?o scroll ??n cu?i cùng
+            if (flpMessages.VerticalScroll.Visible)
+            {
+                flpMessages.VerticalScroll.Value = flpMessages.VerticalScroll.Maximum;
+                // G?i l?i ?? ??m b?o scroll value ???c áp d?ng
+                flpMessages.PerformLayout();
+            }
         }
 
         public void UpdateMembers(List<GroupMemberInfo> members)

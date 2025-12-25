@@ -205,10 +205,13 @@ namespace ChatAppClient.UserControls
             // ChatViewControl
             // 
             AutoScaleMode = AutoScaleMode.None;
-            Controls.Add(pnlEmojiPicker);
-            Controls.Add(flpMessages);
-            Controls.Add(pnlInput);
-            Controls.Add(pnlHeader);
+            // ? [FIX] Th? t? thêm controls cho Dock layout:
+            // Fill ph?i thêm ??U TIÊN (s? dock sau cùng, chi?m ph?n còn l?i)
+            // Top/Bottom thêm SAU (s? dock tr??c)
+            Controls.Add(flpMessages);    // Dock = Fill - thêm ??u tiên
+            Controls.Add(pnlHeader);      // Dock = Top - thêm sau
+            Controls.Add(pnlInput);       // Dock = Bottom - thêm sau
+            Controls.Add(pnlEmojiPicker); // Không dock - float, thêm cu?i ?? ? trên cùng
             Name = "ChatViewControl";
             Size = new Size(520, 540);
             Load += ChatViewControl_Load;

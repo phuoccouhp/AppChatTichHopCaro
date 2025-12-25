@@ -90,9 +90,9 @@
             lblFriendsTitle.Location = new Point(0, 40);
             lblFriendsTitle.Name = "lblFriendsTitle";
             lblFriendsTitle.Padding = new Padding(15, 15, 0, 10);
-            lblFriendsTitle.Size = new Size(212, 50);
+            lblFriendsTitle.Size = new Size(145, 50);
             lblFriendsTitle.TabIndex = 0;
-            lblFriendsTitle.Text = "DANH SÁCH BẠN BÈ";
+            lblFriendsTitle.Text = "DANH SÁCH ";
             // 
             // pnlSearchBox
             // 

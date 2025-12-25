@@ -396,14 +396,28 @@ namespace ChatAppClient.Forms
                     g.FillRectangle(overlayBrush, 0, 0, GAME_WIDTH, GAME_HEIGHT);
                 }
                 
-                using (Font font = new Font("Segoe UI", 24, FontStyle.Bold))
-                using (SolidBrush textBrush = new SolidBrush(Color.White))
+                // ? [FIX] S? d?ng font h? tr? Unicode t?t h?n
+                using (Font font = new Font("Segoe UI", 28, FontStyle.Bold))
+                using (SolidBrush textBrush = new SolidBrush(_myHealth > 0 ? Color.Gold : Color.Red))
+                using (SolidBrush shadowBrush = new SolidBrush(Color.Black))
                 {
-                    string gameOverText = _myHealth > 0 ? "B?N TH?NG!" : "B?N THUA!";
+                    string gameOverText = _myHealth > 0 ? "YOU WIN!" : "YOU LOSE!";
                     SizeF textSize = g.MeasureString(gameOverText, font);
                     float x = (GAME_WIDTH - textSize.Width) / 2;
-                    float y = 200;
+                    float y = 180;
+                    
+                    // V? shadow ?? d? ??c h?n
+                    g.DrawString(gameOverText, font, shadowBrush, x + 2, y + 2);
                     g.DrawString(gameOverText, font, textBrush, x, y);
+                    
+                    // Hi?n th? ?i?m s?
+                    using (Font scoreFont = new Font("Segoe UI", 14))
+                    {
+                        string scoreText = $"Your HP: {_myHealth} | Opponent HP: {_opponentHealth}";
+                        SizeF scoreSize = g.MeasureString(scoreText, scoreFont);
+                        float scoreX = (GAME_WIDTH - scoreSize.Width) / 2;
+                        g.DrawString(scoreText, scoreFont, Brushes.White, scoreX, y + 50);
+                    }
                 }
             }
         }

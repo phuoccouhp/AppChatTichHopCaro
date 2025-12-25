@@ -1,0 +1,721 @@
+﻿using ChatApp.Shared;
+using ChatAppClient.Helpers;
+using System;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Windows.Forms;
+
+namespace ChatAppClient.Forms
+{
+    public partial class frmTankGame : Form
+    {
+        private const int GAME_WIDTH = 800;
+        private const int GAME_HEIGHT = 600;
+        private const float TANK_SIZE = 40f;
+        private const float TANK_SPEED = 3f;
+        private const float ROTATION_SPEED = 5f;
+        private const float BULLET_SPEED = 8f;
+        private const int MAX_HEALTH = 100;
+
+        private string _gameId;
+        private string _opponentId;
+        private string _myId;
+        private bool _isMyTurn;
+        private bool _isGameEnded = false;
+        
+        // Score tracking
+        private int _myScore = 0;
+        private int _myHits = 0;
+
+        // Tank của tôi
+        private float _myTankX = 100;
+        private float _myTankY = 300;
+        private float _myTankAngle = 0;
+        private int _myHealth = MAX_HEALTH;
+
+        // Tank đối thủ
+        private float _opponentTankX = 700;
+        private float _opponentTankY = 300;
+        private float _opponentTankAngle = 180;
+        private int _opponentHealth = MAX_HEALTH;
+
+        // Đạn
+        private class Bullet
+        {
+            public float X { get; set; }
+            public float Y { get; set; }
+            public float Angle { get; set; }
+            public bool IsMine { get; set; }
+        }
+        private System.Collections.Generic.List<Bullet> _bullets = new System.Collections.Generic.List<Bullet>();
+
+        private System.Windows.Forms.Timer? _gameTimer;
+        private bool _keyUp, _keyDown, _keyLeft, _keyRight, _keyShoot;
+        
+        // ✅ [FIX] Throttle để tránh gửi quá nhiều packet - tăng threshold và thêm time-based throttling
+        private float _lastSentX = -1;
+        private float _lastSentY = -1;
+        private float _lastSentAngle = -1;
+        private DateTime _lastPacketSentTime = DateTime.MinValue;
+        private const float POSITION_THRESHOLD = 8f; // ✅ [FIX] Tăng từ 5f lên 8f
+        private const float ANGLE_THRESHOLD = 15f; // ✅ [FIX] Tăng từ 10f lên 15f
+        private const int MIN_PACKET_INTERVAL_MS = 50; // ✅ [FIX] Tối thiểu 50ms giữa các packet (20 packets/giây max)
+
+        // ✅ [FIX] Shoot cooldown để tránh spam đạn
+        private DateTime _lastShootTime = DateTime.MinValue;
+        private const int SHOOT_COOLDOWN_MS = 300; // 300ms giữa các lần bắn
+
+        public frmTankGame(string gameId, string opponentId, bool startsFirst)
+        {
+            InitializeComponent();
+            _gameId = gameId;
+            _opponentId = opponentId;
+            _myId = NetworkManager.Instance.UserID ?? "";
+            _isMyTurn = startsFirst;
+            
+            // Khởi tạo last sent values
+            _lastSentX = _myTankX;
+            _lastSentY = _myTankY;
+            _lastSentAngle = _myTankAngle;
+
+            this.ClientSize = new Size(GAME_WIDTH, GAME_HEIGHT);
+            this.Text = $"Tank Game - vs {opponentId}";
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            this.MaximizeBox = false;
+            this.KeyPreview = true;
+            this.BackColor = Color.DarkGreen;
+            
+            this.Load += frmTankGame_Load;
+            this.KeyDown += FrmTankGame_KeyDown;
+            this.KeyUp += FrmTankGame_KeyUp;
+            
+            if (btnRematch != null)
+                btnRematch.Click += BtnRematch_Click;
+            if (btnExit != null)
+                btnExit.Click += BtnExit_Click;
+                
+            this.SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.DoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.OptimizedDoubleBuffer, true);
+            this.DoubleBuffered = true;
+            this.Invalidate();
+        }
+        
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            FrmTankGame_Paint(this, e);
+        }
+        
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            e.Graphics.Clear(Color.DarkGreen);
+        }
+
+        private void frmTankGame_Load(object sender, EventArgs e)
+        {
+            _gameTimer = new System.Windows.Forms.Timer();
+            _gameTimer.Interval = 33; // ✅ [FIX] 30 FPS - giảm tải CPU
+            _gameTimer.Tick += GameTimer_Tick;
+            _gameTimer.Start();
+
+            UpdateStatusLabel();
+            UpdateScoreLabels();
+            this.Focus();
+            this.Activate();
+            this.Invalidate();
+        }
+        
+        private void UpdateScoreLabels()
+        {
+            if (lblScore != null)
+                lblScore.Text = $"Score: {_myScore}";
+            if (lblHits != null)
+                lblHits.Text = $"Hits: {_myHits}";
+        }
+
+        private void GameTimer_Tick(object sender, EventArgs e)
+        {
+            if (_isGameEnded) return;
+            
+            bool needsRedraw = false;
+            bool positionChanged = false;
+            
+            // Xử lý di chuyển
+            if (_keyUp) { MoveTankLocal(1); needsRedraw = true; positionChanged = true; }
+            if (_keyDown) { MoveTankLocal(-1); needsRedraw = true; positionChanged = true; }
+            if (_keyLeft) { RotateTankLocal(-1); needsRedraw = true; positionChanged = true; }
+            if (_keyRight) { RotateTankLocal(1); needsRedraw = true; positionChanged = true; }
+
+            // ✅ [FIX] Gửi packet sau khi xử lý tất cả input để batch lại
+            if (positionChanged)
+            {
+                TrySendPositionUpdate();
+            }
+
+            // Cập nhật đạn
+            if (_bullets.Count > 0)
+            {
+                UpdateBullets();
+                needsRedraw = true;
+            }
+
+            if (needsRedraw)
+            {
+                this.Invalidate();
+            }
+        }
+
+        // ✅ [FIX] Tách riêng logic di chuyển local và gửi packet
+        private void MoveTankLocal(int direction)
+        {
+            float rad = _myTankAngle * (float)Math.PI / 180f;
+            float newX = _myTankX + (float)Math.Cos(rad) * TANK_SPEED * direction;
+            float newY = _myTankY + (float)Math.Sin(rad) * TANK_SPEED * direction;
+
+            if (newX >= TANK_SIZE / 2 && newX <= GAME_WIDTH - TANK_SIZE / 2 &&
+                newY >= TANK_SIZE / 2 && newY <= GAME_HEIGHT - TANK_SIZE / 2)
+            {
+                _myTankX = newX;
+                _myTankY = newY;
+            }
+        }
+
+        private void RotateTankLocal(int direction)
+        {
+            _myTankAngle += ROTATION_SPEED * direction;
+            if (_myTankAngle < 0) _myTankAngle += 360;
+            if (_myTankAngle >= 360) _myTankAngle -= 360;
+        }
+
+        // ✅ [FIX] Gửi packet với throttling dựa trên cả position và time
+        private void TrySendPositionUpdate()
+        {
+            // Kiểm tra time-based throttling
+            var now = DateTime.Now;
+            if ((now - _lastPacketSentTime).TotalMilliseconds < MIN_PACKET_INTERVAL_MS)
+                return;
+
+            // Kiểm tra position/angle threshold
+            float deltaX = Math.Abs(_myTankX - _lastSentX);
+            float deltaY = Math.Abs(_myTankY - _lastSentY);
+            float deltaAngle = Math.Abs(_myTankAngle - _lastSentAngle);
+            if (deltaAngle > 180) deltaAngle = 360 - deltaAngle;
+
+            bool positionChanged = deltaX >= POSITION_THRESHOLD || deltaY >= POSITION_THRESHOLD;
+            bool angleChanged = deltaAngle >= ANGLE_THRESHOLD;
+
+            if (!positionChanged && !angleChanged)
+                return;
+
+            // Gửi packet
+            var action = new TankActionPacket
+            {
+                GameID = _gameId,
+                SenderID = _myId,
+                ActionType = positionChanged ? TankActionType.Move : TankActionType.Rotate,
+                X = _myTankX,
+                Y = _myTankY,
+                Angle = _myTankAngle
+            };
+            NetworkManager.Instance.SendPacket(action);
+
+            _lastSentX = _myTankX;
+            _lastSentY = _myTankY;
+            _lastSentAngle = _myTankAngle;
+            _lastPacketSentTime = now;
+        }
+
+        private void Shoot()
+        {
+            if (_isGameEnded) return;
+
+            // ✅ [FIX] Cooldown để tránh spam đạn
+            var now = DateTime.Now;
+            if ((now - _lastShootTime).TotalMilliseconds < SHOOT_COOLDOWN_MS)
+                return;
+            _lastShootTime = now;
+
+            float rad = _myTankAngle * (float)Math.PI / 180f;
+            float bulletX = _myTankX + (float)Math.Cos(rad) * TANK_SIZE / 2;
+            float bulletY = _myTankY + (float)Math.Sin(rad) * TANK_SIZE / 2;
+
+            _bullets.Add(new Bullet
+            {
+                X = bulletX,
+                Y = bulletY,
+                Angle = _myTankAngle,
+                IsMine = true
+            });
+
+            var action = new TankActionPacket
+            {
+                GameID = _gameId,
+                SenderID = _myId,
+                ActionType = TankActionType.Shoot,
+                X = bulletX,
+                Y = bulletY,
+                Angle = _myTankAngle
+            };
+            NetworkManager.Instance.SendPacket(action);
+        }
+
+        private void UpdateBullets()
+        {
+            const float TANK_HALF_SIZE = TANK_SIZE / 2f;
+            const float COLLISION_DIST_SQ = TANK_HALF_SIZE * TANK_HALF_SIZE;
+            
+            for (int i = _bullets.Count - 1; i >= 0; i--)
+            {
+                var bullet = _bullets[i];
+                float rad = bullet.Angle * (float)Math.PI / 180f;
+                bullet.X += (float)Math.Cos(rad) * BULLET_SPEED;
+                bullet.Y += (float)Math.Sin(rad) * BULLET_SPEED;
+
+                // Kiểm tra biên
+                if (bullet.X < 0 || bullet.X > GAME_WIDTH || bullet.Y < 0 || bullet.Y > GAME_HEIGHT)
+                {
+                    _bullets.RemoveAt(i);
+                    continue;
+                }
+
+                // ✅ [FIX] Collision detection tối ưu với distance squared
+                if (bullet.IsMine)
+                {
+                    float dx = bullet.X - _opponentTankX;
+                    float dy = bullet.Y - _opponentTankY;
+                    float distSq = dx * dx + dy * dy;
+                    
+                    if (distSq < COLLISION_DIST_SQ)
+                    {
+                        _bullets.RemoveAt(i);
+                        _myHits++;
+                        UpdateScoreLabels();
+                        
+                        var hitPacket = new TankHitPacket
+                        {
+                            GameID = _gameId,
+                            HitPlayerID = _opponentId,
+                            Damage = 10,
+                            RemainingHealth = 0,
+                            IsGameOver = false,
+                            WinnerID = null
+                        };
+                        NetworkManager.Instance.SendPacket(hitPacket);
+                        continue;
+                    }
+                }
+                else
+                {
+                    float dx = bullet.X - _myTankX;
+                    float dy = bullet.Y - _myTankY;
+                    float distSq = dx * dx + dy * dy;
+                    
+                    if (distSq < COLLISION_DIST_SQ)
+                    {
+                        _bullets.RemoveAt(i);
+                        var hitPacket = new TankHitPacket
+                        {
+                            GameID = _gameId,
+                            HitPlayerID = _myId,
+                            Damage = 10,
+                            RemainingHealth = 0,
+                            IsGameOver = false,
+                            WinnerID = null
+                        };
+                        NetworkManager.Instance.SendPacket(hitPacket);
+                        continue;
+                    }
+                }
+            }
+        }
+
+        private void FrmTankGame_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (_isGameEnded) return;
+
+            switch (e.KeyCode)
+            {
+                case Keys.W: case Keys.Up: _keyUp = true; break;
+                case Keys.S: case Keys.Down: _keyDown = true; break;
+                case Keys.A: case Keys.Left: _keyLeft = true; break;
+                case Keys.D: case Keys.Right: _keyRight = true; break;
+                case Keys.Space:
+                    if (!_keyShoot)
+                    {
+                        _keyShoot = true;
+                        Shoot();
+                    }
+                    break;
+            }
+        }
+
+        private void FrmTankGame_KeyUp(object sender, KeyEventArgs e)
+        {
+            switch (e.KeyCode)
+            {
+                case Keys.W: case Keys.Up: _keyUp = false; break;
+                case Keys.S: case Keys.Down: _keyDown = false; break;
+                case Keys.A: case Keys.Left: _keyLeft = false; break;
+                case Keys.D: case Keys.Right: _keyRight = false; break;
+                case Keys.Space: _keyShoot = false; break;
+            }
+        }
+
+        private void FrmTankGame_Paint(object sender, PaintEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.InterpolationMode = InterpolationMode.Low; // ✅ [FIX] Giảm chất lượng để tăng tốc
+
+            // Vẽ tank của tôi
+            DrawTank(g, _myTankX, _myTankY, _myTankAngle, Color.Blue);
+
+            // Vẽ tank đối thủ
+            DrawTank(g, _opponentTankX, _opponentTankY, _opponentTankAngle, Color.Red);
+
+            // Vẽ đạn
+            foreach (var bullet in _bullets)
+            {
+                if (bullet.X >= 0 && bullet.X <= GAME_WIDTH && bullet.Y >= 0 && bullet.Y <= GAME_HEIGHT)
+                {
+                    using (SolidBrush brush = new SolidBrush(bullet.IsMine ? Color.Yellow : Color.Orange))
+                    {
+                        g.FillEllipse(brush, bullet.X - 4, bullet.Y - 4, 8, 8);
+                    }
+                }
+            }
+
+            // Vẽ thanh máu
+            DrawHealthBar(g, 10, 60, _myHealth, MAX_HEALTH, Color.Blue, "Bạn");
+            DrawHealthBar(g, GAME_WIDTH - 210, 60, _opponentHealth, MAX_HEALTH, Color.Red, "Đối thủ");
+            
+            // Vẽ overlay khi game kết thúc
+            if (_isGameEnded)
+            {
+                using (SolidBrush overlayBrush = new SolidBrush(Color.FromArgb(128, 0, 0, 0)))
+                {
+                    g.FillRectangle(overlayBrush, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+                }
+                
+                using (Font font = new Font("Segoe UI", 24, FontStyle.Bold))
+                using (SolidBrush textBrush = new SolidBrush(Color.White))
+                {
+                    string gameOverText = _myHealth > 0 ? "BẠN THẮNG!" : "BẠN THUA!";
+                    SizeF textSize = g.MeasureString(gameOverText, font);
+                    float x = (GAME_WIDTH - textSize.Width) / 2;
+                    float y = 200;
+                    g.DrawString(gameOverText, font, textBrush, x, y);
+                }
+            }
+        }
+
+        private void DrawTank(Graphics g, float x, float y, float angle, Color color)
+        {
+            if (x < 0 || x > GAME_WIDTH || y < 0 || y > GAME_HEIGHT) return;
+            
+            float rad = angle * (float)Math.PI / 180f;
+
+            Matrix m = g.Transform;
+            g.TranslateTransform(x, y);
+            g.RotateTransform(angle);
+            
+            using (SolidBrush brush = new SolidBrush(color))
+            {
+                g.FillRectangle(brush, -TANK_SIZE / 2, -TANK_SIZE / 2, TANK_SIZE, TANK_SIZE);
+            }
+            using (Pen pen = new Pen(Color.Black, 2))
+            {
+                g.DrawRectangle(pen, -TANK_SIZE / 2, -TANK_SIZE / 2, TANK_SIZE, TANK_SIZE);
+            }
+            
+            g.Transform = m;
+
+            // Vẽ nòng súng
+            float gunX = x + (float)Math.Cos(rad) * TANK_SIZE / 2;
+            float gunY = y + (float)Math.Sin(rad) * TANK_SIZE / 2;
+            using (Pen gunPen = new Pen(color, 4))
+            {
+                g.DrawLine(gunPen, x, y, gunX, gunY);
+            }
+        }
+
+        private void DrawHealthBar(Graphics g, int x, int y, int current, int max, Color color, string label)
+        {
+            int barWidth = 200;
+            int barHeight = 20;
+            float percent = (float)current / max;
+
+            g.FillRectangle(Brushes.DarkGray, x, y, barWidth, barHeight);
+            using (SolidBrush brush = new SolidBrush(color))
+            {
+                g.FillRectangle(brush, x, y, barWidth * percent, barHeight);
+            }
+            g.DrawRectangle(Pens.Black, x, y, barWidth, barHeight);
+            g.DrawString($"{label}: {current}/{max}", SystemFonts.DefaultFont, Brushes.White, x, y + 25);
+        }
+
+        private void UpdateStatusLabel()
+        {
+            if (_isGameEnded)
+            {
+                this.Text = $"Tank Game - Kết thúc";
+            }
+            else
+            {
+                this.Text = $"Tank Game - vs {_opponentId} | HP: {_myHealth}/{MAX_HEALTH}";
+            }
+        }
+
+        public void ReceiveOpponentAction(TankActionPacket packet)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => ReceiveOpponentAction(packet)));
+                return;
+            }
+
+            if (_isGameEnded) return;
+            if (packet == null || string.IsNullOrEmpty(packet.GameID) || packet.GameID != _gameId) return;
+            if (packet.SenderID != _opponentId) return;
+
+            switch (packet.ActionType)
+            {
+                case TankActionType.Move:
+                case TankActionType.Rotate:
+                    if (packet.X >= TANK_SIZE / 2 && packet.X <= GAME_WIDTH - TANK_SIZE / 2 &&
+                        packet.Y >= TANK_SIZE / 2 && packet.Y <= GAME_HEIGHT - TANK_SIZE / 2)
+                    {
+                        _opponentTankX = packet.X;
+                        _opponentTankY = packet.Y;
+                        _opponentTankAngle = packet.Angle;
+                        while (_opponentTankAngle < 0) _opponentTankAngle += 360;
+                        while (_opponentTankAngle >= 360) _opponentTankAngle -= 360;
+                        this.Invalidate();
+                    }
+                    break;
+                case TankActionType.Shoot:
+                    if (packet.X >= 0 && packet.X <= GAME_WIDTH && packet.Y >= 0 && packet.Y <= GAME_HEIGHT)
+                    {
+                        _bullets.Add(new Bullet
+                        {
+                            X = packet.X,
+                            Y = packet.Y,
+                            Angle = packet.Angle,
+                            IsMine = false
+                        });
+                        this.Invalidate();
+                    }
+                    break;
+            }
+        }
+
+        public void ReceiveHit(TankHitPacket packet)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => ReceiveHit(packet)));
+                return;
+            }
+
+            if (packet == null || string.IsNullOrEmpty(packet.GameID) || packet.GameID != _gameId) return;
+
+            if (packet.HitPlayerID == _myId)
+            {
+                _myHealth = packet.RemainingHealth;
+                if (_myHealth < 0) _myHealth = 0;
+            }
+            else if (packet.HitPlayerID == _opponentId)
+            {
+                _opponentHealth = packet.RemainingHealth;
+                if (_opponentHealth < 0) _opponentHealth = 0;
+            }
+
+            if (packet.IsGameOver)
+            {
+                _isGameEnded = true;
+                bool isWinner = (packet.WinnerID != null && packet.WinnerID == _myId);
+                if (isWinner)
+                {
+                    _myScore += 100;
+                    UpdateScoreLabels();
+                }
+                ShowGameOverButtons();
+            }
+
+            UpdateStatusLabel();
+            this.Invalidate();
+        }
+        
+        private void ShowGameOverButtons()
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(ShowGameOverButtons));
+                return;
+            }
+            
+            if (btnRematch != null)
+            {
+                btnRematch.Visible = true;
+                btnRematch.Enabled = true;
+                btnRematch.BringToFront();
+            }
+            if (btnExit != null)
+            {
+                btnExit.Visible = true;
+                btnExit.BringToFront();
+            }
+        }
+        
+        private void BtnRematch_Click(object sender, EventArgs e)
+        {
+            if (!_isGameEnded) return;
+            
+            if (string.IsNullOrEmpty(_gameId) || string.IsNullOrEmpty(_myId))
+            {
+                MessageBox.Show("Lỗi: Thông tin game không hợp lệ.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            
+            var request = new RematchRequestPacket
+            {
+                GameID = _gameId,
+                SenderID = _myId
+            };
+            
+            if (NetworkManager.Instance.SendPacket(request))
+            {
+                if (btnRematch != null)
+                {
+                    btnRematch.Enabled = false;
+                    btnRematch.Text = "Đang chờ...";
+                }
+            }
+            else
+            {
+                MessageBox.Show("Không thể gửi yêu cầu chơi lại.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        
+        private void BtnExit_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+        
+        public void HandleRematchRequest(RematchRequestPacket request)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => HandleRematchRequest(request)));
+                return;
+            }
+            
+            if (!_isGameEnded) return;
+            
+            DialogResult result = MessageBox.Show(
+                "Đối thủ muốn chơi lại. Bạn có đồng ý?",
+                "Yêu Cầu Chơi Lại",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+            
+            bool accepted = (result == DialogResult.Yes);
+            var response = new RematchResponsePacket
+            {
+                GameID = _gameId,
+                SenderID = _myId,
+                ReceiverID = request.SenderID,
+                Accepted = accepted
+            };
+            NetworkManager.Instance.SendPacket(response);
+            
+            if (accepted && btnRematch != null)
+            {
+                btnRematch.Enabled = false;
+                btnRematch.Text = "Đang chờ...";
+            }
+        }
+        
+        public void HandleRematchResponse(RematchResponsePacket response)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => HandleRematchResponse(response)));
+                return;
+            }
+            
+            if (!response.Accepted)
+            {
+                MessageBox.Show("Đối thủ đã từ chối chơi lại.", "Thông báo");
+                if (btnRematch != null)
+                {
+                    btnRematch.Enabled = true;
+                    btnRematch.Text = "Chơi Lại";
+                }
+            }
+        }
+        
+        public void HandleTankGameReset(TankStartPacket packet)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => HandleTankGameReset(packet)));
+                return;
+            }
+            
+            if (packet == null || string.IsNullOrEmpty(packet.GameID)) return;
+            if (packet.GameID != _gameId) return;
+            
+            // Reset game state
+            _isGameEnded = false;
+            _myHealth = MAX_HEALTH;
+            _opponentHealth = MAX_HEALTH;
+            _myScore = 0;
+            _myHits = 0;
+            _bullets.Clear();
+            
+            // Reset vị trí tank
+            _myTankX = 100f;
+            _myTankY = 300f;
+            _myTankAngle = 0f;
+            _opponentTankX = 700f;
+            _opponentTankY = 300f;
+            _opponentTankAngle = 180f;
+            
+            _isMyTurn = packet.StartsFirst;
+            
+            // Reset throttle values
+            _lastSentX = _myTankX;
+            _lastSentY = _myTankY;
+            _lastSentAngle = _myTankAngle;
+            _lastPacketSentTime = DateTime.MinValue;
+            _lastShootTime = DateTime.MinValue;
+            
+            // Ẩn buttons
+            if (btnRematch != null)
+            {
+                btnRematch.Visible = false;
+                btnRematch.Enabled = true;
+                btnRematch.Text = "Chơi Lại";
+            }
+            if (btnExit != null)
+            {
+                btnExit.Visible = false;
+            }
+            
+            if (_gameTimer != null && !_gameTimer.Enabled)
+            {
+                _gameTimer.Start();
+            }
+            
+            UpdateStatusLabel();
+            UpdateScoreLabels();
+            this.Invalidate();
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            _gameTimer?.Stop();
+            _gameTimer?.Dispose();
+            base.OnFormClosing(e);
+        }
+    }
+}

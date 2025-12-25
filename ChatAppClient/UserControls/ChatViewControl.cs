@@ -241,8 +241,22 @@ namespace ChatAppClient.UserControls
         {
             try
             {
+                // ? [FIX] C?i thi?n scroll ?? luôn cu?n ??n tin nh?n m?i nh?t
                 if (flpMessages.Controls.Count > 0)
-                    flpMessages.ScrollControlIntoView(flpMessages.Controls[flpMessages.Controls.Count - 1]);
+                {
+                    // Delay nh? ?? ??m b?o control ?ã ???c render
+                    flpMessages.PerformLayout();
+                    
+                    // Cách 1: ScrollControlIntoView - ?áng tin c?y nh?t
+                    Control lastControl = flpMessages.Controls[flpMessages.Controls.Count - 1];
+                    flpMessages.ScrollControlIntoView(lastControl);
+                    
+                    // Cách 2: Backup - set scroll value tr?c ti?p
+                    if (flpMessages.VerticalScroll.Visible)
+                    {
+                        flpMessages.VerticalScroll.Value = flpMessages.VerticalScroll.Maximum;
+                    }
+                }
             }
             catch { }
         }

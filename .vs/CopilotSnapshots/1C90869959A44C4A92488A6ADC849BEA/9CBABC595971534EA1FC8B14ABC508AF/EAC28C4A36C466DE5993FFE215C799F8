@@ -1,0 +1,648 @@
+﻿using ChatApp.Shared;
+using ChatAppClient.Forms;
+using ChatAppClient.Helpers;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace ChatAppClient.UserControls
+{
+    public partial class ChatViewControl : UserControl
+    {
+        private string _friendId;
+        private string _friendName;
+        private Form _parentForm;
+        private string _myId = "";
+
+        private Dictionary<string, GameInviteBubble> _gameInviteBubbles = new Dictionary<string, GameInviteBubble>();
+
+        // Unicode emoji constants
+        private const string EMOJI_DICE = "\U0001F3B2";
+        private const string EMOJI_SMILE = "\U0001F60A";
+        private const string EMOJI_PAPERCLIP = "\U0001F4CE";
+        private const string EMOJI_ERROR = "\u274C";
+        private const string EMOJI_WARNING = "\u26A0";
+        private const string EMOJI_INFO = "\u2139";
+        private const string EMOJI_CHAT = "\U0001F4AC";
+
+        public ChatViewControl(string friendId, string friendName, Form parentForm)
+        {
+            InitializeComponent();
+            _friendId = friendId;
+            _friendName = friendName;
+            _parentForm = parentForm;
+            lblFriendName.Text = _friendName;
+
+            flpMessages.AutoScroll = true;
+            flpMessages.FlowDirection = FlowDirection.TopDown;
+            flpMessages.WrapContents = false;
+            flpMessages.HorizontalScroll.Visible = false;
+
+            typeof(Control).GetProperty("DoubleBuffered", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                ?.SetValue(flpMessages, true, null);
+        }
+
+        private void ChatViewControl_Load(object sender, EventArgs e)
+        {
+            _myId = NetworkManager.Instance.UserID ?? "";
+
+            btnSend.Click -= BtnSend_Click;
+            btnStartGame.Click -= BtnStartGame_Click;
+            btnSendImage.Click -= BtnSendImage_Click;
+            btnSendFile.Click -= BtnSendFile_Click;
+            btnEmoji.Click -= BtnEmoji_Click;
+            btnAttach.Click -= BtnAttach_Click;
+
+            btnSend.Click += BtnSend_Click;
+            btnStartGame.Click += BtnStartGame_Click;
+            this.Resize += ChatViewControl_Resize;
+            btnSendImage.Click += BtnSendImage_Click;
+            btnSendFile.Click += BtnSendFile_Click;
+            btnEmoji.Click += BtnEmoji_Click;
+            btnAttach.Click += BtnAttach_Click;
+
+            txtMessage.Multiline = true;
+            txtMessage.ScrollBars = ScrollBars.None;
+            txtMessage.WordWrap = true;
+            txtMessage.KeyDown -= TxtMessage_KeyDown;
+            txtMessage.KeyDown += TxtMessage_KeyDown;
+
+            if (btnStartGame.ContextMenuStrip == null)
+            {
+                ContextMenuStrip gameMenu = new ContextMenuStrip();
+                gameMenu.Items.Add("Play Caro", null, (s, ev) => InviteGame(GameType.Caro));
+                gameMenu.Items.Add("Play Tank Game", null, (s, ev) => InviteGame(GameType.Tank));
+                btnStartGame.ContextMenuStrip = gameMenu;
+            }
+
+            if (pnlEmojiPicker.Controls.Count == 0)
+            {
+                LoadEmojis();
+            }
+            
+            LoadChatHistory();
+        }
+
+        private void TxtMessage_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter && !e.Shift)
+            {
+                e.SuppressKeyPress = true;
+                BtnSend_Click(sender, e);
+            }
+        }
+
+        private async void LoadChatHistory()
+        {
+            if (string.IsNullOrEmpty(_myId) || string.IsNullOrEmpty(_friendId)) return;
+
+            try
+            {
+                var response = await NetworkManager.Instance.RequestChatHistoryAsync(_friendId, 100);
+                if (response.Success && response.Messages != null)
+                {
+                    foreach (var msg in response.Messages)
+                    {
+                        bool isMe = (msg.SenderID == _myId);
+                        MessageType type = isMe ? MessageType.Outgoing : MessageType.Incoming;
+
+                        if (msg.MessageType == "GameInvite")
+                        {
+                            string senderName = isMe ? (NetworkManager.Instance.UserName ?? "You") : _friendName;
+                            GameType gType = msg.FileName == "Tank" ? GameType.Tank : GameType.Caro;
+
+                            var invite = new GameInvitePacket { SenderID = msg.SenderID, SenderName = senderName, ReceiverID = msg.ReceiverID };
+                            DisplayGameInvite(invite, gType, type, msg.MessageContent);
+                        }
+                        else if (msg.MessageType == "Text")
+                        {
+                            string content = msg.MessageContent;
+                            if (!string.IsNullOrWhiteSpace(content))
+                            {
+                                AddMessageBubble(content, type, msg.CreatedAt);
+                            }
+                        }
+                        else if (msg.MessageType == "File" || msg.MessageType == "Image")
+                        {
+                            AddSystemMessage($"[History] {msg.MessageType}: {msg.FileName}");
+                        }
+                    }
+                    ScrollToBottom();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading history: {ex.Message}");
+            }
+        }
+
+        #region === LAYOUT & DISPLAY ===
+
+        private void AddMessageBubble(string message, MessageType type, DateTime time)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                message = "(Empty message)";
+            }
+            
+            var bubble = new ChatMessageBubble();
+            bubble.SetData(message, type, time);
+            AddControlToLayout(bubble, type);
+        }
+
+        public void ReceiveFileMessage(FilePacket p, MessageType type)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => ReceiveFileMessage(p, type))); return; }
+
+            Control bubbleToAdd;
+
+            if (p.IsImage)
+            {
+                var imgBubble = new ImageBubble();
+                try
+                {
+                    using (var ms = new MemoryStream(p.FileData))
+                    {
+                        using (var originalImg = Image.FromStream(ms))
+                        {
+                            Image clonedImg = new Bitmap(originalImg);
+                            imgBubble.SetImage(clonedImg, p.FileName, p.FileData, type);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error loading image: {ex.Message}");
+                    AddSystemMessage($"[Error displaying image: {p.FileName}]");
+                    return;
+                }
+
+                imgBubble.OnForwardRequested += (s, data) => ShowForwardDialog(null, data.fileName, data.fileData);
+                bubbleToAdd = imgBubble;
+            }
+            else
+            {
+                var fileBubble = new FileBubble();
+                fileBubble.SetMessage(p.FileName, p.FileData, type, flpMessages.ClientSize.Width);
+                fileBubble.OnForwardRequested += (s, data) => ShowForwardDialog(null, data.fileName, data.fileData);
+                bubbleToAdd = fileBubble;
+            }
+
+            AddControlToLayout(bubbleToAdd, type);
+        }
+
+        private void AddControlToLayout(Control ctrl, MessageType type)
+        {
+            Panel container = new Panel();
+            container.AutoSize = false;
+            int scrollWidth = SystemInformation.VerticalScrollBarWidth;
+            container.Width = flpMessages.ClientSize.Width - scrollWidth - 5;
+            container.Height = ctrl.Height + 10;
+            container.BackColor = Color.Transparent;
+            container.Margin = new Padding(0, 0, 0, 5);
+
+            if (type == MessageType.Outgoing)
+            {
+                ctrl.Location = new Point(container.Width - ctrl.Width - 10, 0);
+                ctrl.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            }
+            else
+            {
+                ctrl.Location = new Point(5, 0);
+                ctrl.Anchor = AnchorStyles.Top | AnchorStyles.Left;
+            }
+
+            container.Controls.Add(ctrl);
+            flpMessages.Controls.Add(container);
+            ScrollToBottom();
+        }
+
+        private void AddSystemMessage(string text)
+        {
+            Label lbl = new Label();
+            lbl.Text = text;
+            lbl.ForeColor = Color.Gray;
+            lbl.Font = new Font("Segoe UI", 9, FontStyle.Italic);
+            lbl.AutoSize = false;
+            lbl.TextAlign = ContentAlignment.MiddleCenter;
+            lbl.Width = flpMessages.ClientSize.Width - 20;
+            lbl.Height = 25;
+            lbl.Margin = new Padding(0, 5, 0, 5);
+            flpMessages.Controls.Add(lbl);
+            ScrollToBottom();
+        }
+
+        private void ScrollToBottom()
+        {
+            try
+            {
+                if (flpMessages.Controls.Count > 0)
+                    flpMessages.ScrollControlIntoView(flpMessages.Controls[flpMessages.Controls.Count - 1]);
+            }
+            catch { }
+        }
+
+        #endregion
+
+        #region === SEND EVENTS ===
+
+        private void BtnSend_Click(object sender, EventArgs e)
+        {
+            string content = txtMessage.Text.Trim();
+            if (string.IsNullOrWhiteSpace(content)) return;
+
+            AddMessageBubble(content, MessageType.Outgoing, DateTime.Now);
+
+            var packet = new TextPacket 
+            { 
+                SenderID = _myId ?? "", 
+                ReceiverID = _friendId ?? "", 
+                MessageContent = content 
+            };
+            
+            if (!NetworkManager.Instance.SendPacket(packet))
+            {
+                System.Diagnostics.Debug.WriteLine("Cannot send message");
+            }
+
+            txtMessage.Clear();
+            txtMessage.Focus();
+        }
+
+        private void BtnSendImage_Click(object sender, EventArgs e) => SelectAndSendFile(true);
+        private void BtnSendFile_Click(object sender, EventArgs e) => SelectAndSendFile(false);
+
+        private void SelectAndSendFile(bool isImage)
+        {
+            string filter = isImage ? "Image Files|*.jpg;*.jpeg;*.png;*.gif;*.bmp" : "All Files|*.*";
+            OpenFileDialog dialog = new OpenFileDialog { Filter = filter };
+
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                FileInfo fileInfo = new FileInfo(dialog.FileName);
+                const long MAX_FILE_SIZE = 10 * 1024 * 1024;
+                const long MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+                
+                long maxSize = isImage ? MAX_IMAGE_SIZE : MAX_FILE_SIZE;
+                if (fileInfo.Length > maxSize)
+                {
+                    string sizeLimit = isImage ? "5MB" : "10MB";
+                    ShowCustomMessageBox($"File too large!\n\nLimit: {sizeLimit}\nFile size: {fileInfo.Length / (1024.0 * 1024.0):F2}MB", 
+                        "Warning", MessageBoxIcon.Warning);
+                    return;
+                }
+                
+                string selectedFile = dialog.FileName;
+                
+                _ = Task.Run(() =>
+                {
+                    try
+                    {
+                        byte[] fileData = File.ReadAllBytes(selectedFile);
+                        string fileName = Path.GetFileName(selectedFile);
+
+                        var packet = new FilePacket 
+                        { 
+                            SenderID = _myId, 
+                            ReceiverID = _friendId, 
+                            FileName = fileName, 
+                            FileData = fileData, 
+                            IsImage = isImage 
+                        };
+                        
+                        bool sent = NetworkManager.Instance.SendPacket(packet);
+                        
+                        this.Invoke(new Action(() =>
+                        {
+                            if (sent)
+                            {
+                                ReceiveFileMessage(packet, MessageType.Outgoing);
+                            }
+                            else
+                            {
+                                ShowCustomMessageBox("Cannot send file.\nPlease check network connection.", "Error", MessageBoxIcon.Error);
+                            }
+                        }));
+                    }
+                    catch (Exception ex)
+                    {
+                        this.Invoke(new Action(() =>
+                        {
+                            ShowCustomMessageBox($"Error sending file:\n{ex.Message}", "Error", MessageBoxIcon.Error);
+                        }));
+                    }
+                });
+            }
+        }
+
+        #endregion
+
+        #region === GAME INVITE ===
+
+        private void BtnStartGame_Click(object sender, EventArgs e)
+        {
+            if (btnStartGame.ContextMenuStrip != null)
+                btnStartGame.ContextMenuStrip.Show(btnStartGame, new Point(0, btnStartGame.Height));
+            else
+                InviteGame(GameType.Caro);
+        }
+
+        private void InviteGame(GameType type)
+        {
+            if (string.IsNullOrEmpty(_myId)) _myId = NetworkManager.Instance.UserID ?? "";
+            string senderName = NetworkManager.Instance.UserName ?? "User";
+
+            bool sent = false;
+            if (type == GameType.Caro)
+            {
+                var packet = new GameInvitePacket { SenderID = _myId, SenderName = senderName, ReceiverID = _friendId };
+                sent = NetworkManager.Instance.SendPacket(packet);
+                if (sent) ReceiveGameInvite(packet, type, MessageType.Outgoing);
+            }
+            else
+            {
+                var packet = new TankInvitePacket { SenderID = _myId, SenderName = senderName, ReceiverID = _friendId };
+                sent = NetworkManager.Instance.SendPacket(packet);
+                if (sent) ReceiveGameInvite(new GameInvitePacket { SenderID = _myId, SenderName = senderName, ReceiverID = _friendId }, type, MessageType.Outgoing);
+            }
+
+            if (sent)
+            {
+                btnStartGame.Enabled = false;
+                btnStartGame.Text = "...";
+            }
+            else
+            {
+                ShowCustomMessageBox("Cannot send invitation.\nPlease check connection.", "Error", MessageBoxIcon.Warning);
+            }
+        }
+
+        public void ReceiveGameInvite(GameInvitePacket p, GameType gType, MessageType mType)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => ReceiveGameInvite(p, gType, mType))); return; }
+            DisplayGameInvite(p, gType, mType, null);
+        }
+
+        private void DisplayGameInvite(GameInvitePacket p, GameType gType, MessageType mType, string statusContent)
+        {
+            var bubble = new GameInviteBubble();
+            bubble.SetInvite(p.SenderName, mType, gType);
+
+            if (!string.IsNullOrEmpty(statusContent))
+            {
+                if (statusContent.Contains("accepted") || statusContent.Contains("chap nhan")) 
+                    bubble.UpdateStatus(GameInviteStatus.Accepted);
+                else if (statusContent.Contains("declined") || statusContent.Contains("tu choi")) 
+                    bubble.UpdateStatus(GameInviteStatus.Declined);
+            }
+
+            if (mType == MessageType.Incoming)
+            {
+                bubble.OnResponse += (s, accepted) =>
+                {
+                    if (gType == GameType.Caro)
+                        NetworkManager.Instance.SendPacket(new GameResponsePacket { SenderID = _myId, ReceiverID = p.SenderID, Accepted = accepted });
+                    else
+                        NetworkManager.Instance.SendPacket(new TankResponsePacket { SenderID = _myId, ReceiverID = p.SenderID, Accepted = accepted });
+
+                    bubble.UpdateStatus(accepted ? GameInviteStatus.Accepted : GameInviteStatus.Declined);
+                };
+            }
+            else
+            {
+                bubble.OnReinvite += (s, ev) => InviteGame(gType);
+                _gameInviteBubbles[_friendId] = bubble;
+            }
+
+            AddControlToLayout(bubble, mType);
+        }
+
+        public void UpdateGameInviteStatus(string senderID, bool accepted, GameType gType)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => UpdateGameInviteStatus(senderID, accepted, gType))); return; }
+
+            if (_gameInviteBubbles.TryGetValue(_friendId, out var bubble))
+            {
+                bubble.UpdateStatus(accepted ? GameInviteStatus.Accepted : GameInviteStatus.Declined);
+            }
+            else
+            {
+                AddSystemMessage(accepted ? $"Opponent accepted {gType}!" : $"Opponent declined {gType} invitation.");
+            }
+        }
+
+        public void ResetGameButton()
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(ResetGameButton)); return; }
+            btnStartGame.Enabled = true;
+            btnStartGame.Text = EMOJI_DICE;
+        }
+
+        public void HandleGameInviteDeclined()
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(HandleGameInviteDeclined)); return; }
+            ResetGameButton();
+        }
+
+        #endregion
+
+        #region === OTHER EVENTS ===
+
+        public void ReceiveMessage(string content)
+        {
+            if (this.InvokeRequired) { this.Invoke(new Action(() => ReceiveMessage(content))); return; }
+            
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                content = "(Empty message)";
+            }
+            
+            AddMessageBubble(content, MessageType.Incoming, DateTime.Now);
+        }
+
+        private void ShowForwardDialog(string text, string fileName, byte[] fileData)
+        {
+            var friends = new List<(string id, string name)>();
+            if (_parentForm is frmHome homeForm)
+            {
+                friends = homeForm.GetFriendsList().Where(f => f.id != _friendId).ToList();
+            }
+
+            if (friends.Count == 0) 
+            { 
+                ShowCustomMessageBox("No friends to forward to.", "Notice", MessageBoxIcon.Information);
+                return; 
+            }
+
+            using (var fwd = new frmForwardMessage(friends))
+            {
+                if (fwd.ShowDialog() == DialogResult.OK && fwd.SelectedFriendID != null)
+                {
+                    string target = fwd.SelectedFriendID;
+                    bool success = false;
+                    
+                    if (!string.IsNullOrEmpty(text))
+                    {
+                        success = NetworkManager.Instance.SendPacket(new TextPacket { SenderID = _myId, ReceiverID = target, MessageContent = text });
+                    }
+                    else if (fileData != null && !string.IsNullOrEmpty(fileName))
+                    {
+                        string ext = Path.GetExtension(fileName).ToLowerInvariant();
+                        bool isImg = ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".bmp";
+                        success = NetworkManager.Instance.SendPacket(new FilePacket { SenderID = _myId, ReceiverID = target, FileName = fileName, FileData = fileData, IsImage = isImg });
+                    }
+                    
+                    if (success)
+                    {
+                        ShowCustomMessageBox($"Forwarded to {fwd.SelectedFriendName}!", "Success", MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        ShowCustomMessageBox("Cannot forward.\nPlease check connection.", "Error", MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
+        private void ShowCustomMessageBox(string message, string title, MessageBoxIcon icon)
+        {
+            Form msgForm = new Form();
+            msgForm.Text = title;
+            msgForm.FormBorderStyle = FormBorderStyle.FixedDialog;
+            msgForm.StartPosition = FormStartPosition.CenterParent;
+            msgForm.MaximizeBox = false;
+            msgForm.MinimizeBox = false;
+            msgForm.BackColor = Color.FromArgb(47, 49, 54);
+            msgForm.Size = new Size(380, 180);
+            
+            Label lblIcon = new Label();
+            lblIcon.Font = new Font("Segoe UI Symbol", 28);
+            lblIcon.AutoSize = true;
+            lblIcon.Location = new Point(20, 25);
+            switch (icon)
+            {
+                case MessageBoxIcon.Error: lblIcon.Text = EMOJI_ERROR; break;
+                case MessageBoxIcon.Warning: lblIcon.Text = EMOJI_WARNING; break;
+                case MessageBoxIcon.Information: lblIcon.Text = EMOJI_INFO; break;
+                default: lblIcon.Text = EMOJI_CHAT; break;
+            }
+            msgForm.Controls.Add(lblIcon);
+            
+            Label lblMessage = new Label();
+            lblMessage.Text = message;
+            lblMessage.Font = new Font("Segoe UI", 10);
+            lblMessage.ForeColor = Color.White;
+            lblMessage.AutoSize = false;
+            lblMessage.Size = new Size(270, 70);
+            lblMessage.Location = new Point(80, 25);
+            msgForm.Controls.Add(lblMessage);
+            
+            Button btnOK = new Button();
+            btnOK.Text = "OK";
+            btnOK.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            btnOK.BackColor = Color.FromArgb(88, 101, 242);
+            btnOK.ForeColor = Color.White;
+            btnOK.FlatStyle = FlatStyle.Flat;
+            btnOK.FlatAppearance.BorderSize = 0;
+            btnOK.Size = new Size(100, 35);
+            btnOK.Location = new Point(140, 100);
+            btnOK.Cursor = Cursors.Hand;
+            btnOK.Click += (s, ev) => msgForm.Close();
+            msgForm.Controls.Add(btnOK);
+            msgForm.AcceptButton = btnOK;
+            
+            msgForm.ShowDialog(this.ParentForm);
+        }
+
+        private void ChatViewControl_Resize(object sender, EventArgs e)
+        {
+            int w = flpMessages.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 5;
+            foreach (Control c in flpMessages.Controls)
+            {
+                if (c is Panel p)
+                {
+                    p.Width = w;
+                    if (p.Controls.Count > 0)
+                    {
+                        Control child = p.Controls[0];
+                        if (child.Left > p.Width / 2)
+                        {
+                            child.Left = p.Width - child.Width - 10;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void BtnAttach_Click(object sender, EventArgs e) 
+        {
+            if (ctxAttachMenu != null)
+            {
+                ctxAttachMenu.Show(btnAttach, new Point(0, -ctxAttachMenu.Height));
+            }
+        }
+        
+        private void BtnEmoji_Click(object sender, EventArgs e) 
+        { 
+            pnlEmojiPicker.Location = new Point(
+                btnEmoji.Left, 
+                pnlInput.Top - pnlEmojiPicker.Height - 5
+            );
+            
+            pnlEmojiPicker.Visible = !pnlEmojiPicker.Visible;
+            
+            if (pnlEmojiPicker.Visible) 
+            {
+                pnlEmojiPicker.BringToFront();
+            }
+        }
+
+        private void LoadEmojis()
+        {
+            pnlEmojiPicker.Controls.Clear();
+            
+            // Using Unicode escape sequences for emoji
+            string[] emojis = { 
+                "\U0001F60A", "\U0001F602", "\u2764", "\U0001F44D", "\U0001F914", 
+                "\U0001F622", "\U0001F620", "\U0001F62E", "\U0001F60E", "\U0001F625", 
+                "\U0001F62D", "\U0001F480", "\U0001F389", "\U0001F525", "\U0001F44B", 
+                "\U0001F4AF", "\u2728", "\U0001F64F", "\U0001F4AA", "\U0001F440" 
+            };
+            
+            foreach (string emoji in emojis)
+            {
+                Button btn = new Button 
+                { 
+                    Text = emoji, 
+                    Font = new Font("Segoe UI Symbol", 16), 
+                    Size = new Size(45, 45), 
+                    FlatStyle = FlatStyle.Flat, 
+                    Cursor = Cursors.Hand, 
+                    BackColor = Color.FromArgb(54, 57, 63), 
+                    ForeColor = Color.White,
+                    Margin = new Padding(2)
+                };
+                btn.FlatAppearance.BorderSize = 0;
+                btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(88, 101, 242);
+                btn.Click += (s, ev) => 
+                { 
+                    txtMessage.AppendText(emoji); 
+                    pnlEmojiPicker.Visible = false; 
+                    txtMessage.Focus(); 
+                };
+                pnlEmojiPicker.Controls.Add(btn);
+            }
+        }
+
+        private void PnlHeader_Paint(object sender, PaintEventArgs e) { }
+        private void PnlInput_Paint(object sender, PaintEventArgs e) { }
+        private void PnlEmojiPicker_Paint(object sender, PaintEventArgs e) { }
+
+        #endregion
+    }
+}
