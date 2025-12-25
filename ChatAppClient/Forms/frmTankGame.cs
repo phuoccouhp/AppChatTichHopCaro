@@ -56,8 +56,8 @@ namespace ChatAppClient.Forms
         private float _lastSentX = -1;
         private float _lastSentY = -1;
         private float _lastSentAngle = -1;
-        private const float POSITION_THRESHOLD = 2f; // Chỉ gửi khi di chuyển ít nhất 2 pixel
-        private const float ANGLE_THRESHOLD = 5f; // Chỉ gửi khi xoay ít nhất 5 độ
+        private const float POSITION_THRESHOLD = 5f; // ✅ [FIX] Tăng từ 2f lên 5f để gửi ít packet hơn
+        private const float ANGLE_THRESHOLD = 10f; // ✅ [FIX] Tăng từ 5f lên 10f để gửi ít packet hơn
 
         public frmTankGame(string gameId, string opponentId, bool startsFirst)
         {
@@ -114,7 +114,7 @@ namespace ChatAppClient.Forms
         {
             // Khởi tạo timer
             _gameTimer = new System.Windows.Forms.Timer();
-            _gameTimer.Interval = 16; // ~60 FPS
+            _gameTimer.Interval = 33; // ✅ [FIX] Giảm từ 16ms xuống 33ms (30 FPS) - vẫn mượt nhưng ít lag hơn
             _gameTimer.Tick += GameTimer_Tick;
             _gameTimer.Start();
 
@@ -141,17 +141,27 @@ namespace ChatAppClient.Forms
         {
             if (_isGameEnded) return;
             
+            bool needsRedraw = false;
+            
             // Tank Game là real-time, cả 2 người có thể di chuyển đồng thời
             // Xử lý di chuyển (không cần kiểm tra _isMyTurn)
-            if (_keyUp) MoveTank(1);
-            if (_keyDown) MoveTank(-1);
-            if (_keyLeft) RotateTank(-1);
-            if (_keyRight) RotateTank(1);
+            if (_keyUp) { MoveTank(1); needsRedraw = true; }
+            if (_keyDown) { MoveTank(-1); needsRedraw = true; }
+            if (_keyLeft) { RotateTank(-1); needsRedraw = true; }
+            if (_keyRight) { RotateTank(1); needsRedraw = true; }
 
-            // Cập nhật đạn (luôn cập nhật để đạn di chuyển)
-            UpdateBullets();
+            // Cập nhật đạn (chỉ khi có đạn)
+            if (_bullets.Count > 0)
+            {
+                UpdateBullets();
+                needsRedraw = true;
+            }
 
-            this.Invalidate();
+            // ✅ [FIX] Chỉ vẽ lại khi thực sự cần thiết
+            if (needsRedraw)
+            {
+                this.Invalidate();
+            }
         }
 
         private void MoveTank(int direction)
@@ -251,6 +261,9 @@ namespace ChatAppClient.Forms
 
         private void UpdateBullets()
         {
+            const float TANK_HALF_SIZE = TANK_SIZE / 2f;
+            const float COLLISION_DIST_SQ = TANK_HALF_SIZE * TANK_HALF_SIZE; // ✅ [FIX] Dùng distance squared để tránh sqrt tốn kém
+            
             for (int i = _bullets.Count - 1; i >= 0; i--)
             {
                 var bullet = _bullets[i];
@@ -265,23 +278,26 @@ namespace ChatAppClient.Forms
                     continue;
                 }
 
-                // Kiểm tra va chạm với tank
+                // ✅ [FIX] Tối ưu collision detection - dùng distance squared thay vì sqrt
                 if (bullet.IsMine)
                 {
                     // Kiểm tra va chạm với tank đối thủ
-                    float dist = (float)Math.Sqrt(Math.Pow(bullet.X - _opponentTankX, 2) + Math.Pow(bullet.Y - _opponentTankY, 2));
-                    if (dist < TANK_SIZE / 2)
+                    float dx = bullet.X - _opponentTankX;
+                    float dy = bullet.Y - _opponentTankY;
+                    float distSq = dx * dx + dy * dy; // Không cần sqrt - nhanh hơn nhiều
+                    
+                    if (distSq < COLLISION_DIST_SQ)
                     {
                         _bullets.RemoveAt(i);
-                        _myHits++; // Tăng số lần bắn trúng
+                        _myHits++;
                         UpdateScoreLabels();
-                        // Gửi hit packet đến server (server sẽ tính RemainingHealth và gửi lại)
+                        
                         var hitPacket = new TankHitPacket
                         {
                             GameID = _gameId,
                             HitPlayerID = _opponentId,
                             Damage = 10,
-                            RemainingHealth = 0, // Server sẽ tính và gửi lại giá trị đúng
+                            RemainingHealth = 0,
                             IsGameOver = false,
                             WinnerID = null
                         };
@@ -292,17 +308,19 @@ namespace ChatAppClient.Forms
                 else
                 {
                     // Kiểm tra va chạm với tank của tôi
-                    float dist = (float)Math.Sqrt(Math.Pow(bullet.X - _myTankX, 2) + Math.Pow(bullet.Y - _myTankY, 2));
-                    if (dist < TANK_SIZE / 2)
+                    float dx = bullet.X - _myTankX;
+                    float dy = bullet.Y - _myTankY;
+                    float distSq = dx * dx + dy * dy; // Không cần sqrt - nhanh hơn nhiều
+                    
+                    if (distSq < COLLISION_DIST_SQ)
                     {
                         _bullets.RemoveAt(i);
-                        // Gửi hit packet đến server (server sẽ tính RemainingHealth và gửi lại)
                         var hitPacket = new TankHitPacket
                         {
                             GameID = _gameId,
                             HitPlayerID = _myId,
                             Damage = 10,
-                            RemainingHealth = 0, // Server sẽ tính và gửi lại giá trị đúng
+                            RemainingHealth = 0,
                             IsGameOver = false,
                             WinnerID = null
                         };

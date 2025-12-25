@@ -55,6 +55,33 @@ END
 ELSE
     PRINT '  Bảng Messages chưa tồn tại';
 
+-- Xóa bảng GroupMessages trước (vì có thể có Foreign Key)
+IF OBJECT_ID('GroupMessages', 'U') IS NOT NULL
+BEGIN
+    DROP TABLE GroupMessages;
+    PRINT '✓ Đã xóa bảng GroupMessages';
+END
+ELSE
+    PRINT '  Bảng GroupMessages chưa tồn tại';
+
+-- Xóa bảng GroupMembers
+IF OBJECT_ID('GroupMembers', 'U') IS NOT NULL
+BEGIN
+    DROP TABLE GroupMembers;
+    PRINT '✓ Đã xóa bảng GroupMembers';
+END
+ELSE
+    PRINT '  Bảng GroupMembers chưa tồn tại';
+
+-- Xóa bảng Groups
+IF OBJECT_ID('Groups', 'U') IS NOT NULL
+BEGIN
+    DROP TABLE Groups;
+    PRINT '✓ Đã xóa bảng Groups';
+END
+ELSE
+    PRINT '  Bảng Groups chưa tồn tại';
+
 -- Xóa bảng Users
 IF OBJECT_ID('Users', 'U') IS NOT NULL
 BEGIN
@@ -117,7 +144,9 @@ GO
 
 -- Tạo Index để tìm kiếm nhanh
 CREATE INDEX IX_Messages_SenderReceiver ON Messages(SenderID, ReceiverID);
-CREATE INDEX IX_Messages_CreatedAt ON Messages(CreatedAt);
+CREATE INDEX IX_Messages_CreatedAt ON Messages(CreatedAt DESC);
+CREATE INDEX IX_Messages_SenderID ON Messages(SenderID);
+CREATE INDEX IX_Messages_ReceiverID ON Messages(ReceiverID);
 GO
 
 -- Thêm Foreign Key (nếu có thể)
@@ -178,7 +207,84 @@ PRINT '';
 GO
 
 -- ============================================
--- BƯỚC 5: TẠO CÁC TÀI KHOẢN TEST
+-- BƯỚC 5: TẠO BẢNG NHÓM CHAT (GROUPS)
+-- ============================================
+
+PRINT 'Đang tạo bảng Groups...';
+
+CREATE TABLE Groups (
+    GroupID NVARCHAR(50) PRIMARY KEY,
+    GroupName NVARCHAR(100) NOT NULL,
+    CreatorID NVARCHAR(50) NOT NULL,
+    CreatedAt DATETIME DEFAULT GETDATE()
+);
+GO
+
+-- Tạo Index cho Groups
+CREATE INDEX IX_Groups_CreatorID ON Groups(CreatorID);
+CREATE INDEX IX_Groups_CreatedAt ON Groups(CreatedAt DESC);
+GO
+
+PRINT '✓ Đã tạo bảng Groups thành công!';
+PRINT '';
+GO
+
+-- ============================================
+-- BƯỚC 6: TẠO BẢNG THÀNH VIÊN NHÓM (GROUPMEMBERS)
+-- ============================================
+
+PRINT 'Đang tạo bảng GroupMembers...';
+
+CREATE TABLE GroupMembers (
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    GroupID NVARCHAR(50) NOT NULL,
+    UserID NVARCHAR(50) NOT NULL,
+    IsAdmin BIT DEFAULT 0,
+    JoinedAt DATETIME DEFAULT GETDATE(),
+    UNIQUE(GroupID, UserID)
+);
+GO
+
+-- Tạo Index cho GroupMembers
+CREATE INDEX IX_GroupMembers_GroupID ON GroupMembers(GroupID);
+CREATE INDEX IX_GroupMembers_UserID ON GroupMembers(UserID);
+CREATE INDEX IX_GroupMembers_GroupUser ON GroupMembers(GroupID, UserID);
+GO
+
+PRINT '✓ Đã tạo bảng GroupMembers thành công!';
+PRINT '';
+GO
+
+-- ============================================
+-- BƯỚC 7: TẠO BẢNG TIN NHẮN NHÓM (GROUPMESSAGES)
+-- ============================================
+
+PRINT 'Đang tạo bảng GroupMessages...';
+
+CREATE TABLE GroupMessages (
+    MessageID INT IDENTITY(1,1) PRIMARY KEY,
+    GroupID NVARCHAR(50) NOT NULL,
+    SenderID NVARCHAR(50) NOT NULL,
+    MessageContent NVARCHAR(MAX),
+    MessageType NVARCHAR(20) DEFAULT 'Text',
+    FileName NVARCHAR(255),
+    CreatedAt DATETIME DEFAULT GETDATE()
+);
+GO
+
+-- Tạo Index cho GroupMessages
+CREATE INDEX IX_GroupMessages_GroupID ON GroupMessages(GroupID);
+CREATE INDEX IX_GroupMessages_CreatedAt ON GroupMessages(CreatedAt DESC);
+CREATE INDEX IX_GroupMessages_SenderID ON GroupMessages(SenderID);
+CREATE INDEX IX_GroupMessages_GroupCreated ON GroupMessages(GroupID, CreatedAt DESC);
+GO
+
+PRINT '✓ Đã tạo bảng GroupMessages thành công!';
+PRINT '';
+GO
+
+-- ============================================
+-- BƯỚC 8: TẠO CÁC TÀI KHOẢN TEST
 -- ============================================
 
 PRINT 'Đang tạo các tài khoản test...';
@@ -233,7 +339,7 @@ PRINT '';
 GO
 
 -- ============================================
--- BƯỚC 6: HIỂN THỊ KẾT QUẢ
+-- BƯỚC 9: HIỂN THỊ KẾT QUẢ
 -- ============================================
 
 PRINT '========================================';
@@ -281,6 +387,19 @@ PRINT '   - WinnerUsername, GameResult';
 PRINT '   - TotalMoves, GameDuration';
 PRINT '   - StartedAt, EndedAt';
 PRINT '';
+PRINT '4. BẢNG GROUPS (NHÓM CHAT):';
+PRINT '   - GroupID, GroupName, CreatorID';
+PRINT '   - CreatedAt';
+PRINT '';
+PRINT '5. BẢNG GROUPMEMBERS (THÀNH VIÊN NHÓM):';
+PRINT '   - ID, GroupID, UserID';
+PRINT '   - IsAdmin, JoinedAt';
+PRINT '';
+PRINT '6. BẢNG GROUPMESSAGES (TIN NHẮN NHÓM):';
+PRINT '   - MessageID, GroupID, SenderID';
+PRINT '   - MessageContent, MessageType, FileName';
+PRINT '   - CreatedAt';
+PRINT '';
 PRINT '========================================';
 PRINT 'HOÀN THÀNH SETUP DATABASE!';
 PRINT '========================================';
@@ -298,10 +417,14 @@ PRINT '9. huyphuoc1 / 123123';
 PRINT '';
 PRINT 'Lưu ý:';
 PRINT '- Password sẽ được tự động hash khi đăng nhập lần đầu';
-PRINT '- Bảng Users, Messages và GameHistory đã được tạo lại hoàn toàn';
+PRINT '- Tất cả các bảng đã được tạo lại hoàn toàn:';
+PRINT '  + Users, Messages, GameHistory';
+PRINT '  + Groups, GroupMembers, GroupMessages';
 PRINT '- Tất cả dữ liệu cũ đã bị xóa';
+PRINT '- Tất cả các Indexes đã được tạo để tối ưu hiệu suất';
 PRINT '- Sử dụng IsOnline để theo dõi trạng thái online của user';
 PRINT '- Sử dụng GameHistory để lưu lịch sử các ván Caro';
+PRINT '- Sử dụng Groups/GroupMembers/GroupMessages cho chức năng nhắn tin nhóm';
 PRINT '========================================';
 GO
 

@@ -159,6 +159,56 @@ namespace ChatAppServer
                         cmd.ExecuteNonQuery();
                     }
                     Logger.Success("[Database] Đã khởi tạo các bảng Users, Messages, Groups, GroupMembers, GroupMessages!");
+                    
+                    // ✅ THÊM INDEXES ĐỂ TỐI ƯU HIỆU SUẤT
+                    string indexScript = @"
+                        -- Indexes cho Users
+                        IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Users_Username' AND object_id = OBJECT_ID('Users'))
+                            CREATE INDEX IX_Users_Username ON Users(Username);
+                        IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Users_Email' AND object_id = OBJECT_ID('Users'))
+                            CREATE INDEX IX_Users_Email ON Users(Email);
+                        IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Users_IsOnline' AND object_id = OBJECT_ID('Users'))
+                            CREATE INDEX IX_Users_IsOnline ON Users(IsOnline);
+                        
+                        -- Indexes cho Messages
+                        IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Messages_SenderReceiver' AND object_id = OBJECT_ID('Messages'))
+                            CREATE INDEX IX_Messages_SenderReceiver ON Messages(SenderID, ReceiverID);
+                        IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Messages_CreatedAt' AND object_id = OBJECT_ID('Messages'))
+                            CREATE INDEX IX_Messages_CreatedAt ON Messages(CreatedAt DESC);
+                        IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Messages_SenderID' AND object_id = OBJECT_ID('Messages'))
+                            CREATE INDEX IX_Messages_SenderID ON Messages(SenderID);
+                        IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Messages_ReceiverID' AND object_id = OBJECT_ID('Messages'))
+                            CREATE INDEX IX_Messages_ReceiverID ON Messages(ReceiverID);
+                        
+                        -- Indexes cho Groups
+                        IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Groups_CreatorID' AND object_id = OBJECT_ID('Groups'))
+                            CREATE INDEX IX_Groups_CreatorID ON Groups(CreatorID);
+                        IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Groups_CreatedAt' AND object_id = OBJECT_ID('Groups'))
+                            CREATE INDEX IX_Groups_CreatedAt ON Groups(CreatedAt DESC);
+                        
+                        -- Indexes cho GroupMembers
+                        IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_GroupMembers_GroupID' AND object_id = OBJECT_ID('GroupMembers'))
+                            CREATE INDEX IX_GroupMembers_GroupID ON GroupMembers(GroupID);
+                        IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_GroupMembers_UserID' AND object_id = OBJECT_ID('GroupMembers'))
+                            CREATE INDEX IX_GroupMembers_UserID ON GroupMembers(UserID);
+                        IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_GroupMembers_GroupUser' AND object_id = OBJECT_ID('GroupMembers'))
+                            CREATE INDEX IX_GroupMembers_GroupUser ON GroupMembers(GroupID, UserID);
+                        
+                        -- Indexes cho GroupMessages
+                        IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_GroupMessages_GroupID' AND object_id = OBJECT_ID('GroupMessages'))
+                            CREATE INDEX IX_GroupMessages_GroupID ON GroupMessages(GroupID);
+                        IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_GroupMessages_CreatedAt' AND object_id = OBJECT_ID('GroupMessages'))
+                            CREATE INDEX IX_GroupMessages_CreatedAt ON GroupMessages(CreatedAt DESC);
+                        IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_GroupMessages_SenderID' AND object_id = OBJECT_ID('GroupMessages'))
+                            CREATE INDEX IX_GroupMessages_SenderID ON GroupMessages(SenderID);
+                        IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_GroupMessages_GroupCreated' AND object_id = OBJECT_ID('GroupMessages'))
+                            CREATE INDEX IX_GroupMessages_GroupCreated ON GroupMessages(GroupID, CreatedAt DESC);
+                    ";
+                    using (var indexCmd = new SqlCommand(indexScript, conn))
+                    {
+                        indexCmd.ExecuteNonQuery();
+                    }
+                    Logger.Success("[Database] Đã thêm các Indexes để tối ưu hiệu suất!");
                 }
             }
             catch (Exception ex)
