@@ -8,7 +8,7 @@ namespace ChatAppServer
     {
         // [BẢO MẬT] Hãy thay đổi bằng App Password mới của bạn, không để lộ code này
         private static string _senderEmail = "taonekmay09112005@gmail.com";
-        private static string _appPassword = "YOUR_APP_PASSWORD_HERE"; // <--- THAY BẰNG MẬT KHẨU MỚI CỦA BẠN
+        private static string _appPassword = "ulsk rlnz uwgo tahu"; // <--- THAY BẰNG MẬT KHẨU MỚI CỦA BẠN
 
         public static bool SendOTP(string toEmail, string otpCode)
         {
