@@ -1,16 +1,9 @@
-﻿namespace ChatAppClient.UserControls
+namespace ChatAppClient.UserControls
 {
     partial class ChatViewControl
     {
-        /// <summary> 
-        /// Required designer variable.
-        /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary> 
-        /// Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -22,10 +15,6 @@
 
         #region Component Designer generated code
 
-        /// <summary> 
-        /// Required method for Designer support - do not modify 
-        /// the contents of this method with the code editor.
-        /// </summary>
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
@@ -49,13 +38,13 @@
             // 
             // pnlHeader
             // 
-            pnlHeader.BackColor = Color.FromArgb(47, 49, 54); // ✅ [FIX] Màu đen như GroupChat
+            pnlHeader.BackColor = Color.FromArgb(47, 49, 54);
             pnlHeader.Controls.Add(btnStartGame);
             pnlHeader.Controls.Add(lblFriendName);
             pnlHeader.Dock = DockStyle.Top;
             pnlHeader.Location = new Point(0, 0);
             pnlHeader.Name = "pnlHeader";
-            pnlHeader.Size = new Size(520, 65);
+            pnlHeader.Size = new Size(520, 60);
             pnlHeader.TabIndex = 1;
             pnlHeader.Paint += PnlHeader_Paint;
             // 
@@ -64,32 +53,32 @@
             btnStartGame.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnStartGame.BackColor = Color.Transparent;
             btnStartGame.FlatAppearance.BorderSize = 0;
-            btnStartGame.FlatAppearance.MouseOverBackColor = Color.FromArgb(64, 68, 75); // ✅ [FIX] Màu hover đen
+            btnStartGame.FlatAppearance.MouseOverBackColor = Color.FromArgb(64, 68, 75);
             btnStartGame.FlatStyle = FlatStyle.Flat;
-            btnStartGame.Font = new Font("Segoe UI Emoji", 14F);
+            btnStartGame.Font = new Font("Segoe UI Emoji", 16F);
             btnStartGame.ForeColor = Color.White;
-            btnStartGame.Location = new Point(465, 12);
+            btnStartGame.Location = new Point(465, 8);
             btnStartGame.Name = "btnStartGame";
             btnStartGame.Size = new Size(45, 45);
             btnStartGame.TabIndex = 1;
-            btnStartGame.Text = "🎲";
+            btnStartGame.Text = "??";
             btnStartGame.UseVisualStyleBackColor = false;
             btnStartGame.Cursor = Cursors.Hand;
             // 
             // lblFriendName
             // 
             lblFriendName.AutoSize = true;
-            lblFriendName.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
+            lblFriendName.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
             lblFriendName.ForeColor = Color.White;
-            lblFriendName.Location = new Point(15, 20);
+            lblFriendName.Location = new Point(15, 16);
             lblFriendName.Name = "lblFriendName";
             lblFriendName.Size = new Size(98, 30);
             lblFriendName.TabIndex = 0;
-            lblFriendName.Text = "Bạn Bè A";
+            lblFriendName.Text = "B?n B�";
             // 
             // pnlInput
             // 
-            pnlInput.BackColor = Color.FromArgb(64, 68, 75); // ✅ [FIX] Màu đen như GroupChat
+            pnlInput.BackColor = Color.FromArgb(64, 68, 75);
             pnlInput.Controls.Add(btnEmoji);
             pnlInput.Controls.Add(btnAttach);
             pnlInput.Controls.Add(btnSend);
@@ -97,8 +86,8 @@
             pnlInput.Dock = DockStyle.Bottom;
             pnlInput.Location = new Point(0, 480);
             pnlInput.Name = "pnlInput";
-            pnlInput.Padding = new Padding(12, 12, 12, 12);
-            pnlInput.Size = new Size(520, 70);
+            pnlInput.Padding = new Padding(10);
+            pnlInput.Size = new Size(520, 60);
             pnlInput.TabIndex = 2;
             pnlInput.Paint += PnlInput_Paint;
             // 
@@ -106,105 +95,109 @@
             // 
             btnEmoji.BackColor = Color.Transparent;
             btnEmoji.FlatAppearance.BorderSize = 0;
-            btnEmoji.FlatAppearance.MouseOverBackColor = Color.FromArgb(88, 101, 242); // ✅ [FIX] Màu hover xanh
+            btnEmoji.FlatAppearance.MouseOverBackColor = Color.FromArgb(88, 101, 242);
             btnEmoji.FlatStyle = FlatStyle.Flat;
-            btnEmoji.Font = new Font("Segoe UI Emoji", 14F);
-            btnEmoji.Location = new Point(55, 18);
+            btnEmoji.Font = new Font("Segoe UI Emoji", 16F);
+            btnEmoji.Location = new Point(50, 10);
             btnEmoji.Name = "btnEmoji";
-            btnEmoji.Size = new Size(42, 42);
+            btnEmoji.Size = new Size(40, 40);
             btnEmoji.TabIndex = 3;
-            btnEmoji.Text = "😊";
+            btnEmoji.Text = "??";
             btnEmoji.UseVisualStyleBackColor = false;
             btnEmoji.Cursor = Cursors.Hand;
             // 
             // btnAttach
             // 
             btnAttach.BackColor = Color.Transparent;
-            btnAttach.ContextMenuStrip = ctxAttachMenu;
             btnAttach.FlatAppearance.BorderSize = 0;
-            btnAttach.FlatAppearance.MouseOverBackColor = Color.FromArgb(88, 101, 242); // ✅ [FIX] Màu hover xanh
+            btnAttach.FlatAppearance.MouseOverBackColor = Color.FromArgb(88, 101, 242);
             btnAttach.FlatStyle = FlatStyle.Flat;
-            btnAttach.Font = new Font("Segoe UI Emoji", 14F);
-            btnAttach.Location = new Point(12, 18);
+            btnAttach.Font = new Font("Segoe UI Emoji", 16F);
+            btnAttach.Location = new Point(10, 10);
             btnAttach.Name = "btnAttach";
-            btnAttach.Size = new Size(42, 42);
+            btnAttach.Size = new Size(40, 40);
             btnAttach.TabIndex = 2;
-            btnAttach.Text = "📎";
+            btnAttach.Text = "??";
             btnAttach.UseVisualStyleBackColor = false;
             btnAttach.Cursor = Cursors.Hand;
             // 
             // ctxAttachMenu
             // 
+            ctxAttachMenu.BackColor = Color.FromArgb(47, 49, 54);
+            ctxAttachMenu.ForeColor = Color.White;
             ctxAttachMenu.ImageScalingSize = new Size(20, 20);
             ctxAttachMenu.Items.AddRange(new ToolStripItem[] { btnSendImage, btnSendFile });
             ctxAttachMenu.Name = "ctxAttachMenu";
-            ctxAttachMenu.Size = new Size(167, 52);
+            ctxAttachMenu.Size = new Size(170, 56);
             // 
             // btnSendImage
             // 
+            btnSendImage.BackColor = Color.FromArgb(47, 49, 54);
+            btnSendImage.ForeColor = Color.White;
             btnSendImage.Name = "btnSendImage";
-            btnSendImage.Size = new Size(166, 24);
-            btnSendImage.Text = "Gửi Hình Ảnh";
+            btnSendImage.Size = new Size(169, 26);
+            btnSendImage.Text = "??? G?i H�nh ?nh";
             // 
             // btnSendFile
             // 
+            btnSendFile.BackColor = Color.FromArgb(47, 49, 54);
+            btnSendFile.ForeColor = Color.White;
             btnSendFile.Name = "btnSendFile";
-            btnSendFile.Size = new Size(166, 24);
-            btnSendFile.Text = "Gửi File";
+            btnSendFile.Size = new Size(169, 26);
+            btnSendFile.Text = "?? G?i File";
             // 
             // btnSend
             // 
             btnSend.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnSend.BackColor = Color.Transparent;
-            btnSend.BorderRadius = 22;
-            btnSend.ButtonColor = Color.FromArgb(88, 101, 242); // ✅ [FIX] Màu xanh như GroupChat
+            btnSend.BorderRadius = 20;
+            btnSend.ButtonColor = Color.FromArgb(88, 101, 242);
             btnSend.FlatStyle = FlatStyle.Flat;
             btnSend.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             btnSend.ForeColor = Color.Transparent;
-            btnSend.Location = new Point(430, 18);
+            btnSend.Location = new Point(435, 10);
             btnSend.Name = "btnSend";
-            btnSend.Size = new Size(78, 42);
+            btnSend.Size = new Size(75, 40);
             btnSend.TabIndex = 1;
-            btnSend.Text = "Gửi";
+            btnSend.Text = "G?i";
             btnSend.TextColor = Color.White;
             btnSend.UseVisualStyleBackColor = false;
             btnSend.Cursor = Cursors.Hand;
             // 
             // txtMessage
             // 
-            txtMessage.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            txtMessage.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             txtMessage.BorderStyle = BorderStyle.None;
-            txtMessage.Font = new Font("Segoe UI", 11F);
-            txtMessage.Location = new Point(107, 20);
+            txtMessage.Font = new Font("Segoe UI", 12F);
+            txtMessage.Location = new Point(95, 15);
             txtMessage.Multiline = true;
             txtMessage.Name = "txtMessage";
-            txtMessage.Size = new Size(315, 38);
+            txtMessage.Size = new Size(330, 30);
             txtMessage.TabIndex = 0;
-            txtMessage.BackColor = Color.FromArgb(54, 57, 63); // ✅ [FIX] Màu đen như GroupChat
-            txtMessage.ForeColor = Color.White; // ✅ [FIX] Chữ trắng
+            txtMessage.BackColor = Color.FromArgb(54, 57, 63);
+            txtMessage.ForeColor = Color.White;
             // 
             // flpMessages
             // 
             flpMessages.AutoScroll = true;
-            flpMessages.BackColor = Color.FromArgb(54, 57, 63); // ✅ [FIX] Màu đen như GroupChat
+            flpMessages.BackColor = Color.FromArgb(54, 57, 63);
             flpMessages.Dock = DockStyle.Fill;
             flpMessages.FlowDirection = FlowDirection.TopDown;
-            flpMessages.Location = new Point(0, 65);
+            flpMessages.Location = new Point(0, 60);
             flpMessages.Name = "flpMessages";
             flpMessages.Padding = new Padding(8, 10, 8, 10);
-            flpMessages.Size = new Size(520, 415);
+            flpMessages.Size = new Size(520, 420);
             flpMessages.TabIndex = 3;
             flpMessages.WrapContents = false;
             // 
             // pnlEmojiPicker
             // 
-            pnlEmojiPicker.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            pnlEmojiPicker.BackColor = Color.FromArgb(64, 68, 75); // ✅ [FIX] Màu đen như GroupChat
+            pnlEmojiPicker.BackColor = Color.FromArgb(47, 49, 54);
             pnlEmojiPicker.BorderStyle = BorderStyle.None;
-            pnlEmojiPicker.Location = new Point(102, 330);
+            pnlEmojiPicker.Location = new Point(10, 280);
             pnlEmojiPicker.Name = "pnlEmojiPicker";
-            pnlEmojiPicker.Padding = new Padding(8);
-            pnlEmojiPicker.Size = new Size(260, 160);
+            pnlEmojiPicker.Padding = new Padding(5);
+            pnlEmojiPicker.Size = new Size(250, 140);
             pnlEmojiPicker.TabIndex = 4;
             pnlEmojiPicker.Visible = false;
             pnlEmojiPicker.Paint += PnlEmojiPicker_Paint;
@@ -226,15 +219,14 @@
             ctxAttachMenu.ResumeLayout(false);
             ResumeLayout(false);
         }
+
         #endregion
-        // Thêm các control mới vào
+
         private System.Windows.Forms.ContextMenuStrip ctxAttachMenu;
         private System.Windows.Forms.ToolStripMenuItem btnSendImage;
         private System.Windows.Forms.ToolStripMenuItem btnSendFile;
         private System.Windows.Forms.Button btnEmoji;
         private System.Windows.Forms.FlowLayoutPanel pnlEmojiPicker;
-        //... (giữ các control cũ)
-
         private System.Windows.Forms.Panel pnlHeader;
         private System.Windows.Forms.Button btnStartGame;
         private System.Windows.Forms.Label lblFriendName;
