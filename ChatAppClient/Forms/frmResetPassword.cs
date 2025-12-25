@@ -22,6 +22,9 @@ namespace ChatAppClient.Forms
         {
             this.btnReset.Click += BtnReset_Click;
             this.lnkBack.LinkClicked += LnkBack_LinkClicked;
+            
+            // Dang ky su kien ngay khi form load
+            NetworkManager.Instance.OnForgotPasswordResult += HandleResetResult;
         }
 
         private void BtnReset_Click(object sender, EventArgs e)
@@ -31,23 +34,23 @@ namespace ChatAppClient.Forms
 
             if (string.IsNullOrEmpty(newPassword))
             {
-                MessageBox.Show("Vui lòng nhập mật khẩu mới.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui l�ng nh?p m?t kh?u m?i.", "C?nh b�o", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             if (newPassword.Length < 6)
             {
-                MessageBox.Show("Mật khẩu phải có ít nhất 6 ký tự.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("M?t kh?u ph?i c� �t nh?t 6 k� t?.", "C?nh b�o", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             if (newPassword != confirmPassword)
             {
-                MessageBox.Show("Mật khẩu xác nhận không khớp.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("M?t kh?u x�c nh?n kh�ng kh?p.", "C?nh b�o", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // Gửi packet reset password
+            // G?i packet reset password
             var packet = new ResetPasswordPacket
             {
                 Email = _email,
@@ -57,10 +60,7 @@ namespace ChatAppClient.Forms
 
             NetworkManager.Instance.SendPacket(packet);
             btnReset.Enabled = false;
-            btnReset.Text = "Đang xử lý...";
-
-            // Đăng ký sự kiện để nhận kết quả
-            NetworkManager.Instance.OnForgotPasswordResult += HandleResetResult;
+            btnReset.Text = "?ang x? l�...";
         }
 
         private void HandleResetResult(ForgotPasswordResultPacket result)
@@ -71,44 +71,63 @@ namespace ChatAppClient.Forms
                 return;
             }
 
-            // Hủy đăng ký sự kiện
+            // H?y ??ng k� s? ki?n
             NetworkManager.Instance.OnForgotPasswordResult -= HandleResetResult;
 
             if (result.Success && !result.IsStep1Success)
             {
-                // Reset password thành công
-                MessageBox.Show(result.Message, "Thành Công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                // Quay về form login
+                // Reset password th�nh c�ng
+                MessageBox.Show(result.Message, "Th�nh C�ng", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                // Quay v? form login
                 frmLogin loginForm = new frmLogin();
                 loginForm.Show();
-                this.Hide();
+                this.Close();
             }
             else
             {
-                // Lỗi
-                MessageBox.Show(result.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // L?i
+                MessageBox.Show(result.Message, "L?i", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 btnReset.Enabled = true;
-                btnReset.Text = "Reset Password";
+                btnReset.Text = "??i M?t Kh?u";
             }
         }
 
         private void LnkBack_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            // Quay về form login
+            // Huy dang ky su kien truoc khi dong
+            NetworkManager.Instance.OnForgotPasswordResult -= HandleResetResult;
+            
+            // Quay v? form login
             frmLogin loginForm = new frmLogin();
             loginForm.Show();
-            this.Hide();
+            this.Close();
         }
 
         private void frmResetPassword_FormClosing(object sender, FormClosingEventArgs e)
         {
-            // Nếu đóng form, quay về form login
+            // Huy dang ky su kien
+            NetworkManager.Instance.OnForgotPasswordResult -= HandleResetResult;
+            
+            // N?u ?�ng form, quay v? form login
             if (e.CloseReason == CloseReason.UserClosing)
             {
-                frmLogin loginForm = new frmLogin();
-                loginForm.Show();
+                // Kiem tra neu da co form login mo thi khong tao moi
+                bool hasLoginForm = false;
+                foreach (Form f in Application.OpenForms)
+                {
+                    if (f is frmLogin)
+                    {
+                        hasLoginForm = true;
+                        f.Show();
+                        break;
+                    }
+                }
+                if (!hasLoginForm)
+                {
+                    frmLogin loginForm = new frmLogin();
+                    loginForm.Show();
+                }
             }
         }
     }
 }
-

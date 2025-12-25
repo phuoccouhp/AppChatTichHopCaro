@@ -366,7 +366,13 @@ namespace ChatAppClient.Forms
             // Async Responses
             if (packet is LoginResultPacket pLogin) { lock (_loginLock) _loginCompletionSource?.TrySetResult(pLogin); return; }
             if (packet is RegisterResultPacket pReg) { _registerCompletionSource?.TrySetResult(pReg); return; }
-            if (packet is ForgotPasswordResultPacket pForgot) { OnForgotPasswordResult?.Invoke(pForgot); return; }
+            if (packet is ForgotPasswordResultPacket pForgot) 
+            { 
+                System.Diagnostics.Debug.WriteLine($"[NetworkManager] Received ForgotPasswordResultPacket: Success={pForgot.Success}, IsStep1={pForgot.IsStep1Success}, Msg={pForgot.Message}");
+                System.Diagnostics.Debug.WriteLine($"[NetworkManager] OnForgotPasswordResult has {(OnForgotPasswordResult != null ? OnForgotPasswordResult.GetInvocationList().Length : 0)} subscribers");
+                OnForgotPasswordResult?.Invoke(pForgot); 
+                return; 
+            }
             if (packet is ChatHistoryResponsePacket pHist) { _chatHistoryCompletionSource?.TrySetResult(pHist); OnChatHistoryReceived?.Invoke(pHist); return; }
 
             // Tank Multiplayer - direct events (not tied to homeForm)
