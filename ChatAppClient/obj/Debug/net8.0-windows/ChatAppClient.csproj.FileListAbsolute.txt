@@ -37,9 +37,14 @@ C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-wi
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmSignup.resources
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\Images\Background1.jpg
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Properties.Resources.resources
+<<<<<<< Updated upstream
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\ChatApp.Shared.deps.json
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\ChatApp.Shared.runtimeconfig.json
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\ChatApp.Shared.exe
+=======
+C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmTankGame.resources
+C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmResetPassword.resources
+>>>>>>> Stashed changes
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\ChatAppClient.exe
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\Images\Background1.jpg
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\Images\default_avatar.png
@@ -50,6 +55,7 @@ D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\ChatApp.Shared.dll
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\bin\Debug\net8.0-windows\ChatApp.Shared.pdb
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.csproj.AssemblyReference.cache
+<<<<<<< Updated upstream
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Form1.resources
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmCaroGame.resources
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmChat.resources
@@ -58,6 +64,16 @@ D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmLogin.resources
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmSettings.resources
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmSignup.resources
+=======
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmCaroGame.resources
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmForgotPass.resources
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmHome.resources
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmLogin.resources
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmResetPassword.resources
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmSettings.resources
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmSignup.resources
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Forms.frmTankGame.resources
+>>>>>>> Stashed changes
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.Properties.Resources.resources
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.UserControls.ChatMessageBubble.resources
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppClient\obj\Debug\net8.0-windows\ChatAppClient.UserControls.ChatViewControl.resources

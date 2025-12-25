@@ -1,6 +1,10 @@
 {
   "version": 2,
+<<<<<<< Updated upstream
   "dgSpecHash": "PzYh76FmjAY=",
+=======
+  "dgSpecHash": "X+Ol/6y1QhA=",
+>>>>>>> Stashed changes
   "success": true,
   "projectFilePath": "D:\\HK5-UIT\\Lập Trình Mạng\\AppChatTichHopCaro\\ChatAppClient\\ChatAppClient.csproj",
   "expectedPackageFiles": [],

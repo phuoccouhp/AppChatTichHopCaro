@@ -28,9 +28,12 @@ C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-wi
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\runtimes\unix\lib\netcoreapp2.1\System.Data.SqlClient.dll
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\runtimes\win\lib\netcoreapp2.1\System.Data.SqlClient.dll
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatAppServer\obj\Debug\net8.0-windows\ChatAppServer.frmServer.resources
+<<<<<<< Updated upstream
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatApp.Shared.deps.json
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatApp.Shared.runtimeconfig.json
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatApp.Shared.exe
+=======
+>>>>>>> Stashed changes
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatAppServer.exe
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatAppServer.deps.json
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatAppServer\bin\Debug\net8.0-windows\ChatAppServer.runtimeconfig.json

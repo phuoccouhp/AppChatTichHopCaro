@@ -15,6 +15,7 @@ C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-w
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.pdb
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.genruntimeconfig.cache
 C:\Users\Admin\source\repos\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ref\ChatApp.Shared.dll
+<<<<<<< Updated upstream
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\bin\Debug\net8.0-windows\ChatApp.Shared.exe
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\bin\Debug\net8.0-windows\ChatApp.Shared.deps.json
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\bin\Debug\net8.0-windows\ChatApp.Shared.runtimeconfig.json
@@ -22,6 +23,11 @@ D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\bin\Debug\net8.
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\bin\Debug\net8.0-windows\ChatApp.Shared.pdb
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.Form1.resources
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.csproj.GenerateResource.cache
+=======
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\bin\Debug\net8.0-windows\ChatApp.Shared.deps.json
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\bin\Debug\net8.0-windows\ChatApp.Shared.dll
+D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\bin\Debug\net8.0-windows\ChatApp.Shared.pdb
+>>>>>>> Stashed changes
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.GeneratedMSBuildEditorConfig.editorconfig
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.AssemblyInfoInputs.cache
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.AssemblyInfo.cs
@@ -30,5 +36,8 @@ D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.dll
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\refint\ChatApp.Shared.dll
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.pdb
+<<<<<<< Updated upstream
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ChatApp.Shared.genruntimeconfig.cache
+=======
+>>>>>>> Stashed changes
 D:\HK5-UIT\Lập Trình Mạng\AppChatTichHopCaro\ChatApp.Shared\obj\Debug\net8.0-windows\ref\ChatApp.Shared.dll

@@ -1,0 +1,81 @@
+﻿using System;
+using System.Data;
+using System.Data.SqlClient;
+
+namespace ChatAppServer
+{
+    public class DatabaseManager
+    {
+        // CHUỖI KẾT NỐI (CONNECTION STRING)
+        // Bạn cần sửa lại cho đúng với máy của bạn
+        // Server=Tên_Máy_Của_Bạn; Database=ChatAppDB; Trusted_Connection=True; (Nếu dùng Windows Auth)
+        // Hoặc: Server=...; User Id=sa; Password=...; (Nếu dùng SQL Auth)
+        private readonly string _connectionString = @"Data Source=localhost;Initial Catalog=ChatAppDB;Integrated Security=True";
+        private static DatabaseManager? _instance;
+        public static DatabaseManager Instance => _instance ??= new DatabaseManager();
+
+        private DatabaseManager()
+        {
+            try
+            {
+                EnsureDatabaseAndTables();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Lỗi khi khởi tạo cơ sở dữ liệu", ex);
+            }
+        }
+
+        // Đảm bảo database ChatAppDB và bảng Users tồn tại. Nếu chưa có thì tạo tự động.
+        private void EnsureDatabaseAndTables()
+        {
+            // Tạo connection string tới master để kiểm tra/ tạo database
+            var builder = new SqlConnectionStringBuilder(_connectionString);
+            string targetDb = builder.InitialCatalog;
+            builder.InitialCatalog = "master";
+            string masterConn = builder.ConnectionString;
+
+            using (SqlConnection conn = new SqlConnection(masterConn))
+            {
+                conn.Open();
+
+                // Kiểm tra database
+                using (SqlCommand cmd = new SqlCommand("SELECT database_id FROM sys.databases WHERE Name = @name", conn))
+                {
+                    cmd.Parameters.AddWithValue("@name", targetDb);
+                    object? result = cmd.ExecuteScalar();
+                    if (result == null)
+                    {
+                        Logger.Info($"Database '{targetDb}' không tồn tại. Đang tạo...");
+                        using (SqlCommand createCmd = new SqlCommand($"CREATE DATABASE [{targetDb}];", conn))
+                        {
+                            createCmd.ExecuteNonQuery();
+                        }
+                        Logger.Success($"Đã tạo database '{targetDb}'.");
+                    }
+                }
+            }
+
+            // Tạo bảng Users nếu chưa tồn tại
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                conn.Open();
+                // Kiểm tra bảng Users
+                using (SqlCommand cmd = new SqlCommand("SELECT OBJECT_ID('dbo.Users','U')", conn))
+                {
+                    object? objId = cmd.ExecuteScalar();
+                    if (objId == DBNull.Value || objId == null)
+                    {
+                        Logger.Info("Bảng 'Users' không tồn tại. Đang tạo bảng...");
+                        string createTableSql = @"
+CREATE TABLE dbo.Users (
+    Username NVARCHAR(100) NOT NULL PRIMARY KEY,
+    Password NVARCHAR(256) NOT NULL,
+    DisplayName NVARCHAR(200) NULL,
+    Email NVARCHAR(200) NULL
+);";
+                        using (SqlCommand createCmd = new SqlCommand(createTableSql, conn))
+                        {
+                            createCmd.ExecuteNonQuery();
+                        }
+                        Logger.Success("Đã tạo bảng 'Users'.");
