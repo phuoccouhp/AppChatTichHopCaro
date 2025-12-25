@@ -55,13 +55,13 @@ namespace ChatAppClient.UserControls
             btnStartGame.FlatAppearance.BorderSize = 0;
             btnStartGame.FlatAppearance.MouseOverBackColor = Color.FromArgb(64, 68, 75);
             btnStartGame.FlatStyle = FlatStyle.Flat;
-            btnStartGame.Font = new Font("Segoe UI Emoji", 16F);
+            btnStartGame.Font = new Font("Segoe UI Symbol", 16F);
             btnStartGame.ForeColor = Color.White;
             btnStartGame.Location = new Point(465, 8);
             btnStartGame.Name = "btnStartGame";
             btnStartGame.Size = new Size(45, 45);
             btnStartGame.TabIndex = 1;
-            btnStartGame.Text = "??";
+            btnStartGame.Text = "\U0001F3B2"; // Game dice emoji
             btnStartGame.UseVisualStyleBackColor = false;
             btnStartGame.Cursor = Cursors.Hand;
             // 
@@ -74,7 +74,7 @@ namespace ChatAppClient.UserControls
             lblFriendName.Name = "lblFriendName";
             lblFriendName.Size = new Size(98, 30);
             lblFriendName.TabIndex = 0;
-            lblFriendName.Text = "B?n Bè";
+            lblFriendName.Text = "Friend";
             // 
             // pnlInput
             // 
@@ -97,12 +97,12 @@ namespace ChatAppClient.UserControls
             btnEmoji.FlatAppearance.BorderSize = 0;
             btnEmoji.FlatAppearance.MouseOverBackColor = Color.FromArgb(88, 101, 242);
             btnEmoji.FlatStyle = FlatStyle.Flat;
-            btnEmoji.Font = new Font("Segoe UI Emoji", 16F);
+            btnEmoji.Font = new Font("Segoe UI Symbol", 16F);
             btnEmoji.Location = new Point(50, 10);
             btnEmoji.Name = "btnEmoji";
             btnEmoji.Size = new Size(40, 40);
             btnEmoji.TabIndex = 3;
-            btnEmoji.Text = "??";
+            btnEmoji.Text = "\U0001F60A"; // Smiling face emoji
             btnEmoji.UseVisualStyleBackColor = false;
             btnEmoji.Cursor = Cursors.Hand;
             // 
@@ -112,12 +112,12 @@ namespace ChatAppClient.UserControls
             btnAttach.FlatAppearance.BorderSize = 0;
             btnAttach.FlatAppearance.MouseOverBackColor = Color.FromArgb(88, 101, 242);
             btnAttach.FlatStyle = FlatStyle.Flat;
-            btnAttach.Font = new Font("Segoe UI Emoji", 16F);
+            btnAttach.Font = new Font("Segoe UI Symbol", 16F);
             btnAttach.Location = new Point(10, 10);
             btnAttach.Name = "btnAttach";
             btnAttach.Size = new Size(40, 40);
             btnAttach.TabIndex = 2;
-            btnAttach.Text = "??";
+            btnAttach.Text = "\U0001F4CE"; // Paperclip emoji
             btnAttach.UseVisualStyleBackColor = false;
             btnAttach.Cursor = Cursors.Hand;
             // 
@@ -128,23 +128,23 @@ namespace ChatAppClient.UserControls
             ctxAttachMenu.ImageScalingSize = new Size(20, 20);
             ctxAttachMenu.Items.AddRange(new ToolStripItem[] { btnSendImage, btnSendFile });
             ctxAttachMenu.Name = "ctxAttachMenu";
-            ctxAttachMenu.Size = new Size(170, 56);
+            ctxAttachMenu.Size = new Size(180, 56);
             // 
             // btnSendImage
             // 
             btnSendImage.BackColor = Color.FromArgb(47, 49, 54);
             btnSendImage.ForeColor = Color.White;
             btnSendImage.Name = "btnSendImage";
-            btnSendImage.Size = new Size(169, 26);
-            btnSendImage.Text = "??? G?i Hình ?nh";
+            btnSendImage.Size = new Size(179, 26);
+            btnSendImage.Text = "\U0001F5BC Send Image"; // Picture frame emoji
             // 
             // btnSendFile
             // 
             btnSendFile.BackColor = Color.FromArgb(47, 49, 54);
             btnSendFile.ForeColor = Color.White;
             btnSendFile.Name = "btnSendFile";
-            btnSendFile.Size = new Size(169, 26);
-            btnSendFile.Text = "?? G?i File";
+            btnSendFile.Size = new Size(179, 26);
+            btnSendFile.Text = "\U0001F4C4 Send File"; // Document emoji
             // 
             // btnSend
             // 
@@ -159,7 +159,7 @@ namespace ChatAppClient.UserControls
             btnSend.Name = "btnSend";
             btnSend.Size = new Size(75, 40);
             btnSend.TabIndex = 1;
-            btnSend.Text = "G?i";
+            btnSend.Text = "Send";
             btnSend.TextColor = Color.White;
             btnSend.UseVisualStyleBackColor = false;
             btnSend.Cursor = Cursors.Hand;

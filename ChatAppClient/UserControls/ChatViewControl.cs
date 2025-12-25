@@ -19,8 +19,16 @@ namespace ChatAppClient.UserControls
         private Form _parentForm;
         private string _myId = "";
 
-        // Dictionary l?u bong bóng game ?? c?p nh?t tr?ng thái
         private Dictionary<string, GameInviteBubble> _gameInviteBubbles = new Dictionary<string, GameInviteBubble>();
+
+        // Unicode emoji constants
+        private const string EMOJI_DICE = "\U0001F3B2";
+        private const string EMOJI_SMILE = "\U0001F60A";
+        private const string EMOJI_PAPERCLIP = "\U0001F4CE";
+        private const string EMOJI_ERROR = "\u274C";
+        private const string EMOJI_WARNING = "\u26A0";
+        private const string EMOJI_INFO = "\u2139";
+        private const string EMOJI_CHAT = "\U0001F4AC";
 
         public ChatViewControl(string friendId, string friendName, Form parentForm)
         {
@@ -30,13 +38,11 @@ namespace ChatAppClient.UserControls
             _parentForm = parentForm;
             lblFriendName.Text = _friendName;
 
-            // C?u hình FlowLayoutPanel
             flpMessages.AutoScroll = true;
             flpMessages.FlowDirection = FlowDirection.TopDown;
             flpMessages.WrapContents = false;
             flpMessages.HorizontalScroll.Visible = false;
 
-            // Ch?ng nháy (Flicker)
             typeof(Control).GetProperty("DoubleBuffered", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                 ?.SetValue(flpMessages, true, null);
         }
@@ -45,7 +51,6 @@ namespace ChatAppClient.UserControls
         {
             _myId = NetworkManager.Instance.UserID ?? "";
 
-            // ? [FIX] Xóa event handlers c? tr??c khi gán m?i ?? tránh duplicate
             btnSend.Click -= BtnSend_Click;
             btnStartGame.Click -= BtnStartGame_Click;
             btnSendImage.Click -= BtnSendImage_Click;
@@ -53,7 +58,6 @@ namespace ChatAppClient.UserControls
             btnEmoji.Click -= BtnEmoji_Click;
             btnAttach.Click -= BtnAttach_Click;
 
-            // Gán s? ki?n
             btnSend.Click += BtnSend_Click;
             btnStartGame.Click += BtnStartGame_Click;
             this.Resize += ChatViewControl_Resize;
@@ -62,23 +66,20 @@ namespace ChatAppClient.UserControls
             btnEmoji.Click += BtnEmoji_Click;
             btnAttach.Click += BtnAttach_Click;
 
-            // C?u hình TextBox
             txtMessage.Multiline = true;
             txtMessage.ScrollBars = ScrollBars.None;
             txtMessage.WordWrap = true;
             txtMessage.KeyDown -= TxtMessage_KeyDown;
             txtMessage.KeyDown += TxtMessage_KeyDown;
 
-            // Menu ch?n game
             if (btnStartGame.ContextMenuStrip == null)
             {
                 ContextMenuStrip gameMenu = new ContextMenuStrip();
-                gameMenu.Items.Add("Ch?i Caro", null, (s, ev) => InviteGame(GameType.Caro));
-                gameMenu.Items.Add("Ch?i Tank Game", null, (s, ev) => InviteGame(GameType.Tank));
+                gameMenu.Items.Add("Play Caro", null, (s, ev) => InviteGame(GameType.Caro));
+                gameMenu.Items.Add("Play Tank Game", null, (s, ev) => InviteGame(GameType.Tank));
                 btnStartGame.ContextMenuStrip = gameMenu;
             }
 
-            // ? [FIX] Load emojis ch? 1 l?n
             if (pnlEmojiPicker.Controls.Count == 0)
             {
                 LoadEmojis();
@@ -112,7 +113,7 @@ namespace ChatAppClient.UserControls
 
                         if (msg.MessageType == "GameInvite")
                         {
-                            string senderName = isMe ? (NetworkManager.Instance.UserName ?? "B?n") : _friendName;
+                            string senderName = isMe ? (NetworkManager.Instance.UserName ?? "You") : _friendName;
                             GameType gType = msg.FileName == "Tank" ? GameType.Tank : GameType.Caro;
 
                             var invite = new GameInvitePacket { SenderID = msg.SenderID, SenderName = senderName, ReceiverID = msg.ReceiverID };
@@ -128,7 +129,7 @@ namespace ChatAppClient.UserControls
                         }
                         else if (msg.MessageType == "File" || msg.MessageType == "Image")
                         {
-                            AddSystemMessage($"[L?ch s?] {msg.MessageType}: {msg.FileName}");
+                            AddSystemMessage($"[History] {msg.MessageType}: {msg.FileName}");
                         }
                     }
                     ScrollToBottom();
@@ -136,17 +137,17 @@ namespace ChatAppClient.UserControls
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"L?i load l?ch s?: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error loading history: {ex.Message}");
             }
         }
 
-        #region === H? TH?NG LAYOUT & HI?N TH? (CORE) ===
+        #region === LAYOUT & DISPLAY ===
 
         private void AddMessageBubble(string message, MessageType type, DateTime time)
         {
             if (string.IsNullOrWhiteSpace(message))
             {
-                message = "(Tin nh?n tr?ng)";
+                message = "(Empty message)";
             }
             
             var bubble = new ChatMessageBubble();
@@ -176,8 +177,8 @@ namespace ChatAppClient.UserControls
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"L?i load ?nh: {ex.Message}");
-                    AddSystemMessage($"[L?i hi?n th? ?nh: {p.FileName}]");
+                    System.Diagnostics.Debug.WriteLine($"Error loading image: {ex.Message}");
+                    AddSystemMessage($"[Error displaying image: {p.FileName}]");
                     return;
                 }
 
@@ -248,17 +249,15 @@ namespace ChatAppClient.UserControls
 
         #endregion
 
-        #region === S? KI?N G?I TIN ===
+        #region === SEND EVENTS ===
 
         private void BtnSend_Click(object sender, EventArgs e)
         {
             string content = txtMessage.Text.Trim();
             if (string.IsNullOrWhiteSpace(content)) return;
 
-            // Hi?n th? tin nh?n ngay l?p t?c
             AddMessageBubble(content, MessageType.Outgoing, DateTime.Now);
 
-            // G?i packet
             var packet = new TextPacket 
             { 
                 SenderID = _myId ?? "", 
@@ -268,7 +267,7 @@ namespace ChatAppClient.UserControls
             
             if (!NetworkManager.Instance.SendPacket(packet))
             {
-                System.Diagnostics.Debug.WriteLine("Không th? g?i tin nh?n");
+                System.Diagnostics.Debug.WriteLine("Cannot send message");
             }
 
             txtMessage.Clear();
@@ -293,8 +292,8 @@ namespace ChatAppClient.UserControls
                 if (fileInfo.Length > maxSize)
                 {
                     string sizeLimit = isImage ? "5MB" : "10MB";
-                    ShowCustomMessageBox($"File quá l?n!\n\nGi?i h?n: {sizeLimit}\nKích th??c file: {fileInfo.Length / (1024.0 * 1024.0):F2}MB", 
-                        "C?nh báo", MessageBoxIcon.Warning);
+                    ShowCustomMessageBox($"File too large!\n\nLimit: {sizeLimit}\nFile size: {fileInfo.Length / (1024.0 * 1024.0):F2}MB", 
+                        "Warning", MessageBoxIcon.Warning);
                     return;
                 }
                 
@@ -326,7 +325,7 @@ namespace ChatAppClient.UserControls
                             }
                             else
                             {
-                                ShowCustomMessageBox("Không th? g?i file.\nVui lòng ki?m tra k?t n?i m?ng.", "L?i", MessageBoxIcon.Error);
+                                ShowCustomMessageBox("Cannot send file.\nPlease check network connection.", "Error", MessageBoxIcon.Error);
                             }
                         }));
                     }
@@ -334,7 +333,7 @@ namespace ChatAppClient.UserControls
                     {
                         this.Invoke(new Action(() =>
                         {
-                            ShowCustomMessageBox($"L?i g?i file:\n{ex.Message}", "L?i", MessageBoxIcon.Error);
+                            ShowCustomMessageBox($"Error sending file:\n{ex.Message}", "Error", MessageBoxIcon.Error);
                         }));
                     }
                 });
@@ -343,7 +342,7 @@ namespace ChatAppClient.UserControls
 
         #endregion
 
-        #region === X? LÝ GAME INVITE ===
+        #region === GAME INVITE ===
 
         private void BtnStartGame_Click(object sender, EventArgs e)
         {
@@ -379,7 +378,7 @@ namespace ChatAppClient.UserControls
             }
             else
             {
-                ShowCustomMessageBox("Không th? g?i l?i m?i.\nVui lòng ki?m tra k?t n?i.", "L?i", MessageBoxIcon.Warning);
+                ShowCustomMessageBox("Cannot send invitation.\nPlease check connection.", "Error", MessageBoxIcon.Warning);
             }
         }
 
@@ -389,15 +388,17 @@ namespace ChatAppClient.UserControls
             DisplayGameInvite(p, gType, mType, null);
         }
 
-        private void DisplayGameInvite(GameInvitePacket p, GameType gType, MessageType mType, string? statusContent)
+        private void DisplayGameInvite(GameInvitePacket p, GameType gType, MessageType mType, string statusContent)
         {
             var bubble = new GameInviteBubble();
             bubble.SetInvite(p.SenderName, mType, gType);
 
             if (!string.IsNullOrEmpty(statusContent))
             {
-                if (statusContent.Contains("ch?p nh?n")) bubble.UpdateStatus(GameInviteStatus.Accepted);
-                else if (statusContent.Contains("t? ch?i")) bubble.UpdateStatus(GameInviteStatus.Declined);
+                if (statusContent.Contains("accepted") || statusContent.Contains("chap nhan")) 
+                    bubble.UpdateStatus(GameInviteStatus.Accepted);
+                else if (statusContent.Contains("declined") || statusContent.Contains("tu choi")) 
+                    bubble.UpdateStatus(GameInviteStatus.Declined);
             }
 
             if (mType == MessageType.Incoming)
@@ -414,7 +415,7 @@ namespace ChatAppClient.UserControls
             }
             else
             {
-                bubble.OnReinvite += (s, e) => InviteGame(gType);
+                bubble.OnReinvite += (s, ev) => InviteGame(gType);
                 _gameInviteBubbles[_friendId] = bubble;
             }
 
@@ -431,7 +432,7 @@ namespace ChatAppClient.UserControls
             }
             else
             {
-                AddSystemMessage(accepted ? $"??i th? ?ã ch?p nh?n ch?i {gType}!" : $"??i th? ?ã t? ch?i l?i m?i {gType}.");
+                AddSystemMessage(accepted ? $"Opponent accepted {gType}!" : $"Opponent declined {gType} invitation.");
             }
         }
 
@@ -439,7 +440,7 @@ namespace ChatAppClient.UserControls
         {
             if (this.InvokeRequired) { this.Invoke(new Action(ResetGameButton)); return; }
             btnStartGame.Enabled = true;
-            btnStartGame.Text = "??";
+            btnStartGame.Text = EMOJI_DICE;
         }
 
         public void HandleGameInviteDeclined()
@@ -450,7 +451,7 @@ namespace ChatAppClient.UserControls
 
         #endregion
 
-        #region === CÁC S? KI?N PH? ===
+        #region === OTHER EVENTS ===
 
         public void ReceiveMessage(string content)
         {
@@ -458,13 +459,13 @@ namespace ChatAppClient.UserControls
             
             if (string.IsNullOrWhiteSpace(content))
             {
-                content = "(Tin nh?n tr?ng)";
+                content = "(Empty message)";
             }
             
             AddMessageBubble(content, MessageType.Incoming, DateTime.Now);
         }
 
-        private void ShowForwardDialog(string? text, string? fileName, byte[]? fileData)
+        private void ShowForwardDialog(string text, string fileName, byte[] fileData)
         {
             var friends = new List<(string id, string name)>();
             if (_parentForm is frmHome homeForm)
@@ -474,7 +475,7 @@ namespace ChatAppClient.UserControls
 
             if (friends.Count == 0) 
             { 
-                ShowCustomMessageBox("Không có b?n bè ?? chuy?n ti?p.", "Thông báo", MessageBoxIcon.Information);
+                ShowCustomMessageBox("No friends to forward to.", "Notice", MessageBoxIcon.Information);
                 return; 
             }
 
@@ -491,7 +492,6 @@ namespace ChatAppClient.UserControls
                     }
                     else if (fileData != null && !string.IsNullOrEmpty(fileName))
                     {
-                        // ? [FIX] Ki?m tra extension case-insensitive
                         string ext = Path.GetExtension(fileName).ToLowerInvariant();
                         bool isImg = ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".bmp";
                         success = NetworkManager.Instance.SendPacket(new FilePacket { SenderID = _myId, ReceiverID = target, FileName = fileName, FileData = fileData, IsImage = isImg });
@@ -499,20 +499,18 @@ namespace ChatAppClient.UserControls
                     
                     if (success)
                     {
-                        ShowCustomMessageBox($"?ã chuy?n ti?p ??n {fwd.SelectedFriendName}!", "Thành công", MessageBoxIcon.Information);
+                        ShowCustomMessageBox($"Forwarded to {fwd.SelectedFriendName}!", "Success", MessageBoxIcon.Information);
                     }
                     else
                     {
-                        ShowCustomMessageBox("Không th? chuy?n ti?p.\nVui lòng ki?m tra k?t n?i.", "L?i", MessageBoxIcon.Error);
+                        ShowCustomMessageBox("Cannot forward.\nPlease check connection.", "Error", MessageBoxIcon.Error);
                     }
                 }
             }
         }
 
-        // ? [FIX] Custom MessageBox ??p h?n
         private void ShowCustomMessageBox(string message, string title, MessageBoxIcon icon)
         {
-            // T?o form custom
             Form msgForm = new Form();
             msgForm.Text = title;
             msgForm.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -522,21 +520,19 @@ namespace ChatAppClient.UserControls
             msgForm.BackColor = Color.FromArgb(47, 49, 54);
             msgForm.Size = new Size(380, 180);
             
-            // Icon
             Label lblIcon = new Label();
-            lblIcon.Font = new Font("Segoe UI Emoji", 28);
+            lblIcon.Font = new Font("Segoe UI Symbol", 28);
             lblIcon.AutoSize = true;
             lblIcon.Location = new Point(20, 25);
             switch (icon)
             {
-                case MessageBoxIcon.Error: lblIcon.Text = "?"; break;
-                case MessageBoxIcon.Warning: lblIcon.Text = "??"; break;
-                case MessageBoxIcon.Information: lblIcon.Text = "??"; break;
-                default: lblIcon.Text = "??"; break;
+                case MessageBoxIcon.Error: lblIcon.Text = EMOJI_ERROR; break;
+                case MessageBoxIcon.Warning: lblIcon.Text = EMOJI_WARNING; break;
+                case MessageBoxIcon.Information: lblIcon.Text = EMOJI_INFO; break;
+                default: lblIcon.Text = EMOJI_CHAT; break;
             }
             msgForm.Controls.Add(lblIcon);
             
-            // Message
             Label lblMessage = new Label();
             lblMessage.Text = message;
             lblMessage.Font = new Font("Segoe UI", 10);
@@ -546,7 +542,6 @@ namespace ChatAppClient.UserControls
             lblMessage.Location = new Point(80, 25);
             msgForm.Controls.Add(lblMessage);
             
-            // Button OK
             Button btnOK = new Button();
             btnOK.Text = "OK";
             btnOK.Font = new Font("Segoe UI", 10, FontStyle.Bold);
@@ -594,7 +589,6 @@ namespace ChatAppClient.UserControls
         
         private void BtnEmoji_Click(object sender, EventArgs e) 
         { 
-            // ? [FIX] ??t v? trí emoji picker ngay phía trên nút emoji
             pnlEmojiPicker.Location = new Point(
                 btnEmoji.Left, 
                 pnlInput.Top - pnlEmojiPicker.Height - 5
@@ -612,15 +606,20 @@ namespace ChatAppClient.UserControls
         {
             pnlEmojiPicker.Controls.Clear();
             
-            string[] emojis = { "??", "??", "??", "??", "??", "??", "??", "??", "??", "??", "??", "??", 
-                               "??", "??", "??", "??", "?", "??", "??", "??" };
+            // Using Unicode escape sequences for emoji
+            string[] emojis = { 
+                "\U0001F60A", "\U0001F602", "\u2764", "\U0001F44D", "\U0001F914", 
+                "\U0001F622", "\U0001F620", "\U0001F62E", "\U0001F60E", "\U0001F625", 
+                "\U0001F62D", "\U0001F480", "\U0001F389", "\U0001F525", "\U0001F44B", 
+                "\U0001F4AF", "\u2728", "\U0001F64F", "\U0001F4AA", "\U0001F440" 
+            };
             
             foreach (string emoji in emojis)
             {
                 Button btn = new Button 
                 { 
                     Text = emoji, 
-                    Font = new Font("Segoe UI Emoji", 16), 
+                    Font = new Font("Segoe UI Symbol", 16), 
                     Size = new Size(45, 45), 
                     FlatStyle = FlatStyle.Flat, 
                     Cursor = Cursors.Hand, 
@@ -630,7 +629,7 @@ namespace ChatAppClient.UserControls
                 };
                 btn.FlatAppearance.BorderSize = 0;
                 btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(88, 101, 242);
-                btn.Click += (s, e) => 
+                btn.Click += (s, ev) => 
                 { 
                     txtMessage.AppendText(emoji); 
                     pnlEmojiPicker.Visible = false; 
