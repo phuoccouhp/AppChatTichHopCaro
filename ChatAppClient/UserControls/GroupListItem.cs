@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using ChatAppClient.Helpers;
 
 namespace ChatAppClient.UserControls
 {
@@ -32,7 +33,7 @@ namespace ChatAppClient.UserControls
             pnlGroupIcon = new Panel();
             pnlGroupIcon.Size = new Size(45, 45);
             pnlGroupIcon.Location = new Point(10, 12);
-            pnlGroupIcon.BackColor = Color.FromArgb(88, 101, 242); // Discord-like purple
+            pnlGroupIcon.BackColor = Color.FromArgb(88, 101, 242);
             pnlGroupIcon.Paint += (s, e) => {
                 e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 using (var path = new System.Drawing.Drawing2D.GraphicsPath())
@@ -97,14 +98,27 @@ namespace ChatAppClient.UserControls
             this.Controls.Add(lblNewMessageBadge);
 
             // Hover effect
-            this.MouseEnter += (s, e) => this.BackColor = Color.FromArgb(40, 43, 55);
-            this.MouseLeave += (s, e) => this.BackColor = Color.FromArgb(30, 33, 45);
-            
+            this.MouseEnter += (s, e) => ApplyHoverEffect(true);
+            this.MouseLeave += (s, e) => ApplyHoverEffect(false);
+     
             foreach (Control ctrl in this.Controls)
             {
-                ctrl.MouseEnter += (s, e) => this.BackColor = Color.FromArgb(40, 43, 55);
-                ctrl.MouseLeave += (s, e) => this.BackColor = Color.FromArgb(30, 33, 45);
+                ctrl.MouseEnter += (s, e) => ApplyHoverEffect(true);
+                ctrl.MouseLeave += (s, e) => ApplyHoverEffect(false);
             }
+        }
+        
+        private void ApplyHoverEffect(bool isHovered)
+        {
+            bool isDark = ThemeManager.IsDarkMode;
+            if (isHovered)
+         {
+this.BackColor = isDark ? Color.FromArgb(40, 43, 55) : Color.FromArgb(230, 235, 245);
+ }
+   else
+     {
+        this.BackColor = isDark ? Color.FromArgb(30, 33, 45) : Color.FromArgb(245, 245, 250);
+   }
         }
 
         public void SetData(string groupId, string groupName, int memberCount, string lastMessage = null)
@@ -116,14 +130,31 @@ namespace ChatAppClient.UserControls
             lblGroupName.Text = groupName;
             lblMemberCount.Text = $"{memberCount} thành viên";
             lblLastMessage.Text = lastMessage ?? "";
-            
-            pnlGroupIcon.Invalidate(); // Redraw icon with new initial
+     
+          pnlGroupIcon.Invalidate();
         }
 
-        public void SetNewMessageAlert(bool hasNewMessage)
-        {
-            lblNewMessageBadge.Visible = hasNewMessage;
-            this.BackColor = hasNewMessage ? Color.FromArgb(45, 48, 60) : Color.FromArgb(30, 33, 45);
+     public void SetNewMessageAlert(bool hasNewMessage)
+  {
+          lblNewMessageBadge.Visible = hasNewMessage;
+   bool isDark = ThemeManager.IsDarkMode;
+            this.BackColor = hasNewMessage 
+      ? (isDark ? Color.FromArgb(45, 48, 60) : Color.FromArgb(230, 235, 245))
+         : (isDark ? Color.FromArgb(30, 33, 45) : Color.FromArgb(245, 245, 250));
+       }
+        
+        /// <summary>
+        /// Áp dụng theme cho item
+       /// </summary>
+     public void ApplyTheme(bool isDarkMode)
+   {
+         this.BackColor = isDarkMode 
+             ? Color.FromArgb(30, 33, 45) 
+        : Color.FromArgb(245, 245, 250);
+       
+            lblGroupName.ForeColor = isDarkMode ? Color.White : Color.Black;
+            lblMemberCount.ForeColor = ThemeManager.TextMuted;
+     lblLastMessage.ForeColor = ThemeManager.TextMuted;
         }
     }
 }

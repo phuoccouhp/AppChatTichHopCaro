@@ -1,5 +1,6 @@
 using ChatApp.Shared;
 using ChatAppClient.Forms;
+using ChatAppClient.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -640,6 +641,56 @@ namespace ChatAppClient.UserControls
         public void OnMemberLeft(string userName)
         {
             AddSystemMessage($"{EMOJI_WAVE} {userName} left the group");
+        }
+
+        /// <summary>
+        /// Áp d?ng theme Dark/Light mode
+        /// </summary>
+        public void ApplyTheme(bool isDarkMode)
+        {
+            // Main background
+            this.BackColor = isDarkMode 
+                ? Color.FromArgb(54, 57, 63) 
+                : Color.White;
+
+            // Header
+            pnlHeader.BackColor = isDarkMode 
+                ? Color.FromArgb(47, 49, 54) 
+                : Color.FromArgb(245, 245, 250);
+            lblGroupName.ForeColor = isDarkMode ? Color.White : Color.Black;
+            lblMemberCount.ForeColor = ThemeManager.TextMuted;
+
+            // Messages area
+            flpMessages.BackColor = isDarkMode 
+      ? Color.FromArgb(54, 57, 63) 
+       : Color.White;
+
+      // Input area
+    pnlInput.BackColor = isDarkMode 
+           ? Color.FromArgb(64, 68, 75) 
+       : Color.FromArgb(235, 237, 239);
+     txtMessage.BackColor = isDarkMode 
+                ? Color.FromArgb(54, 57, 63) 
+                : Color.White;
+ txtMessage.ForeColor = isDarkMode ? Color.White : Color.Black;
+
+            // Buttons
+    var hoverColor = isDarkMode 
+          ? Color.FromArgb(88, 101, 242) 
+       : Color.FromArgb(200, 210, 250);
+      btnEmoji.BackColor = Color.Transparent;
+            btnEmoji.ForeColor = isDarkMode ? Color.White : Color.Black;
+       btnEmoji.FlatAppearance.MouseOverBackColor = hoverColor;
+            btnAttach.BackColor = Color.Transparent;
+       btnAttach.ForeColor = isDarkMode ? Color.White : Color.Black;
+btnAttach.FlatAppearance.MouseOverBackColor = hoverColor;
+
+     // Emoji picker
+  pnlEmojiPicker.BackColor = isDarkMode 
+          ? Color.FromArgb(47, 49, 54) 
+   : Color.FromArgb(250, 250, 250);
+
+       this.Refresh();
         }
     }
 }

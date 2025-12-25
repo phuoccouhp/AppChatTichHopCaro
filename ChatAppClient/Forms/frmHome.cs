@@ -1,8 +1,9 @@
 ﻿using ChatApp.Shared;
 using ChatAppClient.UserControls;
+using ChatAppClient.Helpers;
 using System;
 using System.Collections.Generic;
-using System.Drawing; // Thêm
+using System.Drawing;
 using System.Windows.Forms;
 
 namespace ChatAppClient.Forms
@@ -14,6 +15,9 @@ namespace ChatAppClient.Forms
         private Dictionary<string, frmTankGame> openTankGameForms;
         private List<UserStatus> _initialUsers;
         private ChatViewControl? _currentChatControl = null;
+        
+        // ✅ Nút toggle Dark/Light mode
+        private Button? _btnThemeToggle;
 
         public frmHome(List<UserStatus> initialUsers)
         {
@@ -21,16 +25,27 @@ namespace ChatAppClient.Forms
             openChatControls = new Dictionary<string, ChatViewControl>();
             openGameForms = new Dictionary<string, frmCaroGame>();
             openTankGameForms = new Dictionary<string, frmTankGame>();
-            _initialUsers = initialUsers;
-            btnSettings.MouseEnter += (s, e) =>
-            {
-                btnSettings.BackColor = Color.FromArgb(80, 83, 95); // Màu xám sáng
+        _initialUsers = initialUsers;
+            
+// ✅ Đăng ký sự kiện thay đổi theme
+     ThemeManager.ThemeChanged += OnThemeChanged;
+         
+    btnSettings.MouseEnter += (s, e) =>
+          {
+             btnSettings.BackColor = ThemeManager.IsDarkMode 
+   ? Color.FromArgb(80, 83, 95) 
+         : Color.FromArgb(200, 200, 200);
             };
             btnSettings.MouseLeave += (s, e) =>
             {
-                btnSettings.BackColor = Color.FromArgb(55, 58, 70); // Màu xám tối ban đầu
-            };
-            Color separatorColor = Color.FromArgb(32, 34, 37);
+                btnSettings.BackColor = ThemeManager.IsDarkMode 
+         ? Color.FromArgb(55, 58, 70) 
+          : Color.FromArgb(230, 230, 230);
+   };
+     
+          Color separatorColor = ThemeManager.IsDarkMode 
+                ? Color.FromArgb(32, 34, 37) 
+       : Color.FromArgb(200, 200, 200);
 
             // 1. Tạo các đường kẻ (Nếu chưa có)
             // Kẻ dưới Header chính
@@ -102,18 +117,125 @@ namespace ChatAppClient.Forms
             btnTankMP.Cursor = Cursors.Hand;
             btnTankMP.Click += (s, e) => OpenTankMultiplayerLobby();
             lblFriendsTitle.Controls.Add(btnTankMP);
+         
+          // ✅ Thêm nút Toggle Theme (Dark/Light Mode)
+        InitializeThemeToggleButton();
+        }
+        
+/// <summary>
+/// Khởi tạo nút toggle Dark/Light mode
+        /// </summary>
+  private void InitializeThemeToggleButton()
+        {
+            _btnThemeToggle = ThemeManager.CreateThemeToggleButton();
+  _btnThemeToggle.Location = new Point(btnSettings.Left - 50, btnSettings.Top + 5);
+       _btnThemeToggle.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            pnlHeader.Controls.Add(_btnThemeToggle);
+            _btnThemeToggle.BringToFront();
+        }
+        
+  /// <summary>
+        /// Xử lý khi theme thay đổi
+        /// </summary>
+        private void OnThemeChanged(object? sender, bool isDarkMode)
+        {
+       if (this.InvokeRequired)
+            {
+          this.Invoke(new Action(() => OnThemeChanged(sender, isDarkMode)));
+    return;
+    }
+    
+     ApplyTheme();
+        }
+        
+        /// <summary>
+ /// Áp dụng theme cho form
+        /// </summary>
+        private void ApplyTheme()
+        {
+     bool isDark = ThemeManager.IsDarkMode;
+    
+            // Main backgrounds
+this.BackColor = ThemeManager.BackgroundSecondary;
+            pnlHeader.BackColor = ThemeManager.BackgroundSecondary;
+            pnlSidebar.BackColor = ThemeManager.BackgroundSecondary;
+     pnlMain.BackColor = ThemeManager.Background;
+            flpFriendsList.BackColor = ThemeManager.Background;
+     
+            // Text colors
+       lblWelcome.ForeColor = ThemeManager.TextPrimary;
+            lblFriendsTitle.ForeColor = ThemeManager.TextPrimary;
+  lblFriendsTitle.BackColor = ThemeManager.BackgroundSecondary;
+          lblMainWelcome.ForeColor = ThemeManager.TextSecondary;
+            lblMainWelcome.BackColor = ThemeManager.Background;
+ 
+            // Search box
+          if (txtSearch != null)
+        {
+        txtSearch.BackColor = ThemeManager.InputBackground;
+                txtSearch.ForeColor = ThemeManager.TextPrimary;
+            }
+      if (pnlSearchBox != null)
+     {
+     pnlSearchBox.BackColor = ThemeManager.BackgroundSecondary;
+  }
+        
+            // Settings button
+     btnSettings.BackColor = isDark ? Color.FromArgb(55, 58, 70) : Color.FromArgb(230, 230, 230);
+   btnSettings.ForeColor = ThemeManager.TextPrimary;
+          
+            // Update separators
+    foreach (Control ctrl in pnlHeader.Controls)
+       {
+           if (ctrl is Panel panel && panel.Height == 2)
+            panel.BackColor = ThemeManager.BackgroundTertiary;
+        }
+          foreach (Control ctrl in pnlSidebar.Controls)
+      {
+          if (ctrl is Panel panel && (panel.Width == 2 || panel.Height == 2))
+      panel.BackColor = ThemeManager.BackgroundTertiary;
+            }
+      
+      // Update friend list items
+ foreach (Control ctrl in flpFriendsList.Controls)
+     {
+     if (ctrl is FriendListItem item)
+                {
+       item.ApplyTheme(isDark);
+    }
+        else if (ctrl is GroupListItem groupItem)
+                {
+ groupItem.ApplyTheme(isDark);
+                }
+     }
+            
+            // Update open chat controls
+            foreach (var chatCtrl in openChatControls.Values)
+{
+            chatCtrl.ApplyTheme(isDark);
+     }
+       foreach (var groupCtrl in openGroupChatControls.Values)
+            {
+                groupCtrl.ApplyTheme(isDark);
+            }
+            
+   this.Refresh();
         }
 
-        private void frmHome_Load(object sender, EventArgs e)
+   private void frmHome_Load(object sender, EventArgs e)
         {
             NetworkManager.Instance.RegisterHomeForm(this);
-            string? userName = NetworkManager.Instance.UserName ?? "User";
+      string? userName = NetworkManager.Instance.UserName ?? "User";
             lblWelcome.Text = $"Chào mừng, {userName}!";
-            LoadInitialFriendList();
+       LoadInitialFriendList();
             lblMainWelcome.Visible = true;
-            LoadMyAvatar();
-        }
-        private void txtSearch_TextChanged(object sender, EventArgs e)
+ LoadMyAvatar();
+    
+       // ✅ Áp dụng theme khi form load
+  ApplyTheme();
+      }
+      
+      private void txtSearch_TextChanged(object sender, EventArgs e)
         {
             string keyword = txtSearch.Text.Trim().ToLower();
 
@@ -413,72 +535,73 @@ namespace ChatAppClient.Forms
         private void ShowToastNotification(string title, string message)
         {
             // Đóng toast cũ nếu có
-            if (_toastForm != null && !_toastForm.IsDisposed)
-            {
-                _toastForm.Close();
+        if (_toastForm != null && !_toastForm.IsDisposed)
+   {
+          _toastForm.Close();
             }
-            
-            _toastForm = new Form();
-            _toastForm.FormBorderStyle = FormBorderStyle.None;
-            _toastForm.StartPosition = FormStartPosition.Manual;
-            _toastForm.ShowInTaskbar = false;
-            _toastForm.TopMost = true;
-            _toastForm.BackColor = Color.FromArgb(45, 48, 60);
-            _toastForm.Size = new Size(300, 80);
-            
-            // Vị trí góc dưới phải màn hình
+
+_toastForm = new Form();
+      _toastForm.FormBorderStyle = FormBorderStyle.None;
+      _toastForm.StartPosition = FormStartPosition.Manual;
+       _toastForm.ShowInTaskbar = false;
+_toastForm.TopMost = true;
+        _toastForm.BackColor = Color.FromArgb(45, 48, 60);
+      _toastForm.Size = new Size(300, 80);
+
+       // Vị trí góc dưới phải màn hình
             var screen = Screen.PrimaryScreen.WorkingArea;
-            _toastForm.Location = new Point(screen.Right - _toastForm.Width - 20, screen.Bottom - _toastForm.Height - 20);
-            
-            // Border bo tròn
-            var path = Helpers.DrawingHelper.CreateRoundedRectPath(new Rectangle(0, 0, _toastForm.Width, _toastForm.Height), 10);
+     _toastForm.Location = new Point(screen.Right - _toastForm.Width - 20, screen.Bottom - _toastForm.Height - 20);
+
+ // Border bo tròn
+        var path = Helpers.DrawingHelper.CreateRoundedRectPath(new Rectangle(0, 0, _toastForm.Width, _toastForm.Height), 10);
             _toastForm.Region = new Region(path);
-            
-            // Icon tin nhắn
-            Label lblIcon = new Label();
-            lblIcon.Text = "💬";
-            lblIcon.Font = new Font("Segoe UI Emoji", 20);
-            lblIcon.AutoSize = true;
-            lblIcon.Location = new Point(10, 15);
-            _toastForm.Controls.Add(lblIcon);
-            
-            // Tên người gửi
-            Label lblTitle = new Label();
-            lblTitle.Text = title;
-            lblTitle.Font = new Font("Segoe UI Semibold", 11);
-            lblTitle.ForeColor = Color.White;
-            lblTitle.AutoSize = true;
-            lblTitle.Location = new Point(55, 10);
-            _toastForm.Controls.Add(lblTitle);
-            
-            // Nội dung tin nhắn
-            Label lblMessage = new Label();
-            lblMessage.Text = message;
-            lblMessage.Font = new Font("Segoe UI", 9);
-            lblMessage.ForeColor = Color.LightGray;
-            lblMessage.AutoSize = false;
-            lblMessage.Size = new Size(230, 35);
-            lblMessage.Location = new Point(55, 35);
-            _toastForm.Controls.Add(lblMessage);
-            
-            // Click để đóng
+
+          // Icon tin nhắn - sử dụng text thay vì emoji
+  Label lblIcon = new Label();
+   lblIcon.Text = "[MSG]";
+  lblIcon.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+         lblIcon.ForeColor = Color.FromArgb(88, 101, 242);
+     lblIcon.AutoSize = true;
+            lblIcon.Location = new Point(10, 25);
+     _toastForm.Controls.Add(lblIcon);
+
+// Tên người gửi
+     Label lblTitle = new Label();
+   lblTitle.Text = title;
+       lblTitle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+  lblTitle.ForeColor = Color.White;
+     lblTitle.AutoSize = true;
+  lblTitle.Location = new Point(60, 10);
+        _toastForm.Controls.Add(lblTitle);
+
+       // Nội dung tin nhắn
+      Label lblMessage = new Label();
+       lblMessage.Text = message;
+lblMessage.Font = new Font("Segoe UI", 9);
+  lblMessage.ForeColor = Color.LightGray;
+   lblMessage.AutoSize = false;
+  lblMessage.Size = new Size(225, 35);
+         lblMessage.Location = new Point(60, 35);
+ _toastForm.Controls.Add(lblMessage);
+
+      // Click để đóng
             _toastForm.Click += (s, e) => _toastForm.Close();
-            foreach (Control ctrl in _toastForm.Controls)
+     foreach (Control ctrl in _toastForm.Controls)
             {
-                ctrl.Click += (s, e) => _toastForm.Close();
-            }
-            
-            _toastForm.Show();
-            
-            // Tự đóng sau 4 giây
-            _toastTimer = new System.Windows.Forms.Timer();
-            _toastTimer.Interval = 4000;
+     ctrl.Click += (s, e) => _toastForm.Close();
+          }
+
+   _toastForm.Show();
+
+         // Tự đóng sau 4 giây
+   _toastTimer = new System.Windows.Forms.Timer();
+     _toastTimer.Interval = 4000;
             _toastTimer.Tick += (s, e) =>
-            {
-                _toastTimer.Stop();
-                if (_toastForm != null && !_toastForm.IsDisposed)
-                    _toastForm.Close();
-            };
+     {
+    _toastTimer.Stop();
+     if (_toastForm != null && !_toastForm.IsDisposed)
+       _toastForm.Close();
+     };
             _toastTimer.Start();
         }
         

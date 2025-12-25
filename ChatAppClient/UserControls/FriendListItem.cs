@@ -9,6 +9,7 @@ namespace ChatAppClient.UserControls
         public string FriendID { get; private set; }
         public string FriendName { get; private set; }
         public string FriendStatus { get; private set; }
+        private bool _isOnline;
 
         public FriendListItem()
         {
@@ -20,24 +21,12 @@ namespace ChatAppClient.UserControls
             FriendID = id;
             FriendName = name;
             FriendStatus = status;
+            _isOnline = isOnline;
 
             lblFriendName.Text = name;
             lblStatus.Text = status;
 
-            if (isOnline)
-            {
-                // Trạng thái Online: Sáng sủa
-                pnlStatusDot.BackColor = Color.LimeGreen;
-                lblStatus.ForeColor = Color.LimeGreen;
-                lblFriendName.ForeColor = Color.White;
-            }
-            else
-            {
-                // Trạng thái Offline: Tối màu
-                pnlStatusDot.BackColor = Color.Gray;
-                lblStatus.ForeColor = Color.Gray;
-                lblFriendName.ForeColor = Color.Silver;
-            }
+            ApplyStatusColors(isOnline);
 
             // Load Avatar
             string avatarPath = System.IO.Path.Combine("Images", $"{id}.png");
@@ -51,10 +40,43 @@ namespace ChatAppClient.UserControls
             }
         }
 
+        private void ApplyStatusColors(bool isOnline)
+        {
+            bool isDark = ThemeManager.IsDarkMode;
+
+            if (isOnline)
+            {
+                pnlStatusDot.BackColor = ThemeManager.Online;
+                lblStatus.ForeColor = ThemeManager.Online;
+                lblFriendName.ForeColor = ThemeManager.TextPrimary;
+            }
+            else
+            {
+                pnlStatusDot.BackColor = ThemeManager.Offline;
+                lblStatus.ForeColor = ThemeManager.Offline;
+                lblFriendName.ForeColor = ThemeManager.TextSecondary;
+            }
+        }
+
         public void SetNewMessageAlert(bool hasNewMessage)
         {
             lblNewMessageBadge.Visible = hasNewMessage;
-            this.BackColor = hasNewMessage ? Color.FromArgb(45, 48, 60) : Color.FromArgb(30, 33, 45);
+            bool isDark = ThemeManager.IsDarkMode;
+            this.BackColor = hasNewMessage
+                ? (isDark ? Color.FromArgb(45, 48, 60) : Color.FromArgb(230, 235, 245))
+                : (isDark ? Color.FromArgb(30, 33, 45) : Color.FromArgb(245, 245, 250));
+        }
+
+        /// <summary>
+        /// Áp dụng theme cho item
+        /// </summary>
+        public void ApplyTheme(bool isDarkMode)
+        {
+            this.BackColor = isDarkMode
+                 ? Color.FromArgb(30, 33, 45)
+                    : Color.FromArgb(245, 245, 250);
+
+            ApplyStatusColors(_isOnline);
         }
     }
 }
