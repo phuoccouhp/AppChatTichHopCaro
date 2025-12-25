@@ -13,7 +13,6 @@
 │
 ├── # --- Database Scripts ---
 ├── SetupDatabase_Full.sql               # Script tạo database đầy đủ
-├── UpdateDatabase_AddIndexes.sql        # Script thêm indexes tối ưu
 │
 ├── # --- Batch/PowerShell Scripts ---
 ├── QuickStart.bat                       # Khởi động nhanh ứng dụng
