@@ -1,4 +1,4 @@
-# ChatApp + Caro Game + Tank Game
+# ChatApp + Caro Game
 
 Ứng dụng chat thời gian thực tích hợp game Caro và Tank, xây dựng bằng .NET 8 và Windows Forms.
 
@@ -6,48 +6,123 @@
 
 ```
 📦 AppChatTichHopCaro
-├── 📂 ChatAppServer/          # Server xử lý kết nối
-│   ├── Server.cs              # Xử lý kết nối socket chính
-│   ├── ClientHandler.cs       # Quản lý từng client
-│   ├── DatabaseManager.cs     # Thao tác database
-│   ├── GameSession.cs         # Quản lý phiên chơi Caro
-│   ├── TankGameManager.cs     # Quản lý game Tank
-│   ├── TankMultiplayerManager.cs # Tank multiplayer
-│   ├── FirewallHelper.cs      # Hỗ trợ mở port firewall
-│   ├── EmailHelper.cs         # Gửi email OTP
-│   ├── PasswordHelper.cs      # Mã hóa password
-│   ├── Logger.cs              # Ghi log
-│   ├── frmServer.cs           # Giao diện server
-│   └── Program.cs             # Entry point
 │
-├── 📂 ChatAppClient/          # Ứng dụng client
-│   ├── 📂 Forms/              # Các form giao diện
-│   │   ├── frmLogin.cs        # Đăng nhập
-│   │   ├── frmSignup.cs       # Đăng ký
-│   │   ├── frmHome.cs         # Màn hình chính
-│   │   ├── frmCaroGame.cs     # Game Caro
-│   │   ├── frmTankGame.cs     # Game Tank 1v1
-│   │   ├── frmTankMultiplayer.cs # Tank multiplayer
-│   │   ├── frmSettings.cs     # Cài đặt
-│   │   └── frmForgotPass.cs   # Quên mật khẩu
-│   ├── 📂 UserControls/       # Custom controls
-│   │   ├── ChatViewControl.cs # Hiển thị chat
-│   │   ├── ChatMessageBubble.cs # Bubble tin nhắn
-│   │   └── FriendListItem.cs  # Item danh sách bạn
-│   ├── 📂 Helpers/            # Helper classes
-│   ├── NetworkManager.cs      # Quản lý kết nối server
-│   ├── Logger.cs              # Ghi log
-│   └── Program.cs             # Entry point
+├── 📂 ChatAppServer/                    # Server xử lý kết nối
+│   ├── Program.cs                       # Entry point khởi động server
+│   ├── Server.cs                        # Xử lý kết nối socket chính, quản lý clients
+│   ├── ClientHandler.cs                 # Quản lý từng client kết nối
+│   ├── DatabaseManager.cs               # Thao tác database (Users, Messages, Groups)
+│   ├── GameSession.cs                   # Quản lý phiên chơi game Caro
+│   ├── TankGameManager.cs               # Quản lý logic game Tank 1v1
+│   ├── TankMultiplayerManager.cs        # Quản lý phòng chơi Tank multiplayer
+│   ├── FirewallHelper.cs                # Hỗ trợ mở port firewall tự động
+│   ├── EmailHelper.cs                   # Gửi email OTP reset password
+│   ├── PasswordHelper.cs                # Mã hóa và xác thực password
+│   ├── PasswordMigrationTool.cs         # Tool migrate password cũ sang hash mới
+│   ├── OptimizationConfig.cs            # Cấu hình tối ưu hiệu năng server
+│   ├── Logger.cs                        # Ghi log hoạt động server
+│   ├── frmServer.cs                     # Form giao diện điều khiển server
+│   └── frmServer.Designer.cs            # Designer cho form server
 │
-└── 📂 ChatApp.Shared/         # Thư viện dùng chung
-    ├── LoginPacket.cs         # Gói đăng nhập
-    ├── TextPacket.cs          # Gói tin nhắn
-    ├── FilePacket.cs          # Gói gửi file
-    ├── GameInvitePacket.cs    # Gói mời chơi game
-    ├── GameMovePacket.cs      # Gói nước đi game
-    ├── GroupPackets.cs        # Gói chat nhóm
-    ├── User.cs                # Model User
-    └── PacketMapper.cs        # Map packet types
+├── 📂 ChatAppClient/                    # Ứng dụng client cho người dùng
+│   ├── Program.cs                       # Entry point khởi động client
+│   ├── NetworkManager.cs                # Quản lý kết nối TCP đến server
+│   ├── Logger.cs                        # Ghi log hoạt động client
+│   │
+│   ├── 📂 Forms/                        # Các form giao diện chính
+│   │   ├── frmLogin.cs                  # Form đăng nhập
+│   │   ├── frmLogin.Designer.cs         # Designer form đăng nhập
+│   │   ├── frmSignup.cs                 # Form đăng ký tài khoản
+│   │   ├── frmSignup.Designer.cs        # Designer form đăng ký
+│   │   ├── frmHome.cs                   # Form màn hình chính (chat)
+│   │   ├── frmHome.Designer.cs          # Designer form home
+│   │   ├── frmSettings.cs               # Form cài đặt người dùng
+│   │   ├── frmSettings.Designer.cs      # Designer form settings
+│   │   ├── frmForgotPass.cs             # Form quên mật khẩu
+│   │   ├── frmForgotPass.Designer.cs    # Designer form quên mật khẩu
+│   │   ├── frmResetPassword.cs          # Form đặt lại mật khẩu
+│   │   ├── frmResetPassword.Designer.cs # Designer form reset password
+│   │   ├── frmCreateGroup.cs            # Form tạo nhóm chat
+│   │   ├── frmInviteGroupMembers.cs     # Form mời thành viên vào nhóm
+│   │   ├── frmForwardMessage.cs         # Form chuyển tiếp tin nhắn
+│   │   ├── frmCaroGame.cs               # Form chơi game Caro
+│   │   ├── frmCaroGame.Designer.cs      # Designer form Caro
+│   │   ├── frmTankGame.cs               # Form chơi game Tank 1v1
+│   │   ├── frmTankGame.Designer.cs      # Designer form Tank
+│   │   ├── frmTankMultiplayer.cs        # Form chơi Tank multiplayer
+│   │   └── frmTankMultiplayerLobby.cs   # Form lobby Tank multiplayer
+│   │
+│   ├── 📂 UserControls/                 # Custom controls tái sử dụng
+│   │   ├── ChatViewControl.cs           # Control hiển thị khung chat
+│   │   ├── ChatViewControl.Designer.cs  # Designer ChatViewControl
+│   │   ├── GroupChatViewControl.cs      # Control hiển thị chat nhóm
+│   │   ├── ChatMessageBubble.cs         # Bubble hiển thị tin nhắn text
+│   │   ├── ChatMessageBubble.Designer.cs# Designer bubble tin nhắn
+│   │   ├── ImageBubble.cs               # Bubble hiển thị hình ảnh
+│   │   ├── ImageBubble.Designer.cs      # Designer bubble hình ảnh
+│   │   ├── FileBubble.cs                # Bubble hiển thị file đính kèm
+│   │   ├── FileBubble.Designer.cs       # Designer bubble file
+│   │   ├── GameInviteBubble.cs          # Bubble hiển thị lời mời chơi game
+│   │   ├── GameInviteBubble.Designer.cs # Designer bubble mời game
+│   │   ├── FriendListItem.cs            # Item hiển thị bạn bè online
+│   │   ├── FriendListItem.Designer.cs   # Designer item bạn bè
+│   │   └── GroupListItem.cs             # Item hiển thị nhóm chat
+│   │
+│   ├── 📂 CustomControls/               # Controls tùy chỉnh giao diện
+│   │   ├── CustomControl.cs             # Base custom control
+│   │   └── RoundedButton.cs             # Button bo tròn góc
+│   │
+│   ├── 📂 Helpers/                      # Các class helper
+│   │   ├── AppColors.cs                 # Định nghĩa màu sắc ứng dụng
+│   │   └── DrawingHelper.cs             # Helper vẽ đồ họa
+│   │
+│   └── 📂 Properties/
+│       └── Resources.Designer.cs        # Resources (icons, images)
+│
+└── 📂 ChatApp.Shared/                   # Thư viện dùng chung Client-Server
+    ├── PacketMapper.cs                  # Map tên packet sang Type để deserialize
+    ├── User.cs                          # Model thông tin người dùng
+    │
+    ├── # --- Authentication Packets ---
+    ├── LoginPacket.cs                   # Gói yêu cầu đăng nhập
+    ├── LoginResultPacket.cs             # Gói kết quả đăng nhập
+    ├── RegisterPacket.cs                # Gói yêu cầu đăng ký
+    ├── RegisterResultPacket.cs          # Gói kết quả đăng ký
+    ├── ForgotPasswordPacket.cs          # Gói yêu cầu quên mật khẩu
+    ├── ForgotPasswordResultPacket.cs    # Gói kết quả quên mật khẩu
+    ├── ResetPasswordPacket.cs           # Gói đặt lại mật khẩu
+    ├── UpdateProfilePacket.cs           # Gói cập nhật thông tin cá nhân
+    │
+    ├── # --- Chat Packets ---
+    ├── TextPacket.cs                    # Gói tin nhắn text
+    ├── FilePacket.cs                    # Gói gửi file/hình ảnh
+    ├── ChatHistoryRequestPacket.cs      # Gói yêu cầu lịch sử chat
+    ├── ChatHistoryResponsePacket.cs     # Gói trả về lịch sử chat
+    │
+    ├── # --- User Status Packets ---
+    ├── RequestOnlineListPacket.cs       # Gói yêu cầu danh sách online
+    ├── OnlineUsersPacket.cs             # Gói danh sách người dùng online
+    ├── UserStatusPacket.cs              # Gói thông báo trạng thái user
+    │
+    ├── # --- Group Chat Packets ---
+    ├── GroupPackets.cs                  # Các gói liên quan chat nhóm
+    │
+    ├── # --- Game Caro Packets ---
+    ├── GameInvitePacket.cs              # Gói mời chơi game
+    ├── GameResponsePacket.cs            # Gói phản hồi lời mời
+    ├── GameStartPacket.cs               # Gói bắt đầu game
+    ├── GameMovePacket.cs                # Gói nước đi trong game
+    ├── GameResetPacket.cs               # Gói reset game
+    ├── RematchRequestPacket.cs          # Gói yêu cầu chơi lại
+    ├── RematchResponsePacket.cs         # Gói phản hồi chơi lại
+    │
+    ├── # --- Game Tank Packets ---
+    ├── TankInvitePacket.cs              # Gói mời chơi Tank
+    ├── TankResponseAndStartPackets.cs   # Gói phản hồi và bắt đầu Tank
+    ├── TankStartPacket.cs               # Gói khởi động game Tank
+    ├── TankActionPacket.cs              # Gói hành động (di chuyển, bắn)
+    ├── TankHitPacket.cs                 # Gói thông báo trúng đạn
+    └── TankMultiplayerPackets.cs        # Các gói Tank multiplayer (tạo phòng, join, ready)
 ```
 
 ## 🚀 Cách sử dụng
