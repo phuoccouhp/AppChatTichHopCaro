@@ -127,12 +127,12 @@ namespace ChatAppClient.Forms
         /// </summary>
   private void InitializeThemeToggleButton()
         {
-            _btnThemeToggle = ThemeManager.CreateThemeToggleButton();
-  _btnThemeToggle.Location = new Point(btnSettings.Left - 50, btnSettings.Top + 5);
-       _btnThemeToggle.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            pnlHeader.Controls.Add(_btnThemeToggle);
-            _btnThemeToggle.BringToFront();
-        }
+      _btnThemeToggle = ThemeManager.CreateThemeToggleButton();
+            _btnThemeToggle.Location = new Point(btnSettings.Left - 70, btnSettings.Top + 5);
+    _btnThemeToggle.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+         pnlHeader.Controls.Add(_btnThemeToggle);
+     _btnThemeToggle.BringToFront();
+     }
         
   /// <summary>
         /// Xử lý khi theme thay đổi

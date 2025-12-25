@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
 namespace ChatAppClient.Helpers
@@ -235,52 +236,195 @@ namespace ChatAppClient.Helpers
         }
 
         /// <summary>
-        /// T?o icon button cho toggle theme - S? D?NG TEXT THAY VÌ EMOJI
+ /// T?o nút toggle theme ??p v?i gradient và icon
         /// </summary>
         public static Button CreateThemeToggleButton()
         {
-            var btn = new Button
-            {
-                Size = new Size(50, 35),
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand,
-                BackColor = _isDarkMode ? Color.FromArgb(64, 68, 75) : Color.FromArgb(220, 220, 225),
-                ForeColor = _isDarkMode ? Color.White : Color.Black,
-                Font = new Font("Segoe UI", 8, FontStyle.Bold),
-                Text = _isDarkMode ? "Light" : "Dark",
-                Tag = "theme"
-            };
-            btn.FlatAppearance.BorderSize = 1;
-            btn.FlatAppearance.BorderColor = _isDarkMode ? Color.FromArgb(88, 101, 242) : Color.FromArgb(150, 150, 150);
-            btn.FlatAppearance.MouseOverBackColor = _isDarkMode ? Dark.InputBackground : Light.InputBackground;
-
-            var tooltip = new ToolTip();
-            tooltip.SetToolTip(btn, _isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode");
-
+  var btn = new ThemeToggleButton();
+        btn.UpdateTheme(_isDarkMode);
+    
             btn.Click += (s, e) =>
-            {
-                ToggleTheme();
-                UpdateThemeButton(btn, tooltip);
+          {
+       ToggleTheme();
+    btn.UpdateTheme(_isDarkMode);
             };
 
             // Update button when theme changes from elsewhere
-            ThemeChanged += (s, isDark) =>
-            {
-                if (btn.IsDisposed) return;
-                UpdateThemeButton(btn, tooltip);
+     ThemeChanged += (s, isDark) =>
+      {
+          if (btn.IsDisposed) return;
+       btn.UpdateTheme(isDark);
             };
 
-            return btn;
+      return btn;
+      }
+    }
+
+    /// <summary>
+    /// Custom button cho theme toggle v?i gradient và icon ??p
+    /// </summary>
+ public class ThemeToggleButton : Button
+    {
+        private bool _isDark = true;
+        
+        // Colors for dark mode button (shows sun - switch to light)
+        private readonly Color _darkBgStart = Color.FromArgb(30, 35, 60);
+        private readonly Color _darkBgEnd = Color.FromArgb(50, 55, 80);
+        private readonly Color _sunColor = Color.FromArgb(255, 200, 50);
+      private readonly Color _sunGlow = Color.FromArgb(255, 220, 100);
+        
+  // Colors for light mode button (shows moon - switch to dark)
+        private readonly Color _lightBgStart = Color.FromArgb(135, 206, 250);
+        private readonly Color _lightBgEnd = Color.FromArgb(200, 230, 255);
+      private readonly Color _moonColor = Color.FromArgb(240, 240, 200);
+        private readonly Color _moonShadow = Color.FromArgb(200, 200, 170);
+
+public ThemeToggleButton()
+   {
+            this.Size = new Size(60, 32);
+            this.FlatStyle = FlatStyle.Flat;
+            this.FlatAppearance.BorderSize = 0;
+            this.Cursor = Cursors.Hand;
+      this.Text = "";
+        this.Font = new Font("Segoe UI", 9);
+            
+            // Enable custom painting
+      this.SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
         }
 
-        private static void UpdateThemeButton(Button btn, ToolTip tooltip)
+        public void UpdateTheme(bool isDark)
         {
-            btn.Text = _isDarkMode ? "Light" : "Dark";
-            btn.BackColor = _isDarkMode ? Color.FromArgb(64, 68, 75) : Color.FromArgb(220, 220, 225);
-            btn.ForeColor = _isDarkMode ? Color.White : Color.Black;
-            btn.FlatAppearance.BorderColor = _isDarkMode ? Color.FromArgb(88, 101, 242) : Color.FromArgb(150, 150, 150);
-            btn.FlatAppearance.MouseOverBackColor = _isDarkMode ? Dark.InputBackground : Light.InputBackground;
-            tooltip.SetToolTip(btn, _isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode");
+            _isDark = isDark;
+        this.Invalidate(); // Redraw
+         
+   var tooltip = new ToolTip();
+        tooltip.SetToolTip(this, isDark ? "Switch to Light Mode" : "Switch to Dark Mode");
+        }
+
+      protected override void OnPaint(PaintEventArgs e)
+  {
+      var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+  
+         var rect = new Rectangle(0, 0, this.Width - 1, this.Height - 1);
+   
+            // Draw rounded background with gradient
+        using (var path = CreateRoundedRectangle(rect, 16))
+        {
+    Color bgStart = _isDark ? _darkBgStart : _lightBgStart;
+  Color bgEnd = _isDark ? _darkBgEnd : _lightBgEnd;
+  
+      using (var brush = new LinearGradientBrush(rect, bgStart, bgEnd, LinearGradientMode.Vertical))
+            {
+    g.FillPath(brush, path);
+           }
+   
+      // Draw border
+        using (var pen = new Pen(_isDark ? Color.FromArgb(80, 90, 120) : Color.FromArgb(150, 180, 220), 1))
+   {
+            g.DrawPath(pen, path);
+                }
+    }
+         
+      // Draw icon
+     if (_isDark)
+            {
+  // Draw Sun (switch to light mode)
+      DrawSun(g);
+        }
+        else
+            {
+  // Draw Moon (switch to dark mode)
+     DrawMoon(g);
+     }
+     
+       // Draw text
+            string text = _isDark ? "Light" : "Dark";
+     using (var textBrush = new SolidBrush(_isDark ? Color.White : Color.FromArgb(50, 50, 80)))
+            {
+   var textRect = new Rectangle(22, 0, this.Width - 24, this.Height);
+    var sf = new StringFormat { Alignment = StringAlignment.Near, LineAlignment = StringAlignment.Center };
+          g.DrawString(text, this.Font, textBrush, textRect, sf);
+        }
+   }
+
+        private void DrawSun(Graphics g)
+        {
+    int centerX = 14;
+  int centerY = this.Height / 2;
+    int radius = 6;
+            
+      // Draw glow
+        using (var glowBrush = new SolidBrush(Color.FromArgb(100, _sunGlow)))
+  {
+    g.FillEllipse(glowBrush, centerX - radius - 3, centerY - radius - 3, (radius + 3) * 2, (radius + 3) * 2);
+            }
+            
+ // Draw sun circle
+    using (var sunBrush = new SolidBrush(_sunColor))
+    {
+         g.FillEllipse(sunBrush, centerX - radius, centerY - radius, radius * 2, radius * 2);
+            }
+ 
+       // Draw rays
+  using (var rayPen = new Pen(_sunColor, 2))
+            {
+            for (int i = 0; i < 8; i++)
+     {
+    double angle = i * Math.PI / 4;
+    int x1 = centerX + (int)(Math.Cos(angle) * (radius + 2));
+  int y1 = centerY + (int)(Math.Sin(angle) * (radius + 2));
+         int x2 = centerX + (int)(Math.Cos(angle) * (radius + 5));
+        int y2 = centerY + (int)(Math.Sin(angle) * (radius + 5));
+        g.DrawLine(rayPen, x1, y1, x2, y2);
+  }
+         }
+        }
+
+        private void DrawMoon(Graphics g)
+  {
+            int centerX = 14;
+            int centerY = this.Height / 2;
+         int radius = 7;
+    
+    // Draw moon with crescent effect
+    using (var moonBrush = new SolidBrush(_moonColor))
+            {
+     g.FillEllipse(moonBrush, centerX - radius, centerY - radius, radius * 2, radius * 2);
+            }
+         
+      // Draw shadow to create crescent
+            using (var shadowBrush = new SolidBrush(_lightBgEnd))
+      {
+     g.FillEllipse(shadowBrush, centerX - radius + 4, centerY - radius - 2, radius * 2 - 2, radius * 2 - 2);
+ }
+     
+        // Draw small stars
+      using (var starBrush = new SolidBrush(Color.FromArgb(180, 255, 255, 200)))
+            {
+   g.FillEllipse(starBrush, centerX + 8, centerY - 5, 3, 3);
+   g.FillEllipse(starBrush, centerX + 5, centerY + 4, 2, 2);
+            }
+ }
+
+        private GraphicsPath CreateRoundedRectangle(Rectangle rect, int radius)
+     {
+    var path = new GraphicsPath();
+            int d = radius * 2;
+  
+ path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+            path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+            path.CloseFigure();
+         
+      return path;
+  }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+      base.OnMouseEnter(e);
+            this.Cursor = Cursors.Hand;
         }
     }
 }
