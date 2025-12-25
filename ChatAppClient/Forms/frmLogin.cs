@@ -1,4 +1,4 @@
-﻿using ChatApp.Shared;
+using ChatApp.Shared;
 using ChatAppClient.Helpers;
 using System;
 using System.Drawing;
@@ -9,24 +9,28 @@ namespace ChatAppClient.Forms
 {
     public partial class frmLogin : Form
     {
+        // ? [FIX] Flag ch?n click n�t Login 2 l?n
+        private volatile bool _isProcessingLogin = false;
+
         public frmLogin()
         {
             InitializeComponent();
-            // Đảm bảo IsPassword được set sau khi InitializeComponent
+            // ??m b?o IsPassword ???c set sau khi InitializeComponent
             txtPass.IsPassword = true;
         }
 
         private void frmLogin_Load(object sender, EventArgs e)
         {
-            // Gán sự kiện Click cho nút Đăng nhập
+            // ? [FIX] Ch? g�n s? ki?n 1 l?n - x�a event c? tr??c khi g�n m?i
+            this.btnLogin.Click -= BtnLogin_Click;
             this.btnLogin.Click += BtnLogin_Click;
             
-            // Đảm bảo txtServerIP có thể nhập được
+            // ??m b?o txtServerIP c� th? nh?p ???c
             txtServerIP.InnerTextBox.ReadOnly = false;
             txtServerIP.InnerTextBox.Enabled = true;
             txtServerIP.Enabled = true;
             
-            // Thiết lập mặc định
+            // Thi?t l?p m?c ??nh
             UpdateLoginFieldPlaceholder();
             // (Optional) Pre-fill for testing if you want
             // txtServerIP.Text = "127.0.0.1";
@@ -53,57 +57,67 @@ namespace ChatAppClient.Forms
             }
         }
 
-        // Sự kiện click nút Đăng nhập (Async)
+        // S? ki?n click n�t ??ng nh?p (Async)
         private async void BtnLogin_Click(object sender, EventArgs e)
         {
-            // Lấy dữ liệu từ các RoundedTextBox
-            // Lưu ý: RoundedTextBox thường dùng thuộc tính .Text giống TextBox thường
+            // ? [FIX] Ch?n click 2 l?n nhanh - ki?m tra flag tr??c
+            if (_isProcessingLogin)
+            {
+                Logger.Warning("[Login] ?ang x? l� login, b? qua click tr�ng l?p");
+                return;
+            }
+            
+            // L?y d? li?u t? c�c RoundedTextBox
+            // L?u �: RoundedTextBox th??ng d�ng thu?c t�nh .Text gi?ng TextBox th??ng
             string serverIp = txtServerIP.Text.Trim();
             string usernameOrEmail = txtUser.Text.Trim();
             string password = txtPass.Text.Trim();
             bool useEmail = rdoEmail.Checked;
 
-            // 1. Kiểm tra đầu vào
+            // 1. Ki?m tra ??u v�o
             if (string.IsNullOrEmpty(serverIp))
             {
-                MessageBox.Show("Vui lòng nhập địa chỉ IP của máy chủ.\n\n" +
-                    "Lấy IP từ máy chủ:\n" +
-                    "- Mở form Server\n" +
-                    "- Nhấn Start Server\n" +
-                    "- Xem IP hiển thị trên form\n\n" +
-                    "LƯU Ý:\n" +
-                    "- KHÔNG nhập 127.0.0.1 (chỉ dùng khi cùng máy)\n" +
-                    "- KHÔNG nhập IP Gateway (router IP)\n" +
-                    "- Phải là IP WiFi của máy Server", 
-                    "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui l�ng nh?p ??a ch? IP c?a m�y ch?.\n\n" +
+                    "L?y IP t? m�y ch?:\n" +
+                    "- M? form Server\n" +
+                    "- Nh?n Start Server\n" +
+                    "- Xem IP hi?n th? tr�n form\n\n" +
+                    "L?U �:\n" +
+                    "- KH�NG nh?p 127.0.0.1 (ch? d�ng khi c�ng m�y)\n" +
+                    "- KH�NG nh?p IP Gateway (router IP)\n" +
+                    "- Ph?i l� IP WiFi c?a m�y Server", 
+                    "Thi?u th�ng tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             if (string.IsNullOrEmpty(usernameOrEmail) || string.IsNullOrEmpty(password))
             {
                 string fieldName = useEmail ? "Email" : "Username";
-                MessageBox.Show($"Vui lòng nhập {fieldName} và Password.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show($"Vui l�ng nh?p {fieldName} v� Password.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // Validate email format nếu đăng nhập bằng email
+            // Validate email format n?u ??ng nh?p b?ng email
             if (useEmail && !IsValidEmail(usernameOrEmail))
             {
-                MessageBox.Show("Email không hợp lệ. Vui lòng nhập đúng định dạng email.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Email kh�ng h?p l?. Vui l�ng nh?p ?�ng ??nh d?ng email.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // 2. Vô hiệu hóa nút
+            // ? [FIX] Set flag TR??C khi disable button
+            _isProcessingLogin = true;
+
+            // 2. V� hi?u h�a n�t
             btnLogin.Enabled = false;
             btnLogin.Text = "Connecting...";
 
             try
             {
-                // 3. Kết nối đến Server
+                // 3. K?t n?i ??n Server
                 bool connected = await NetworkManager.Instance.ConnectAsync(serverIp, 9000);
 
                 if (!connected)
                 {
-                    // Kiểm tra xem có ping được không
+                    // Ki?m tra xem c� ping ???c kh�ng
                     bool canPing = false;
                     try
                     {
@@ -115,52 +129,52 @@ namespace ChatAppClient.Forms
                     }
                     catch { }
 
-                    string helpText = $"Không thể kết nối đến server tại {serverIp}:9000\n\n";
+                    string helpText = $"Kh�ng th? k?t n?i ??n server t?i {serverIp}:9000\n\n";
                     
                     if (!canPing)
                     {
-                        helpText += "🔴 KHÔNG PING ĐƯỢC - HAI MÁY KHÔNG CÙNG MẠNG!\n\n" +
-                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-                            "NGUYÊN NHÂN:\n" +
-                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-                            "• Hai máy KHÔNG cùng mạng WiFi\n" +
-                            "• Khác subnet (IP khác lớp)\n" +
-                            "• Router có AP Isolation\n\n" +
-                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-                            "GIẢI PHÁP (Thử theo thứ tự):\n" +
-                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-                            "1️⃣ DÙNG MOBILE HOTSPOT (Đơn giản nhất)\n" +
-                            "   → Bật Hotspot trên điện thoại\n" +
-                            "   → Cả hai máy kết nối WiFi từ điện thoại\n" +
-                            "   → Xem lại IP mới và thử lại\n\n" +
-                            "2️⃣ KIỂM TRA CÙNG WIFI\n" +
-                            "   → Đảm bảo cả hai máy cùng tên WiFi\n" +
-                            "   → Ngắt/kết nối lại WiFi trên cả hai máy\n" +
-                            "   → Chạy ipconfig để xem IP mới\n\n" +
-                            "3️⃣ KIỂM TRA SUBNET\n" +
-                            "   → IP phải cùng subnet (3 số đầu giống)\n" +
-                            "   → Ví dụ: 192.168.1.10 và 192.168.1.20 = OK ✓\n" +
-                            "   → Ví dụ: 192.168.1.10 và 192.168.2.20 = SAI ✗\n\n" +
-                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-                            "Xem file HUONG_DAN_KHAC_MANG.md để biết chi tiết!";
+                        helpText += "?? KH�NG PING ???C - HAI M�Y KH�NG C�NG M?NG!\n\n" +
+                            "????????????????????????????????????????\n" +
+                            "NGUY�N NH�N:\n" +
+                            "????????????????????????????????????????\n" +
+                            "� Hai m�y KH�NG c�ng m?ng WiFi\n" +
+                            "� Kh�c subnet (IP kh�c l?p)\n" +
+                            "� Router c� AP Isolation\n\n" +
+                            "????????????????????????????????????????\n" +
+                            "GI?I PH�P (Th? theo th? t?):\n" +
+                            "????????????????????????????????????????\n" +
+                            "1?? D�NG MOBILE HOTSPOT (??n gi?n nh?t)\n" +
+                            "   ? B?t Hotspot tr�n ?i?n tho?i\n" +
+                            "   ? C? hai m�y k?t n?i WiFi t? ?i?n tho?i\n" +
+                            "   ? Xem l?i IP m?i v� th? l?i\n\n" +
+                            "2?? KI?M TRA C�NG WIFI\n" +
+                            "   ? ??m b?o c? hai m�y c�ng t�n WiFi\n" +
+                            "   ? Ng?t/k?t n?i l?i WiFi tr�n c? hai m�y\n" +
+                            "   ? Ch?y ipconfig ?? xem IP m?i\n\n" +
+                            "3?? KI?M TRA SUBNET\n" +
+                            "   ? IP ph?i c�ng subnet (3 s? ??u gi?ng)\n" +
+                            "   ? V� d?: 192.168.1.10 v� 192.168.1.20 = OK ?\n" +
+                            "   ? V� d?: 192.168.1.10 v� 192.168.2.20 = SAI ?\n\n" +
+                            "????????????????????????????????????????\n" +
+                            "Xem file HUONG_DAN_KHAC_MANG.md ?? bi?t chi ti?t!";
                     }
                     else
                     {
-                        helpText += "✅ Ping được nhưng không kết nối được port 9000\n\n" +
-                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-                            "KIỂM TRA:\n" +
-                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-                            "□ Server đã Start chưa? (Phải thấy 'Server: Running...')\n" +
-                            "□ Firewall Server đã mở chưa? (Chạy OpenFirewall.bat)\n" +
-                            "□ Firewall Client đã mở chưa? (Chạy OpenFirewall.bat)\n" +
-                            "□ IP nhập có đúng không? (Lấy từ form Server)\n\n" +
-                            "Xem file CHECKLIST_KET_NOI.md để kiểm tra chi tiết!";
+                        helpText += "? Ping ???c nh?ng kh�ng k?t n?i ???c port 9000\n\n" +
+                            "????????????????????????????????????????\n" +
+                            "KI?M TRA:\n" +
+                            "????????????????????????????????????????\n" +
+                            "? Server ?� Start ch?a? (Ph?i th?y 'Server: Running...')\n" +
+                            "? Firewall Server ?� m? ch?a? (Ch?y OpenFirewall.bat)\n" +
+                            "? Firewall Client ?� m? ch?a? (Ch?y OpenFirewall.bat)\n" +
+                            "? IP nh?p c� ?�ng kh�ng? (L?y t? form Server)\n\n" +
+                            "Xem file CHECKLIST_KET_NOI.md ?? ki?m tra chi ti?t!";
                     }
                     
                     throw new Exception(helpText);
                 }
 
-                // 4. Gửi gói tin Login
+                // 4. G?i g�i tin Login
                 btnLogin.Text = "Logging in...";
                 var loginPacket = new LoginPacket 
                 { 
@@ -170,10 +184,10 @@ namespace ChatAppClient.Forms
                     UseEmailLogin = useEmail
                 };
 
-                // Gọi hàm async trong NetworkManager
+                // G?i h�m async trong NetworkManager
                 LoginResultPacket result = await NetworkManager.Instance.LoginAsync(loginPacket);
 
-                // 5. Xử lý kết quả (chỉ xử lý nếu form vẫn còn visible và chưa đóng)
+                // 5. X? l� k?t qu? (ch? x? l� n?u form v?n c�n visible v� ch?a ?�ng)
                 if (!this.IsDisposed && this.Visible)
                 {
                     ProcessLoginResult(result);
@@ -181,50 +195,55 @@ namespace ChatAppClient.Forms
             }
             catch (Exception ex)
             {
-                // Chỉ hiển thị message box nếu form vẫn còn visible và chưa đóng
-                // (tránh hiển thị sau khi đã login thành công và chuyển sang form khác)
+                // Ch? hi?n th? message box n?u form v?n c�n visible v� ch?a ?�ng
+                // (tr�nh hi?n th? sau khi ?� login th�nh c�ng v� chuy?n sang form kh�c)
                 if (!this.IsDisposed && this.Visible)
                 {
-                    // Kiểm tra xem đã login thành công chưa (UserID đã được set)
+                    // Ki?m tra xem ?� login th�nh c�ng ch?a (UserID ?� ???c set)
                     if (string.IsNullOrEmpty(NetworkManager.Instance.UserID))
                     {
                         MessageBox.Show($"Login Failed: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
-                    // Nếu đã có UserID thì không hiển thị error (có thể đã login thành công)
+                    // N?u ?� c� UserID th� kh�ng hi?n th? error (c� th? ?� login th�nh c�ng)
                 }
 
-                // Reset trạng thái nút (chỉ nếu form vẫn còn visible)
+                // Reset tr?ng th�i n�t (ch? n?u form v?n c�n visible)
                 if (!this.IsDisposed && this.Visible)
                 {
                     btnLogin.Enabled = true;
                     btnLogin.Text = "Log in";
                 }
             }
+            finally
+            {
+                // ? [FIX] Lu�n reset flag trong finally
+                _isProcessingLogin = false;
+            }
         }
 
-        // Xử lý kết quả trả về từ Server
+        // X? l� k?t qu? tr? v? t? Server
         private void ProcessLoginResult(LoginResultPacket result)
         {
-            // Kiểm tra form vẫn còn tồn tại và visible
+            // Ki?m tra form v?n c�n t?n t?i v� visible
             if (this.IsDisposed || !this.Visible) return;
             
             if (result.Success)
             {
-                Logger.Info($"[Client] Login successful for {result.UserID}, online users: {result.OnlineUsers.Count}");
-                // Đăng nhập thành công!
+                Logger.Info($"[Client] Login successful for {result.UserID}, online users: {result.OnlineUsers?.Count ?? 0}");
+                // ??ng nh?p th�nh c�ng!
                 NetworkManager.Instance.SetUserCredentials(result.UserID, result.UserName);
 
-                // Mở Form Home
-                frmHome homeForm = new frmHome(result.OnlineUsers);
+                // M? Form Home
+                frmHome homeForm = new frmHome(result.OnlineUsers ?? new System.Collections.Generic.List<UserStatus>());
                 homeForm.Show();
 
-                // Ẩn form login
+                // ?n form login
                 this.Hide();
             }
             else
             {
                 Logger.Warning($"[Client] Login failed: {result.Message}");
-                // Đăng nhập thất bại - chỉ hiển thị nếu form vẫn còn visible
+                // ??ng nh?p th?t b?i - ch? hi?n th? n?u form v?n c�n visible
                 if (!this.IsDisposed && this.Visible)
                 {
                     MessageBox.Show($"Login Failed: {result.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -234,7 +253,7 @@ namespace ChatAppClient.Forms
             }
         }
 
-        // Sự kiện click vào Link Đăng ký
+        // S? ki?n click v�o Link ??ng k�
         private void lnkSignup_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             frmSignup signup = new frmSignup();
@@ -242,7 +261,7 @@ namespace ChatAppClient.Forms
             this.Hide();
         }
 
-        // Sự kiện click vào Link Quên mật khẩu
+        // S? ki?n click v�o Link Qu�n m?t kh?u
         private void lnkForgot_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             frmForgotPass forgot = new frmForgotPass();
@@ -255,7 +274,7 @@ namespace ChatAppClient.Forms
             Application.Exit();
         }
 
-        // Hàm kiểm tra email hợp lệ
+        // H�m ki?m tra email h?p l?
         private bool IsValidEmail(string email)
         {
             try
