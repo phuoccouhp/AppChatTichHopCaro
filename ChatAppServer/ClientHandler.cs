@@ -1,4 +1,4 @@
-﻿#pragma warning disable SYSLIB0011
+#pragma warning disable SYSLIB0011
 using ChatApp.Shared;
 using System;
 using System.IO;
@@ -12,20 +12,26 @@ namespace ChatAppServer
 {
     public class ClientHandler
     {
-        private TcpClient? _client;
+        private TcpClient _client;
         private Server _server;
-        private NetworkStream? _stream;
+        private NetworkStream _stream;
         private JsonSerializerOptions _jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
-        public string? UserID { get; private set; }
-        public string? UserName { get; private set; }
+        public string UserID { get; private set; }
+        public string UserName { get; private set; }
         public string ClientIP { get; private set; } = "Unknown";
         public DateTime LoginTime { get; private set; } = DateTime.Now;
 
-        private string? _currentOtp = null;
-        private string? _currentResetEmail = null;
+        private string _currentOtp = null;
+        private string _currentResetEmail = null;
         private DateTime? _otpCreatedTime = null;
-        private const int OTP_VALID_MINUTES = 5; // OTP có hiệu lực trong 5 phút
+        private const int OTP_VALID_MINUTES = 5;
+
+        // OTP retry tracking
+        private int _otpFailedAttempts = 0;
+        private DateTime? _otpLockoutTime = null;
+        private const int MAX_OTP_ATTEMPTS = 5;
+        private const int LOCKOUT_MINUTES = 5;
 
         public ClientHandler(TcpClient client, Server server)
         {
@@ -36,28 +42,21 @@ namespace ChatAppServer
                 ClientIP = _client.Client.RemoteEndPoint?.ToString() ?? "Unknown";
                 _stream = _client.GetStream();
 
-                // Configure socket for stable cross-network connections (WiFi, LAN)
                 _client.ReceiveBufferSize = 131072;
                 _client.SendBufferSize = 131072;
                 _client.NoDelay = true;
                 
-                // ✅ [FIX WiFi] Thiết lập timeout cho NetworkStream - QUAN TRỌNG cho kết nối qua mạng
-                _stream.ReadTimeout = 120000;  // 2 phút - cho phép độ trễ cao của WiFi
-                _stream.WriteTimeout = 60000;  // 1 phút
+                _stream.ReadTimeout = 120000;
+                _stream.WriteTimeout = 60000;
 
-                // ✅ [FIX WiFi] Cấu hình TCP KeepAlive đầy đủ để duy trì kết nối qua NAT/Firewall
                 try
                 {
                     _client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
                     
-                    // Cấu hình keepalive chi tiết cho Windows (thời gian tính bằng milliseconds)
-                    // Byte 0-3: On/Off (1 = enable)
-                    // Byte 4-7: KeepAliveTime (thời gian trước khi gửi probe đầu tiên) 
-                    // Byte 8-11: KeepAliveInterval (thời gian giữa các probe)
                     byte[] keepAliveValues = new byte[12];
-                    BitConverter.GetBytes((uint)1).CopyTo(keepAliveValues, 0);        // Enable
-                    BitConverter.GetBytes((uint)30000).CopyTo(keepAliveValues, 4);    // 30 giây trước probe đầu
-                    BitConverter.GetBytes((uint)5000).CopyTo(keepAliveValues, 8);     // 5 giây giữa các probe
+                    BitConverter.GetBytes((uint)1).CopyTo(keepAliveValues, 0);
+                    BitConverter.GetBytes((uint)30000).CopyTo(keepAliveValues, 4);
+                    BitConverter.GetBytes((uint)5000).CopyTo(keepAliveValues, 8);
                     _client.Client.IOControl(IOControlCode.KeepAliveValues, keepAliveValues, null);
                 }
                 catch (Exception kex)
@@ -65,7 +64,6 @@ namespace ChatAppServer
                     Logger.Warning($"[ClientHandler] Could not set keepalive options: {kex.Message}");
                 }
 
-                // Log new connection
                 Logger.Info($"[CONNECT] New client connected: {ClientIP}");
             }
             catch (Exception ex)
@@ -80,13 +78,12 @@ namespace ChatAppServer
             if (_stream == null) return;
             byte[] lenBuf = new byte[4];
             int consecutiveTimeouts = 0;
-            const int maxConsecutiveTimeouts = 5; // Server cho phép nhiều timeout hơn client
+            const int maxConsecutiveTimeouts = 5;
 
             while (_client != null && _client.Connected)
             {
                 try
                 {
-                    // ✅ [FIX WiFi] Đọc với khả năng chịu lỗi tạm thời
                     int read = 0;
                     while (read < 4)
                     {
@@ -98,12 +95,11 @@ namespace ChatAppServer
                             int r = await _stream.ReadAsync(lenBuf, read, 4 - read);
                             if (r == 0) return;
                             read += r;
-                            consecutiveTimeouts = 0; // Reset khi đọc thành công
+                            consecutiveTimeouts = 0;
                         }
                         catch (IOException ioEx) when (ioEx.InnerException is SocketException sockEx && 
                             sockEx.SocketErrorCode == SocketError.TimedOut)
                         {
-                            // ✅ [FIX WiFi] Cho phép timeout tạm thời - không ngắt kết nối ngay
                             consecutiveTimeouts++;
                             Logger.Warning($"[{ClientIP}] Read timeout ({consecutiveTimeouts}/{maxConsecutiveTimeouts})");
                             
@@ -118,7 +114,6 @@ namespace ChatAppServer
                     
                     int payloadLen = BitConverter.ToInt32(lenBuf, 0);
 
-                    // ✅ Validate packet size
                     if (payloadLen <= 0 || payloadLen > 10 * 1024 * 1024)
                     {
                         Logger.Error($"[{ClientIP}] Invalid packet size: {payloadLen}");
@@ -139,7 +134,6 @@ namespace ChatAppServer
 
                     string jsonString = Encoding.UTF8.GetString(payload);
 
-                    // Log raw incoming payload (truncate long messages)
                     try
                     {
                         string snippet = jsonString.Length > 1000 ? jsonString.Substring(0, 1000) + "..." : jsonString;
@@ -199,7 +193,7 @@ namespace ChatAppServer
                 catch (IOException) { break; }
                 catch (Exception ex)
                 {
-                    Logger.Warning($"Lỗi xử lý gói tin: {ex.Message}");
+                    Logger.Warning($"Error processing packet: {ex.Message}");
                     break;
                 }
             }
@@ -282,7 +276,6 @@ namespace ChatAppServer
                 case TankActionPacket p: _server.ProcessTankAction(p); break;
                 case TankHitPacket p: _server.TankGameManager.ProcessHit(p.GameID, p.HitPlayerID, p.Damage, _server); break;
 
-                // === GROUP CHAT ===
                 case CreateGroupPacket p: HandleCreateGroup(p); break;
                 case GroupTextPacket p: HandleGroupText(p); break;
                 case GroupFilePacket p: HandleGroupFile(p); break;
@@ -295,12 +288,10 @@ namespace ChatAppServer
 
         private void HandleLogin(LoginPacket p)
         {
-            // ✅ [FIX Race Condition] Thực hiện login trong Task riêng để không block các client khác
             string loginUser = p.Username ?? p.Email;
             bool useEmail = p.UseEmailLogin;
             string password = p.Password;
             
-            // Query database (có thể chậm)
             var user = DatabaseManager.Instance.Login(loginUser, password, useEmail);
             
             if (user != null)
@@ -308,23 +299,18 @@ namespace ChatAppServer
                 UserID = user.Username;
                 UserName = user.DisplayName;
 
-                // === THÊM LOG ĐĂNG NHẬP Ở ĐÂY ===
-                Logger.Success($"[LOGIN] User '{UserName}' ({UserID}) đã đăng nhập từ IP: {ClientIP}");
+                Logger.Success($"[LOGIN] User '{UserName}' ({UserID}) logged in from IP: {ClientIP}");
 
-                // ✅ [FIX] Gửi LoginResultPacket TRƯỚC khi RegisterClient
-                // Điều này đảm bảo client nhận được kết quả login trước khi nhận các broadcast khác
                 var onlineUsers = _server.GetOnlineUsers(UserID);
                 SendPacket(new LoginResultPacket { Success = true, UserID = UserID, UserName = UserName, OnlineUsers = onlineUsers });
                 
-                // ✅ [FIX] Sau khi gửi result, mới đăng ký client để broadcast cho người khác
                 _server.RegisterClient(UserID, this);
             }
             else
             {
-                Logger.Warning($"[LOGIN FAIL] Đăng nhập thất bại từ IP {ClientIP} với user: {loginUser}");
-                SendPacket(new LoginResultPacket { Success = false, Message = "Sai tài khoản hoặc mật khẩu" });
+                Logger.Warning($"[LOGIN FAIL] Login failed from IP {ClientIP} with user: {loginUser}");
+                SendPacket(new LoginResultPacket { Success = false, Message = "Wrong username or password" });
                 
-                // ✅ [FIX] Dùng Task.Delay thay vì Thread.Sleep để không block thread
                 Task.Delay(300).ContinueWith(_ => Close());
             }
         }
@@ -332,14 +318,18 @@ namespace ChatAppServer
         private void HandleRegister(RegisterPacket p)
         {
             bool ok = DatabaseManager.Instance.RegisterUser(p.Username, p.Password, p.Email);
-            if (ok) Logger.Success($"[REGISTER] Đăng ký thành công user mới: {p.Username}");
-            else Logger.Warning($"[REGISTER FAIL] Đăng ký thất bại user: {p.Username}");
+            if (ok) Logger.Success($"[REGISTER] New user registered: {p.Username}");
+            else Logger.Warning($"[REGISTER FAIL] Registration failed for user: {p.Username}");
 
             SendPacket(new RegisterResultPacket { Success = ok, Message = ok ? "Success" : "User exists" });
         }
 
         private void HandleForgotPasswordRequest(ForgotPasswordPacket p)
         {
+            // Reset lockout when requesting new OTP
+            _otpFailedAttempts = 0;
+            _otpLockoutTime = null;
+
             if (DatabaseManager.Instance.CheckEmailExists(p.Email))
             {
                 _currentOtp = new Random().Next(100000, 999999).ToString();
@@ -349,14 +339,13 @@ namespace ChatAppServer
                 
                 if (mailSent)
                 {
-                    Logger.Info($"[ForgotPass] Đã gửi OTP cho email: {p.Email} - OTP: {_currentOtp}");
-                    SendPacket(new ForgotPasswordResultPacket { Success = true, IsStep1Success = true, Message = "Đã gửi mã OTP. Vui lòng kiểm tra email." });
+                    Logger.Info($"[ForgotPass] OTP sent to email: {p.Email} - OTP: {_currentOtp}");
+                    SendPacket(new ForgotPasswordResultPacket { Success = true, IsStep1Success = true, Message = "OTP has been sent. Please check your email." });
                 }
                 else
                 {
-                    Logger.Error($"[ForgotPass] Không thể gửi OTP cho email: {p.Email}");
-                    SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Lỗi gửi email. Vui lòng kiểm tra cấu hình email hoặc thử lại sau." });
-                    // Xóa OTP nếu gửi thất bại
+                    Logger.Error($"[ForgotPass] Could not send OTP to email: {p.Email}");
+                    SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Error sending email. Please check email configuration or try again later." });
                     _currentOtp = null;
                     _currentResetEmail = null;
                     _otpCreatedTime = null;
@@ -364,135 +353,153 @@ namespace ChatAppServer
             }
             else
             {
-                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Email không tồn tại trong hệ thống." });
+                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Email does not exist in the system." });
             }
         }
 
         private void HandleResetPassword(ResetPasswordPacket p)
         {
-            // ===== KIỂM TRA ĐẦU VÀO =====
+            // Check input
             if (p == null)
             {
-                Logger.Error("[ResetPass] ResetPasswordPacket là null");
-                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Dữ liệu không hợp lệ." });
+                Logger.Error("[ResetPass] ResetPasswordPacket is null");
+                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Invalid data." });
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(p.Email))
             {
-                Logger.Warning("[ResetPass] Email không được để trống");
-                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Email không được để trống." });
+                Logger.Warning("[ResetPass] Email cannot be empty");
+                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Email cannot be empty." });
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(p.OtpCode))
             {
-                Logger.Warning($"[ResetPass] OTP không được để trống cho email: {p.Email}");
-                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Mã OTP không được để trống." });
+                Logger.Warning($"[ResetPass] OTP cannot be empty for email: {p.Email}");
+                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "OTP code cannot be empty." });
                 return;
             }
 
-            // Kiểm tra xem đây có phải là request verify OTP (NewPassword empty) hay đổi mật khẩu (NewPassword có giá trị)
+            // Check lockout
+            if (_otpLockoutTime != null)
+            {
+                double minutesSinceLockout = (DateTime.Now - _otpLockoutTime.Value).TotalMinutes;
+                if (minutesSinceLockout < LOCKOUT_MINUTES)
+                {
+                    int remainingMinutes = (int)Math.Ceiling(LOCKOUT_MINUTES - minutesSinceLockout);
+                    Logger.Warning($"[ResetPass] User is locked out for email: {p.Email}. Remaining: {remainingMinutes} minutes");
+                    SendPacket(new ForgotPasswordResultPacket { Success = false, Message = $"Too many failed attempts. Please wait {remainingMinutes} minutes before trying again." });
+                    return;
+                }
+                else
+                {
+                    // Lockout expired, reset
+                    _otpLockoutTime = null;
+                    _otpFailedAttempts = 0;
+                }
+            }
+
             bool isVerifyOnly = string.IsNullOrWhiteSpace(p.NewPassword);
 
-            // ===== KIỂM TRA 1: OTP có được tạo trước đó không =====
+            // Check if OTP was created
             if (string.IsNullOrEmpty(_currentOtp) || string.IsNullOrEmpty(_currentResetEmail))
             {
-                Logger.Warning($"[ResetPass] Không có OTP nào được tạo trước đó cho email: {p.Email}");
-                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Vui lòng yêu cầu mã OTP trước." });
+                Logger.Warning($"[ResetPass] No OTP was created for email: {p.Email}");
+                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Please request an OTP first." });
                 return;
             }
 
-            // ===== KIỂM TRA 2: Email có khớp với email đã yêu cầu OTP không =====
+            // Check email match
             if (!string.Equals(_currentResetEmail, p.Email, StringComparison.OrdinalIgnoreCase))
             {
-                Logger.Warning($"[ResetPass] Email không khớp. Yêu cầu: {p.Email}, OTP thuộc về: {_currentResetEmail}");
-                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Email không khớp với email đã yêu cầu OTP." });
+                Logger.Warning($"[ResetPass] Email mismatch. Requested: {p.Email}, OTP belongs to: {_currentResetEmail}");
+                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Email does not match the email that requested OTP." });
                 return;
             }
 
-            // ===== KIỂM TRA 3: OTP có hết hạn không (5 phút) =====
+            // Check OTP expiry
             if (_otpCreatedTime == null)
             {
-                Logger.Warning($"[ResetPass] Thời gian tạo OTP không hợp lệ cho email: {p.Email}");
+                Logger.Warning($"[ResetPass] OTP creation time is invalid for email: {p.Email}");
                 _currentOtp = null;
                 _currentResetEmail = null;
                 _otpCreatedTime = null;
-                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "OTP không hợp lệ. Vui lòng yêu cầu mã mới." });
+                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "OTP is invalid. Please request a new code." });
                 return;
             }
 
             double minutesSinceCreation = (DateTime.Now - _otpCreatedTime.Value).TotalMinutes;
             if (minutesSinceCreation > OTP_VALID_MINUTES)
             {
-                Logger.Warning($"[ResetPass] OTP đã hết hạn cho email: {p.Email} (đã trôi qua {minutesSinceCreation:F1} phút)");
-                // Xóa OTP đã hết hạn
+                Logger.Warning($"[ResetPass] OTP expired for email: {p.Email} (elapsed {minutesSinceCreation:F1} minutes)");
                 _currentOtp = null;
                 _currentResetEmail = null;
                 _otpCreatedTime = null;
-                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới." });
+                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "OTP has expired. Please request a new code." });
                 return;
             }
 
-            // ===== KIỂM TRA 4: OTP có khớp không (so sánh chính xác) =====
-            // Đảm bảo _currentOtp không null trước khi so sánh (đã kiểm tra ở trên nhưng double-check để an toàn)
+            // Compare OTP
             string expectedOtp = _currentOtp?.Trim() ?? string.Empty;
             string providedOtp = p.OtpCode?.Trim() ?? string.Empty;
             
             if (string.IsNullOrEmpty(expectedOtp))
             {
-                Logger.Error($"[ResetPass] LỖI NGHIÊM TRỌNG: _currentOtp là null hoặc empty sau khi đã pass kiểm tra ban đầu cho email: {p.Email}");
-                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Lỗi hệ thống. Vui lòng thử lại." });
+                Logger.Error($"[ResetPass] CRITICAL ERROR: _currentOtp is null or empty after initial check for email: {p.Email}");
+                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "System error. Please try again." });
                 return;
             }
             
             if (string.IsNullOrEmpty(providedOtp))
             {
-                Logger.Warning($"[ResetPass] OTP được cung cấp là rỗng cho email: {p.Email}");
-                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Mã OTP không được để trống." });
+                Logger.Warning($"[ResetPass] Provided OTP is empty for email: {p.Email}");
+                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "OTP code cannot be empty." });
                 return;
             }
             
-            // So sánh OTP - CHỈ KHI KHỚP MỚI CHO PHÉP ĐỔI MẬT KHẨU
             bool isOtpValid = string.Equals(expectedOtp, providedOtp, StringComparison.Ordinal);
             
             if (!isOtpValid)
             {
-                Logger.Warning($"[ResetPass] OTP KHÔNG ĐÚNG cho email: {p.Email}. Nhập: '{providedOtp}', Đúng: '{expectedOtp}'");
-                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Mã OTP không đúng. Vui lòng kiểm tra lại." });
-                return; // QUAN TRỌNG: Return ngay lập tức, KHÔNG được đổi mật khẩu
-            }
-
-            // ===== CHỈ KHI TẤT CẢ KIỂM TRA ĐỀU PASS - MỚI ĐƯỢC PHÉP ĐỔI MẬT KHẨU =====
-            // Đảm bảo OTP đã được xác minh trước khi gọi UpdatePassword
-            // Double-check: Nếu OTP không hợp lệ, KHÔNG BAO GIỜ được gọi UpdatePassword
-            if (!isOtpValid)
-            {
-                Logger.Error($"[ResetPass] LỖI BẢO MẬT: Cố gắng đổi mật khẩu với OTP không hợp lệ cho email: {p.Email}");
-                SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Lỗi xác thực. Vui lòng thử lại." });
+                // OTP is wrong - increment failed attempts
+                _otpFailedAttempts++;
+                int remainingAttempts = MAX_OTP_ATTEMPTS - _otpFailedAttempts;
+                
+                Logger.Warning($"[ResetPass] WRONG OTP for email: {p.Email}. Entered: '{providedOtp}', Correct: '{expectedOtp}'. Attempt {_otpFailedAttempts}/{MAX_OTP_ATTEMPTS}");
+                
+                if (_otpFailedAttempts >= MAX_OTP_ATTEMPTS)
+                {
+                    // Lock out the user
+                    _otpLockoutTime = DateTime.Now;
+                    Logger.Warning($"[ResetPass] User locked out for {LOCKOUT_MINUTES} minutes after {MAX_OTP_ATTEMPTS} failed attempts for email: {p.Email}");
+                    SendPacket(new ForgotPasswordResultPacket { Success = false, Message = $"Too many failed attempts ({MAX_OTP_ATTEMPTS}). Please wait {LOCKOUT_MINUTES} minutes before trying again." });
+                }
+                else
+                {
+                    SendPacket(new ForgotPasswordResultPacket { Success = false, Message = $"Incorrect OTP. You have {remainingAttempts} attempts remaining." });
+                }
                 return;
             }
+
+            // OTP is valid - reset failed attempts
+            _otpFailedAttempts = 0;
+            _otpLockoutTime = null;
             
-            // ===== OTP ĐÃ ĐƯỢC XÁC MINH THÀNH CÔNG =====
             if (isVerifyOnly)
             {
-                // Chỉ verify OTP, không đổi mật khẩu
-                Logger.Info($"[ResetPass] OTP đã được xác minh thành công cho email: {p.Email} (chỉ verify, chưa đổi mật khẩu)");
+                Logger.Info($"[ResetPass] OTP verified successfully for email: {p.Email} (verify only, not changing password)");
                 SendPacket(new ForgotPasswordResultPacket { Success = true, IsStep1Success = false, Message = "OTP verified successfully" });
-                // KHÔNG xóa OTP ở đây vì user chưa đổi mật khẩu, cần giữ OTP để dùng khi đổi mật khẩu
             }
             else
             {
-                // Verify OTP và đổi mật khẩu
-                Logger.Info($"[ResetPass] OTP đã được xác minh thành công cho email: {p.Email}. Tiến hành đổi mật khẩu...");
+                Logger.Info($"[ResetPass] OTP verified successfully for email: {p.Email}. Proceeding to change password...");
                 
                 try
                 {
-                    // CHỈ GỌI UpdatePassword KHI OTP ĐÃ ĐƯỢC XÁC MINH THÀNH CÔNG VÀ CÓ MẬT KHẨU MỚI
                     DatabaseManager.Instance.UpdatePassword(p.Email, p.NewPassword);
-                    Logger.Success($"[ResetPass] Đổi mật khẩu thành công cho email: {p.Email}");
+                    Logger.Success($"[ResetPass] Password changed successfully for email: {p.Email}");
                     
-                    // Xóa OTP sau khi sử dụng thành công để tránh tái sử dụng
                     _currentOtp = null;
                     _currentResetEmail = null;
                     _otpCreatedTime = null;
@@ -501,8 +508,8 @@ namespace ChatAppServer
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error($"[ResetPass] Lỗi khi đổi mật khẩu cho email: {p.Email}", ex);
-                    SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "Lỗi hệ thống khi đổi mật khẩu. Vui lòng thử lại sau." });
+                    Logger.Error($"[ResetPass] Error changing password for email: {p.Email}", ex);
+                    SendPacket(new ForgotPasswordResultPacket { Success = false, Message = "System error while changing password. Please try again later." });
                 }
             }
         }
@@ -511,7 +518,7 @@ namespace ChatAppServer
         {
             DatabaseManager.Instance.UpdateDisplayName(p.UserID, p.NewDisplayName);
             this.UserName = p.NewDisplayName;
-            Logger.Info($"[Profile] User {UserID} đổi tên thành: {p.NewDisplayName}");
+            Logger.Info($"[Profile] User {UserID} changed name to: {p.NewDisplayName}");
             _server.BroadcastPacket(p, null);
         }
 
@@ -538,25 +545,20 @@ namespace ChatAppServer
             SendPacket(new OnlineListPacket { OnlineUsers = _server.GetOnlineUsers(UserID) });
         }
 
-        // =====================================================
-        // === XỬ LÝ NHÓM CHAT ===
-        // =====================================================
-
         private void HandleCreateGroup(CreateGroupPacket p)
         {
-            Logger.Info($"[Group] {p.CreatorID} tạo nhóm '{p.GroupName}' với {p.MemberIDs.Count} thành viên");
+            Logger.Info($"[Group] {p.CreatorID} creating group '{p.GroupName}' with {p.MemberIDs.Count} members");
             
             string groupId = DatabaseManager.Instance.CreateGroup(p.GroupName, p.CreatorID, p.MemberIDs);
             
             if (string.IsNullOrEmpty(groupId))
             {
-                SendPacket(new CreateGroupResultPacket { Success = false, Message = "Không thể tạo nhóm" });
+                SendPacket(new CreateGroupResultPacket { Success = false, Message = "Could not create group" });
                 return;
             }
             
             var members = DatabaseManager.Instance.GetGroupMembers(groupId);
             
-            // Gửi kết quả cho người tạo
             SendPacket(new CreateGroupResultPacket 
             { 
                 Success = true, 
@@ -565,7 +567,6 @@ namespace ChatAppServer
                 Members = members
             });
             
-            // Thông báo cho các thành viên khác
             var notification = new GroupInviteNotificationPacket
             {
                 GroupID = groupId,
@@ -585,14 +586,12 @@ namespace ChatAppServer
 
         private void HandleGroupText(GroupTextPacket p)
         {
-            Logger.Info($"[Group] {p.SenderID} -> Nhóm {p.GroupID}: {p.MessageContent}");
+            Logger.Info($"[Group] {p.SenderID} -> Group {p.GroupID}: {p.MessageContent}");
             
-            // Lưu tin nhắn vào DB
             _ = Task.Run(() => DatabaseManager.Instance.SaveGroupMessage(p.GroupID, p.SenderID, p.MessageContent, "Text"));
             
-            // Lấy danh sách thành viên và gửi tin nhắn cho tất cả (trừ người gửi)
             var members = DatabaseManager.Instance.GetGroupMembers(p.GroupID);
-            p.SenderName = UserName; // Đảm bảo có tên người gửi
+            p.SenderName = UserName;
             p.SentAt = DateTime.Now;
             
             foreach (var member in members)
@@ -606,13 +605,11 @@ namespace ChatAppServer
 
         private void HandleGroupFile(GroupFilePacket p)
         {
-            Logger.Info($"[Group] File từ {p.SenderID} -> Nhóm {p.GroupID}: {p.FileName}");
+            Logger.Info($"[Group] File from {p.SenderID} -> Group {p.GroupID}: {p.FileName}");
             
-            // Lưu thông tin file vào DB
             string type = p.IsImage ? "Image" : "File";
             _ = Task.Run(() => DatabaseManager.Instance.SaveGroupMessage(p.GroupID, p.SenderID, $"Sent {type}: {p.FileName}", type, p.FileName));
             
-            // Gửi cho tất cả thành viên
             var members = DatabaseManager.Instance.GetGroupMembers(p.GroupID);
             p.SenderName = UserName;
             
@@ -627,16 +624,14 @@ namespace ChatAppServer
 
         private void HandleGroupInvite(GroupInvitePacket p)
         {
-            Logger.Info($"[Group] {p.InviterID} mời {p.InviteeIDs.Count} người vào nhóm {p.GroupID}");
+            Logger.Info($"[Group] {p.InviterID} inviting {p.InviteeIDs.Count} people to group {p.GroupID}");
             
             var members = DatabaseManager.Instance.GetGroupMembers(p.GroupID);
             
             foreach (var inviteeId in p.InviteeIDs)
             {
-                // Thêm vào DB
                 if (DatabaseManager.Instance.AddGroupMember(p.GroupID, inviteeId))
                 {
-                    // Thông báo cho người được mời
                     var notification = new GroupInviteNotificationPacket
                     {
                         GroupID = p.GroupID,
@@ -646,7 +641,6 @@ namespace ChatAppServer
                     };
                     _server.RelayPrivatePacket(inviteeId, notification);
                     
-                    // Thông báo cho các thành viên cũ
                     var memberUpdate = new GroupMemberUpdatePacket
                     {
                         GroupID = p.GroupID,
@@ -665,13 +659,12 @@ namespace ChatAppServer
 
         private void HandleLeaveGroup(LeaveGroupPacket p)
         {
-            Logger.Info($"[Group] {p.UserID} rời nhóm {p.GroupID}");
+            Logger.Info($"[Group] {p.UserID} leaving group {p.GroupID}");
             
             var members = DatabaseManager.Instance.GetGroupMembers(p.GroupID);
             
             if (DatabaseManager.Instance.RemoveGroupMember(p.GroupID, p.UserID))
             {
-                // Thông báo cho các thành viên còn lại
                 var memberUpdate = new GroupMemberUpdatePacket
                 {
                     GroupID = p.GroupID,
@@ -698,7 +691,6 @@ namespace ChatAppServer
 
         private void HandleGroupHistoryRequest(GroupHistoryRequestPacket p)
         {
-            // Kiểm tra quyền truy cập
             if (!DatabaseManager.Instance.IsGroupMember(p.GroupID, p.UserID))
             {
                 SendPacket(new GroupHistoryResponsePacket { Success = false, GroupID = p.GroupID });
@@ -718,13 +710,12 @@ namespace ChatAppServer
         {
             if (UserID != null)
             {
-                Logger.Warning($"[LOGOUT] User '{UserName}' ({UserID}) đã ngắt kết nối.");
+                Logger.Warning($"[LOGOUT] User '{UserName}' ({UserID}) disconnected.");
                 _server.RemoveClient(UserID);
             }
             _client?.Close();
         }
 
-        // Đóng kết nối mà không gọi RemoveClient (dùng khi client bị thay thế bởi client mới)
         public void CloseConnectionOnly()
         {
             _client?.Close();

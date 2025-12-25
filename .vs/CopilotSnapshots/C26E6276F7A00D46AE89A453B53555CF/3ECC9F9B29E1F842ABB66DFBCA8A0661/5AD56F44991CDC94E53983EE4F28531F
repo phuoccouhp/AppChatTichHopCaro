@@ -1,0 +1,260 @@
+﻿using ChatApp.Shared;
+using ChatAppClient.Helpers;
+using System;
+using System.Drawing;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace ChatAppClient.Forms
+{
+    public partial class frmForgotPass : Form
+    {
+        private string _pendingOtp = null;
+        private string _pendingEmail = null;
+
+        public frmForgotPass()
+        {
+            InitializeComponent();
+        }
+
+        private void frmForgotPass_Load(object sender, EventArgs e)
+        {
+            // Kết nối sự kiện Click
+            this.roundedButton1.Click += btnSendOTP_Click; // Nút Send OTP
+            this.btnSend.Click += btnResetPassword_Click; // Nút Reset Pass
+            this.lnkBack.LinkClicked += lnkBack_LinkClicked;
+
+            // Cài đặt trạng thái ban đầu
+            txtOTP.Visible = false;
+            btnSend.Visible = false; // Nút Reset ẩn
+
+            // Đăng ký nhận kết quả từ Server
+            NetworkManager.Instance.OnForgotPasswordResult += HandleResult;
+        }
+
+        private async void btnSendOTP_Click(object sender, EventArgs e)
+        {
+            string email = txtEmail.Text.Trim();
+            if (string.IsNullOrEmpty(email))
+            {
+                MessageBox.Show("Vui lòng nhập Email.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Validate email format
+            if (!IsValidEmail(email))
+            {
+                MessageBox.Show("Email không hợp lệ. Vui lòng nhập đúng định dạng email.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // --- KIỂM TRA KẾT NỐI ---
+            // Sử dụng IP đã lưu từ lần kết nối trước (nếu có)
+            string serverIp = NetworkManager.Instance.CurrentServerIP ?? "127.0.0.1";
+            int port = NetworkManager.Instance.CurrentServerPort;
+
+            // Hàm ConnectAsync sẽ tự trả về true nếu đã kết nối rồi
+            bool isConnected = await NetworkManager.Instance.ConnectAsync(serverIp, port);
+
+            if (!isConnected)
+            {
+                MessageBox.Show("Không thể kết nối đến Server. Vui lòng kiểm tra mạng.", "Lỗi Kết Nối", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            // ------------------------
+
+            roundedButton1.Enabled = false;
+            roundedButton1.Text = "Sending...";
+
+            var packet = new ForgotPasswordPacket { Email = email };
+
+            // Gửi và kiểm tra kết quả gửi ngay lập tức
+            bool sent = NetworkManager.Instance.SendPacket(packet);
+
+            if (!sent)
+            {
+                MessageBox.Show("Gửi yêu cầu thất bại (Lỗi Socket).", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                roundedButton1.Enabled = true;
+                roundedButton1.Text = "Send OTP";
+            }
+            // Nếu sent == true, cứ để nút mờ và chờ Server phản hồi qua sự kiện HandleResult
+        }
+
+        private void btnResetPassword_Click(object sender, EventArgs e)
+        {
+            string otp = txtOTP.Text.Trim();
+            string email = txtEmail.Text.Trim();
+
+            if (string.IsNullOrEmpty(otp))
+            {
+                MessageBox.Show("Vui lòng nhập mã OTP.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Gửi OTP lên server để kiểm tra trước khi mở form reset password
+            // Sử dụng ResetPasswordPacket với mật khẩu trống để verify OTP
+            var verifyPacket = new ResetPasswordPacket
+            {
+                Email = email,
+                OtpCode = otp,
+                NewPassword = "" // Mật khẩu trống = chỉ verify OTP
+            };
+
+            btnSend.Enabled = false;
+            btnSend.Text = "Đang kiểm tra...";
+
+            // Lưu OTP và email để dùng sau khi verify thành công
+            _pendingOtp = otp;
+            _pendingEmail = email;
+
+            // Gửi packet và chờ kết quả
+            NetworkManager.Instance.SendPacket(verifyPacket);
+        }
+
+        // Xử lý kết quả từ Server trả về
+        private void HandleResult(ForgotPasswordResultPacket result)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => HandleResult(result)));
+                return;
+            }
+
+            Logger.Info($"[ForgotPass] Nhận kết quả: Success={result.Success}, IsStep1Success={result.IsStep1Success}, Message={result.Message}");
+
+            if (result.Success)
+            {
+                if (result.IsStep1Success)
+                {
+                    // ✅ Bước 1: Gửi OTP thành công -> Hiện form nhập OTP
+                    MessageBox.Show(result.Message, "OTP Đã Gửi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                    // Hiện ô nhập OTP và nút Reset
+                    txtOTP.Visible = true;
+                    btnSend.Visible = true;
+                    btnSend.Enabled = true;
+                    btnSend.Text = "Xác nhận OTP";
+
+                    // Ẩn nút gửi OTP và khóa email
+                    roundedButton1.Visible = false;
+                    txtEmail.Enabled = false;
+                }
+                else if (!string.IsNullOrEmpty(_pendingOtp) && result.Message == "OTP verified successfully")
+                {
+                    // ✅ Bước 2: OTP đã được xác minh thành công -> Mở form reset password
+                    string verifiedOtp = _pendingOtp;
+                    string verifiedEmail = _pendingEmail;
+                    _pendingOtp = null;
+                    _pendingEmail = null;
+
+                    btnSend.Enabled = true;
+                    btnSend.Text = "Xác nhận OTP";
+
+                    Logger.Info($"[ForgotPass] OTP xác minh thành công, mở form reset password cho email: {verifiedEmail}");
+                    
+                    frmResetPassword resetForm = new frmResetPassword(verifiedEmail, verifiedOtp);
+                    resetForm.Show();
+                    this.Hide();
+                }
+                else if (result.Message == "Password Changed")
+                {
+                    // ✅ Bước 3: Đổi mật khẩu thành công (từ form reset password)
+                    MessageBox.Show("Đổi mật khẩu thành công!", "Thành Công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    frmLogin loginForm = new frmLogin();
+                    loginForm.Show();
+                    this.Hide();
+                }
+                else
+                {
+                    // Trường hợp khác - không mong đợi
+                    Logger.Warning($"[ForgotPass] Nhận Success nhưng không xác định được bước: {result.Message}");
+                    MessageBox.Show(result.Message, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            else
+            {
+                // ✅ Lỗi xảy ra
+                MessageBox.Show(result.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                // Nếu lỗi ở bước gửi OTP (chưa hiện ô nhập OTP), bật lại nút Send OTP
+                if (!txtOTP.Visible)
+                {
+                    roundedButton1.Enabled = true;
+                    roundedButton1.Text = "Send OTP";
+                }
+                else if (!string.IsNullOrEmpty(_pendingOtp))
+                {
+                    // Lỗi khi verify OTP - bật lại nút xác nhận
+                    btnSend.Enabled = true;
+                    btnSend.Text = "Xác nhận OTP";
+                    _pendingOtp = null;
+                    _pendingEmail = null;
+                }
+            }
+        }
+
+        private void lnkBack_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            // Hiển thị lại form login thay vì chỉ đóng form
+            frmLogin loginForm = new frmLogin();
+            loginForm.Show();
+            this.Hide();
+        }
+
+        private void frmForgotPass_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            // Hủy đăng ký sự kiện để tránh lỗi bộ nhớ
+            NetworkManager.Instance.OnForgotPasswordResult -= HandleResult;
+        }
+
+        // Hàm thay thế InputBox
+        private string? ShowPasswordInputDialog(string prompt, string title)
+        {
+            Form inputForm = new Form()
+            {
+                Width = 400,
+                Height = 150,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                Text = title,
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+
+            Label promptLabel = new Label() { Left = 20, Top = 20, Text = prompt, Width = 350 };
+            TextBox textBox = new TextBox() { Left = 20, Top = 50, Width = 350, UseSystemPasswordChar = true };
+            Button okButton = new Button() { Text = "OK", Left = 200, Width = 80, Top = 80, DialogResult = DialogResult.OK };
+            Button cancelButton = new Button() { Text = "Cancel", Left = 290, Width = 80, Top = 80, DialogResult = DialogResult.Cancel };
+
+            okButton.Click += (sender, e) => { inputForm.Close(); };
+            cancelButton.Click += (sender, e) => { inputForm.Close(); };
+
+            inputForm.Controls.Add(promptLabel);
+            inputForm.Controls.Add(textBox);
+            inputForm.Controls.Add(okButton);
+            inputForm.Controls.Add(cancelButton);
+            inputForm.AcceptButton = okButton;
+            inputForm.CancelButton = cancelButton;
+
+            if (inputForm.ShowDialog() == DialogResult.OK)
+            {
+                return textBox.Text;
+            }
+            return null;
+        }
+
+        // Hàm kiểm tra email hợp lệ
+        private bool IsValidEmail(string email)
+        {
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
+}
